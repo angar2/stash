@@ -3,4 +3,23 @@ import Foundation
 
 @MainActor
 final class LoginItemService {
+    private let registrar: LoginItemRegistrar
+
+    init(registrar: LoginItemRegistrar) {
+        self.registrar = registrar
+    }
+
+    var isEnabled: Bool {
+        get throws {
+            try registrar.isRegistered
+        }
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        if enabled {
+            try registrar.register()
+        } else {
+            try registrar.unregister()
+        }
+    }
 }
