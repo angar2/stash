@@ -2,4 +2,13 @@
 import Foundation
 
 actor NotificationService {
+    private let center: StashNotificationCenter
+
+    init(center: StashNotificationCenter) {
+        self.center = center
+    }
+
+    func notify(_ notification: StashNotification) async {
+        await center.send(notification)
+    }
 }
