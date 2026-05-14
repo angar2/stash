@@ -8,6 +8,9 @@ enum Constants {
     // F-007 호출 모델 임계값
     static let modifierHoldThreshold: Duration = .milliseconds(200)
     static let modifierDoubleTapInterval: Duration = .milliseconds(300)
+    // HotkeyMonitor — NSEvent 글로벌 modifier 감지 (TimeInterval 형식, DispatchQueue async 용)
+    static let hotkeyHoldThresholdSeconds: TimeInterval = 0.2
+    static let hotkeyDoubleTapIntervalSeconds: TimeInterval = 0.25
 
     // F-004 Pin 한도
     static let maxPinnedClips: Int = 10
