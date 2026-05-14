@@ -23,6 +23,7 @@
 		2ABF903E87B2F72810F07CAE /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC60EF7B873B2BB39EB01BD9 /* PermissionService.swift */; };
 		3248A6FA6E90FEAA7DBFDDFC /* Clip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF515538B2714E20FDDBCC8B /* Clip.swift */; };
 		32E9CC4D329DCBF07C2E84D9 /* HotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45A2C65902CBAC074B1FB4E /* HotkeyRegistrar.swift */; };
+		42E07A1BC12252DE8CCD0A78 /* LoginItemServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */; };
 		48265BA2ABCE8380BC068446 /* AXPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F6CD60DBB5BBA7DE877DB0 /* AXPermissionChecker.swift */; };
 		4856CC89A1A5DF5F61C84CB3 /* MockPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2038279C8A1DDE0111627B /* MockPermissionChecker.swift */; };
 		48D7FE31707F59FB754E4233 /* V1_InitialSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */; };
@@ -35,6 +36,7 @@
 		72463C79D705CFBD0713D08C /* NotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */; };
 		724F8EA0004E3ECBC8B2D8BE /* AccessibilityPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 897339333BC7339153B401FF /* AccessibilityPermissionChecker.swift */; };
 		7C4167CFB5E294FAD13AC6BA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 89A83E894ACDADE82ACD6570 /* GRDB */; };
+		7C90A0BFC95D4E6B6985A6BC /* NotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E42B0E16548DA1FD287FEF0 /* NotificationServiceTests.swift */; };
 		8069E88977094C5967679524 /* MockLoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E89689F16DED962DF08C1D /* MockLoginItemRegistrar.swift */; };
 		835F6FE3B1AA9EA3A1C6DA5B /* SMLoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFFEA3BA0BB94B320D24BA5 /* SMLoginItemRegistrar.swift */; };
 		88E943BD0312700E5FE4B175 /* ClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62BBACFBBB2C99462C4CC386 /* ClipRepository.swift */; };
@@ -124,7 +126,9 @@
 		9172C06297E8D0BA39D0A945 /* ClipboardWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWatcher.swift; sourceTree = "<group>"; };
 		9486F807DEE00795727B2FD9 /* AppDataPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataPath.swift; sourceTree = "<group>"; };
 		9C8821C6DCF342F758E43699 /* PermissionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionError.swift; sourceTree = "<group>"; };
+		9E42B0E16548DA1FD287FEF0 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
 		A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredFile.swift; sourceTree = "<group>"; };
+		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
 		A8DD0387836461CD98892A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B31DB93533AEF858ED462945 /* InMemoryClipRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryClipRepository.swift; sourceTree = "<group>"; };
 		B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardError.swift; sourceTree = "<group>"; };
@@ -240,6 +244,8 @@
 				7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */,
 				908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */,
 				E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */,
+				A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */,
+				9E42B0E16548DA1FD287FEF0 /* NotificationServiceTests.swift */,
 				5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */,
 				C0BE4E161DA51CD1AA5CD2B9 /* PermissionServiceTests.swift */,
 				0BAF1E0DC019B85638177245 /* SystemWrapperTests.swift */,
@@ -547,6 +553,7 @@
 				8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */,
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */,
+				42E07A1BC12252DE8CCD0A78 /* LoginItemServiceTests.swift in Sources */,
 				566AB976E56EFC855715420C /* MockFileClipService.swift in Sources */,
 				2264E02173A4268697E04849 /* MockHotkeyRegistrar.swift in Sources */,
 				8069E88977094C5967679524 /* MockLoginItemRegistrar.swift in Sources */,
@@ -554,6 +561,7 @@
 				AC31FE35B58211197D6B85C1 /* MockPasteSynthesizer.swift in Sources */,
 				26781DFB5698CDE637621A4C /* MockPasteboard.swift in Sources */,
 				4856CC89A1A5DF5F61C84CB3 /* MockPermissionChecker.swift in Sources */,
+				7C90A0BFC95D4E6B6985A6BC /* NotificationServiceTests.swift in Sources */,
 				5752F24D713EAD2073B400B0 /* PasteServiceTests.swift in Sources */,
 				F30A06D12BFA6ACD99080BEC /* PermissionServiceTests.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
