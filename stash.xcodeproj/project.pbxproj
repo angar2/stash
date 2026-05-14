@@ -37,6 +37,7 @@
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
 		BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */; };
 		CE4E592E49B9B0DDFA3801C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FB8D2E5A9C6027D6DE14A32 /* NotificationService.swift */; };
+		D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31DB93533AEF858ED462945 /* InMemoryClipRepository.swift */; };
 		E2C9B2A099529EA446368C04 /* PasteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6CBE35FD72D968EEF91175 /* PasteService.swift */; };
 		EEA0773400A79F521BE82257 /* StoredFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */; };
 		F4BD0BFCA871A6130318363C /* PasteSynthesizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F550679D6CEAF5533B2620A8 /* PasteSynthesizer.swift */; };
@@ -89,6 +90,7 @@
 		9C8821C6DCF342F758E43699 /* PermissionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionError.swift; sourceTree = "<group>"; };
 		A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredFile.swift; sourceTree = "<group>"; };
 		A8DD0387836461CD98892A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B31DB93533AEF858ED462945 /* InMemoryClipRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryClipRepository.swift; sourceTree = "<group>"; };
 		B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardError.swift; sourceTree = "<group>"; };
 		B51675DBE82CD8A70455CBC7 /* StashApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashApp.swift; sourceTree = "<group>"; };
 		BC60EF7B873B2BB39EB01BD9 /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				557F3C45FCDA7298C9E97570 /* StashTests.swift */,
+				E03D771B5F227261DAD77A16 /* Mocks */,
 			);
 			path = StashTests;
 			sourceTree = "<group>";
@@ -252,6 +255,14 @@
 				37CA509D50BD4C4FBFAD9A22 /* StashUITests */,
 			);
 			path = Tests;
+			sourceTree = "<group>";
+		};
+		E03D771B5F227261DAD77A16 /* Mocks */ = {
+			isa = PBXGroup;
+			children = (
+				B31DB93533AEF858ED462945 /* InMemoryClipRepository.swift */,
+			);
+			path = Mocks;
 			sourceTree = "<group>";
 		};
 		E6A894B053FF2F283182A711 /* Sources */ = {
@@ -430,6 +441,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
