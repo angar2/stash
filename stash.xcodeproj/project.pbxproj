@@ -29,6 +29,7 @@
 		4ADA8D20C0D12EDEAAE39746 /* PermissionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C8821C6DCF342F758E43699 /* PermissionError.swift */; };
 		5449B9745FE5CC876BE26312 /* ClipboardWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9172C06297E8D0BA39D0A945 /* ClipboardWatcher.swift */; };
 		566AB976E56EFC855715420C /* MockFileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD652E4F77C861DC978525BC /* MockFileClipService.swift */; };
+		5752F24D713EAD2073B400B0 /* PasteServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */; };
 		57E5D2A635DFB7430F46BB7A /* SystemPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FB7C47C462D260CBAC144F0 /* SystemPasteboard.swift */; };
 		71AF0770C533518335EBAABA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0B8182EC92FA88FE38E3C0 /* Constants.swift */; };
 		72463C79D705CFBD0713D08C /* NotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */; };
@@ -103,6 +104,7 @@
 		56C3EFAF7A26E7D738B789E8 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		583712D469E1F3ED4752F149 /* MockPasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPasteboard.swift; sourceTree = "<group>"; };
 		5B6618B1B107005F500E32AB /* DirectFileClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectFileClipService.swift; sourceTree = "<group>"; };
+		5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteServiceTests.swift; sourceTree = "<group>"; };
 		5C0B76F95F4B4B5EF23A085D /* stash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = stash.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C4BABEFCF83C0BB68FDD1AC /* DatabaseError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseError.swift; sourceTree = "<group>"; };
 		62BBACFBBB2C99462C4CC386 /* ClipRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipRepository.swift; sourceTree = "<group>"; };
@@ -233,6 +235,7 @@
 			children = (
 				7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */,
 				E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */,
+				5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */,
 				0BAF1E0DC019B85638177245 /* SystemWrapperTests.swift */,
 			);
 			path = Services;
@@ -544,6 +547,7 @@
 				AC31FE35B58211197D6B85C1 /* MockPasteSynthesizer.swift in Sources */,
 				26781DFB5698CDE637621A4C /* MockPasteboard.swift in Sources */,
 				4856CC89A1A5DF5F61C84CB3 /* MockPermissionChecker.swift in Sources */,
+				5752F24D713EAD2073B400B0 /* PasteServiceTests.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
 				052EDE64F4FE003F70E14BA9 /* SystemWrapperTests.swift in Sources */,
 			);
