@@ -13,7 +13,7 @@ struct HotkeyManagerTests {
     private func makeManager(
         registrar: MockHotkeyRegistrar = MockHotkeyRegistrar()
     ) -> (HotkeyManager, MockHotkeyRegistrar) {
-        let mgr = HotkeyManager(registrar: registrar, permissionService: PermissionService())
+        let mgr = HotkeyManager(registrar: registrar, permissionService: PermissionService(checker: MockPermissionChecker()))
         return (mgr, registrar)
     }
 
