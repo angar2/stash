@@ -3,9 +3,11 @@ import Foundation
 
 actor DirectFileClipService: FileClipService {
     private let clipsFolder: URL
+    private let maxFileSize: Int
 
-    init(clipsFolder: URL = AppDataPath.clipsFolder()) {
+    init(clipsFolder: URL = AppDataPath.clipsFolder(), maxFileSize: Int = Constants.fileClipCopyMaxSize) {
         self.clipsFolder = clipsFolder
+        self.maxFileSize = maxFileSize
     }
 
     func saveData(_ data: Data, type: ClipType) async throws -> StoredFile {
@@ -19,7 +21,7 @@ actor DirectFileClipService: FileClipService {
     func saveFile(at sourceURL: URL) async throws -> StoredFile {
         let attrs = try FileManager.default.attributesOfItem(atPath: sourceURL.path)
         let size = attrs[.size] as? Int ?? 0
-        if size > Constants.fileClipCopyMaxSize {
+        if size > maxFileSize {
             return StoredFile(filePath: sourceURL, isFileExternal: true)
         }
         let dest = clipsFolder.appendingPathComponent("\(UUID().uuidString)_\(sourceURL.lastPathComponent)")
