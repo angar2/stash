@@ -18,4 +18,18 @@ struct Clip: Identifiable, Codable, Sendable {
 
 extension Clip: FetchableRecord, PersistableRecord {
     static let databaseTableName = "clips"
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case body
+        case filePath = "file_path"
+        case isFileExternal = "is_file_external"
+        case fileOriginalPath = "file_original_path"
+        case fileBookmark = "file_bookmark"
+        case sourceAppBundleId = "source_app_bundle_id"
+        case isPinned = "is_pinned"
+        case createdAt = "created_at"
+        case lastUsedAt = "last_used_at"
+    }
 }
