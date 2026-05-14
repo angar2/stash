@@ -55,6 +55,7 @@
 		CE4E592E49B9B0DDFA3801C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FB8D2E5A9C6027D6DE14A32 /* NotificationService.swift */; };
 		D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6FAAC0DDF288A15C616E2BD /* GRDBClipRepositoryTests.swift */; };
 		D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31DB93533AEF858ED462945 /* InMemoryClipRepository.swift */; };
+		E18894660142EA2F52041433 /* ClipboardWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */; };
 		E2C9B2A099529EA446368C04 /* PasteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6CBE35FD72D968EEF91175 /* PasteService.swift */; };
 		E41683EA86744D9C9E364D71 /* UNNotificationCenterImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0BF56AE76BBD5260707B92 /* UNNotificationCenterImpl.swift */; };
 		EEA0773400A79F521BE82257 /* StoredFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */; };
@@ -106,6 +107,7 @@
 		62BBACFBBB2C99462C4CC386 /* ClipRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipRepository.swift; sourceTree = "<group>"; };
 		66E89689F16DED962DF08C1D /* MockLoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLoginItemRegistrar.swift; sourceTree = "<group>"; };
 		6EFFEA3BA0BB94B320D24BA5 /* SMLoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMLoginItemRegistrar.swift; sourceTree = "<group>"; };
+		7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWatcherTests.swift; sourceTree = "<group>"; };
 		751A7A0CB094605AA22D5832 /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
 		7B2038279C8A1DDE0111627B /* MockPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPermissionChecker.swift; sourceTree = "<group>"; };
 		7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1_InitialSchema.swift; sourceTree = "<group>"; };
@@ -227,6 +229,7 @@
 		71A1EFE7D7769ED57F61EDC0 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */,
 				0BAF1E0DC019B85638177245 /* SystemWrapperTests.swift */,
 			);
 			path = Services;
@@ -526,6 +529,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA2F09B80048018F8756B4F1 /* ClipFixture.swift in Sources */,
+				E18894660142EA2F52041433 /* ClipboardWatcherTests.swift in Sources */,
 				D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */,
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */,
