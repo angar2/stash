@@ -1,0 +1,32 @@
+// 앱 전역 상수 단일 위치 — 서비스 로직 안 하드코딩 금지
+import Foundation
+
+enum Constants {
+    // F-001 클립보드 폴링
+    static let clipboardPollingInterval: Duration = .milliseconds(500)
+
+    // F-007 호출 모델 임계값
+    static let modifierHoldThreshold: Duration = .milliseconds(200)
+    static let modifierDoubleTapInterval: Duration = .milliseconds(300)
+
+    // F-004 Pin 한도
+    static let maxPinnedClips: Int = 10
+
+    // F-002 + SERVICE-POLICY §3 LRU
+    static let maxUnpinnedClips: Int = 200
+
+    // SERVICE-POLICY §4 파일 클립
+    static let fileClipCopyMaxSize: Int = 100 * 1024 * 1024  // 100MB
+
+    // UX-UI §6 메뉴바 인라인 토스트
+    static let toastAutoDismiss: Duration = .milliseconds(3000)
+
+    // UX-UI §3 onboarding 권한 polling
+    static let permissionPollingIntervalOnboarding: Duration = .milliseconds(1000)
+
+    // F-009 검색 debounce
+    static let searchDebounce: Duration = .milliseconds(100)
+
+    // F-004 Pin 사이드 메뉴 펼침 지연
+    static let pinSideMenuExpandDelay: Duration = .milliseconds(200)
+}
