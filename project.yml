@@ -50,8 +50,11 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: stash
+      - package: GRDB
+        product: GRDB
 
   StashUITests:
     type: bundle.ui-testing
@@ -62,5 +65,6 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: stash
