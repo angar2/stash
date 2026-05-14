@@ -1,0 +1,66 @@
+name: stash
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  bundleIdPrefix: com.angar2
+  createIntermediateGroups: true
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ENABLE_APP_SANDBOX: "NO"
+    DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
+
+targets:
+  stash:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.angar2.stash
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: Sources/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_PREVIEWS: "NO"
+    dependencies:
+      - package: KeyboardShortcuts
+        product: KeyboardShortcuts
+      - package: GRDB
+        product: GRDB
+
+  StashTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Tests/StashTests
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - target: stash
+
+  StashUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Tests/StashUITests
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - target: stash
