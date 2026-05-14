@@ -45,6 +45,7 @@
 		90E9056930218671C39F97F9 /* LoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F37D44E2C3029E2174CAEE /* LoginItemRegistrar.swift */; };
 		913EF81CAA4E1BAA1D6C71F8 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 4585E0795E3DF36473FB5ECA /* KeyboardShortcuts */; };
 		9D50F84A474877E53EE26A1D /* FileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D48CC145A382F6D5F7FAD1 /* FileClipService.swift */; };
+		A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */; };
 		A87CA74854FDFC9DA007C3C9 /* MockNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19923362833B37310A4C6F15 /* MockNotificationCenter.swift */; };
 		AA2F09B80048018F8756B4F1 /* ClipFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38286152C9E4F697E8B7A1E /* ClipFixture.swift */; };
 		AC31FE35B58211197D6B85C1 /* MockPasteSynthesizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58C73620DCDDFF2A079F78D /* MockPasteSynthesizer.swift */; };
@@ -119,6 +120,7 @@
 		897339333BC7339153B401FF /* AccessibilityPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionChecker.swift; sourceTree = "<group>"; };
 		8EF7D2146C3F52D86B84DBCA /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
 		8FB8D2E5A9C6027D6DE14A32 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectFileClipServiceTests.swift; sourceTree = "<group>"; };
 		9172C06297E8D0BA39D0A945 /* ClipboardWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWatcher.swift; sourceTree = "<group>"; };
 		9486F807DEE00795727B2FD9 /* AppDataPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataPath.swift; sourceTree = "<group>"; };
 		9C8821C6DCF342F758E43699 /* PermissionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionError.swift; sourceTree = "<group>"; };
@@ -236,6 +238,7 @@
 			isa = PBXGroup;
 			children = (
 				7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */,
+				908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */,
 				E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */,
 				5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */,
 				C0BE4E161DA51CD1AA5CD2B9 /* PermissionServiceTests.swift */,
@@ -539,6 +542,7 @@
 			files = (
 				AA2F09B80048018F8756B4F1 /* ClipFixture.swift in Sources */,
 				E18894660142EA2F52041433 /* ClipboardWatcherTests.swift in Sources */,
+				A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */,
 				D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */,
 				8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */,
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
