@@ -40,6 +40,7 @@
 		89822F67D27754E1FC32D193 /* GRDBClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434B3F4402897EE56F73DB99 /* GRDBClipRepository.swift */; };
 		8A200B6C7E80CB94F02E537D /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 751A7A0CB094605AA22D5832 /* StatusItemController.swift */; };
 		8A81FFAB4E9F8DD56F534CE4 /* DirectFileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6618B1B107005F500E32AB /* DirectFileClipService.swift */; };
+		8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */; };
 		90E9056930218671C39F97F9 /* LoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F37D44E2C3029E2174CAEE /* LoginItemRegistrar.swift */; };
 		913EF81CAA4E1BAA1D6C71F8 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 4585E0795E3DF36473FB5ECA /* KeyboardShortcuts */; };
 		9D50F84A474877E53EE26A1D /* FileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D48CC145A382F6D5F7FAD1 /* FileClipService.swift */; };
@@ -135,6 +136,7 @@
 		DC71F8B2299A5468DA25ED97 /* CGEventPasteSynthesizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGEventPasteSynthesizer.swift; sourceTree = "<group>"; };
 		DD652E4F77C861DC978525BC /* MockFileClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFileClipService.swift; sourceTree = "<group>"; };
 		DD6CBE35FD72D968EEF91175 /* PasteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteService.swift; sourceTree = "<group>"; };
+		E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManagerTests.swift; sourceTree = "<group>"; };
 		E6FAAC0DDF288A15C616E2BD /* GRDBClipRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GRDBClipRepositoryTests.swift; sourceTree = "<group>"; };
 		E8F6CD60DBB5BBA7DE877DB0 /* AXPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AXPermissionChecker.swift; sourceTree = "<group>"; };
 		F39728CAE9AEC2C7DDAFB5B9 /* PermissionStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStatus.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 			isa = PBXGroup;
 			children = (
 				7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */,
+				E4883D42F250773707ADF23B /* HotkeyManagerTests.swift */,
 				0BAF1E0DC019B85638177245 /* SystemWrapperTests.swift */,
 			);
 			path = Services;
@@ -531,6 +534,7 @@
 				AA2F09B80048018F8756B4F1 /* ClipFixture.swift in Sources */,
 				E18894660142EA2F52041433 /* ClipboardWatcherTests.swift in Sources */,
 				D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */,
+				8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */,
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */,
 				566AB976E56EFC855715420C /* MockFileClipService.swift in Sources */,
