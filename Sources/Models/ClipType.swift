@@ -1,7 +1,7 @@
-// 클립 타입 enum — text / image / file 3종
+// 클립 타입 enum — text / image / file 3종 (DATA-MODEL §1 정합)
 import Foundation
 
-enum ClipType: String, Sendable {
+enum ClipType: String, Codable, Sendable {
     case text
     case image
     case file
