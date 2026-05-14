@@ -19,7 +19,7 @@ struct PasteServiceTests {
             synthesizer: synthesizer,
             pasteboard: pasteboard,
             repository: repository,
-            permissionService: PermissionService()
+            permissionService: PermissionService(checker: MockPermissionChecker())
         )
         return (svc, synthesizer, pasteboard, repository)
     }
