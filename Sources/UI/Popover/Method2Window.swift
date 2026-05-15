@@ -23,7 +23,7 @@ final class Method2Window {
     func show() {
         PopoverPanel.positionAtBottomRight(panel)
         panel.orderFrontRegardless()
-        Logger.ui.info("Method2Window shown — ⌘ hold")
+        Logger.ui.info("Method2Window shown — ⌘ hold (tracker prev: \(FrontmostAppTracker.shared.previousApp?.bundleIdentifier ?? "nil", privacy: .public))")
     }
 
     func hide() {
@@ -31,12 +31,25 @@ final class Method2Window {
         Logger.ui.info("Method2Window hidden — ⌘ keyUp")
     }
 
+    /// 클립 paste 흐름 — PopoverPanel.performPasteFlow 헬퍼로 위임. (방식 2는 hold release 시 별도 hide 호출 — hide() 멱등 안전).
+    private func handleClipPaste(at idx: Int) async {
+        await PopoverPanel.performPasteFlow(
+            viewModel: viewModel,
+            idx: idx,
+            sourceLabel: "Method2Window",
+            hide: { [weak self] in self?.hide() }
+        )
+    }
+
     private func rebuildHosting() {
         let view = HistoryPopover(
             viewModel: viewModel,
             mode: .method2,
             onOpenSettings: {},
-            onDismiss: {},
+            onDismiss: { [weak self] in self?.hide() },
+            handleClipPaste: { [weak self] idx in
+                await self?.handleClipPaste(at: idx)
+            },
             anchorOffsetX: nil
         )
         _ = PopoverPanel.mount(view, in: visualEffectView)

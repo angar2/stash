@@ -1,6 +1,7 @@
 // Method1/2/3 공통 NSPanel + NSVisualEffectView setup 헬퍼 (UI Layer 중복 제거)
 import AppKit
 import SwiftUI
+import OSLog
 
 @MainActor
 enum PopoverPanel {
@@ -84,6 +85,49 @@ enum PopoverPanel {
 
         panel.setFrameOrigin(NSPoint(x: clampedX, y: originY))
         return buttonRectInScreen.midX - clampedX
+    }
+
+    /// 클립 paste 흐름 (TASK-016 D-4·D-5·D-6) — popover dismiss → 이전 frontmost 앱 활성화 → 안정 대기 → viewModel.paste.
+    /// Method1/2/3Window 모두 동일 흐름 — DRY로 묶음.
+    static func performPasteFlow(
+        viewModel: ClipsViewModel,
+        idx: Int,
+        sourceLabel: String,
+        hide: () -> Void
+    ) async {
+        hide()
+        if let prev = FrontmostAppTracker.shared.previousApp {
+            prev.activate(options: [])
+            Logger.ui.info("\(sourceLabel, privacy: .public): restored frontmost app \(prev.bundleIdentifier ?? "unknown", privacy: .public) before paste")
+        } else {
+            Logger.ui.warning("\(sourceLabel, privacy: .public): tracker.previousApp is nil — paste will go to current frontmost")
+        }
+        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        await viewModel.paste(at: idx)
+    }
+
+    /// popover 안 mouseDown 시 검색바 외부 click이면 first responder reset (TASK-016 D-3 outside click deactivate).
+    /// click 좌표가 NSTextField/NSTextView hit이면 reset 안 함 → SwiftUI HostingView가 click 처리해 NSTextField가 first responder 다시 받음.
+    /// 반환된 monitor 객체는 호출자가 보관하다 NSEvent.removeMonitor로 정리.
+    static func installOutsideTextFieldClickMonitor(panel: NSPanel) -> Any? {
+        return NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak panel] event in
+            guard let panel, event.window === panel else { return event }
+            guard let contentView = panel.contentView else { return event }
+            let hitView = contentView.hitTest(event.locationInWindow)
+            var isTextFieldHit = false
+            var current: NSView? = hitView
+            while let v = current {
+                if v is NSTextField || v is NSTextView {
+                    isTextFieldHit = true
+                    break
+                }
+                current = v.superview
+            }
+            if !isTextFieldHit, let firstResp = panel.firstResponder, firstResp !== panel {
+                panel.makeFirstResponder(panel)
+            }
+            return event
+        }
     }
 }
 

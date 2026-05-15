@@ -12,6 +12,7 @@ final class Method3Window {
     private lazy var outsideClickMonitor = OutsideClickMonitor { [weak self] in
         self?.hide()
     }
+    private var localClickMonitor: Any?
 
     init(
         viewModel: ClipsViewModel,
@@ -29,18 +30,46 @@ final class Method3Window {
     }
 
     func show() {
+        viewModel.resetForOpen()  // popover 열 때마다 검색부 비활성 + 첫 클립 선택 커서
         PopoverPanel.positionAtBottomRight(panel)
         NSApp.activate(ignoringOtherApps: true)
         panel.orderFrontRegardless()
         panel.makeKey()
+        // panel 자체를 first responder로 — NSTextField 자동 first responder 차단.
+        panel.makeFirstResponder(panel)
         outsideClickMonitor.install()
-        Logger.ui.info("Method3Window shown — ⌘ double-tap")
+        installLocalClickMonitor()
+        Logger.ui.info("Method3Window shown — ⌘ double-tap (tracker prev: \(FrontmostAppTracker.shared.previousApp?.bundleIdentifier ?? "nil", privacy: .public))")
     }
 
     func hide() {
         outsideClickMonitor.remove()
+        removeLocalClickMonitor()
         panel.orderOut(nil)
         Logger.ui.info("Method3Window hidden")
+    }
+
+    /// PopoverPanel.installOutsideTextFieldClickMonitor 헬퍼 위임 (Method1/3 공통).
+    private func installLocalClickMonitor() {
+        removeLocalClickMonitor()
+        localClickMonitor = PopoverPanel.installOutsideTextFieldClickMonitor(panel: panel)
+    }
+
+    private func removeLocalClickMonitor() {
+        if let m = localClickMonitor {
+            NSEvent.removeMonitor(m)
+            localClickMonitor = nil
+        }
+    }
+
+    /// 클립 paste 흐름 — PopoverPanel.performPasteFlow 헬퍼로 위임.
+    private func handleClipPaste(at idx: Int) async {
+        await PopoverPanel.performPasteFlow(
+            viewModel: viewModel,
+            idx: idx,
+            sourceLabel: "Method3Window",
+            hide: { [weak self] in self?.hide() }
+        )
     }
 
     private func rebuildHosting() {
@@ -49,6 +78,9 @@ final class Method3Window {
             mode: .method3,
             onOpenSettings: onOpenSettings,
             onDismiss: { [weak self] in self?.hide() },
+            handleClipPaste: { [weak self] idx in
+                await self?.handleClipPaste(at: idx)
+            },
             anchorOffsetX: nil
         )
         _ = PopoverPanel.mount(view, in: visualEffectView)
