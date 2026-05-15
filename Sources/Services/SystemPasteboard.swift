@@ -24,4 +24,13 @@ final class SystemPasteboard: Pasteboard, @unchecked Sendable {
     func setString(_ string: String, forType dataType: NSPasteboard.PasteboardType) {
         _ = pb.setString(string, forType: dataType)
     }
+
+    func setData(_ data: Data, forType dataType: NSPasteboard.PasteboardType) {
+        _ = pb.setData(data, forType: dataType)
+    }
+
+    func clearAndDeclareTypes(_ types: [NSPasteboard.PasteboardType]) {
+        pb.clearContents()
+        pb.declareTypes(types, owner: nil)
+    }
 }

@@ -60,18 +60,7 @@ actor ClipboardWatcher {
         let now = Date()
         let id = UUID()
 
-        // 텍스트
-        if let text = pasteboard.string(forType: .string) {
-            return Clip(
-                id: id, type: .text, body: text,
-                filePath: nil, isFileExternal: false,
-                fileOriginalPath: nil, fileBookmark: nil,
-                sourceAppBundleId: nil, isPinned: false,
-                createdAt: now, lastUsedAt: now
-            )
-        }
-
-        // 이미지 (.tiff 우선, .png fallback)
+        // ⓐ 이미지 (.tiff / .png) 우선 — Finder에서 *이미지 파일* 복사 시에도 .tiff/.png 데이터가 박힘. file URL보다 우선해 .image로 분류 (TASK-016 Bug 5 D-7/D-8 폴더 아이콘 통일 문제 fix v3).
         if let imageType = pasteboard.availableType(from: [.tiff, .png]),
            let data = pasteboard.data(forType: imageType) {
             let stored = try await fileClipService.saveData(data, type: .image)
@@ -84,7 +73,7 @@ actor ClipboardWatcher {
             )
         }
 
-        // 파일 URL
+        // ⓑ 파일 URL — 이미지 데이터가 없는 일반 파일/폴더. 폴더 / 파일 분기는 ClipRowView가 FileManager isDirectory로 분기 (DB 모델 변경 X).
         let fileURLType = NSPasteboard.PasteboardType("public.file-url")
         if let urlString = pasteboard.string(forType: fileURLType),
            let url = URL(string: urlString) {
@@ -93,6 +82,17 @@ actor ClipboardWatcher {
                 id: id, type: .file, body: nil,
                 filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
                 fileOriginalPath: url.path, fileBookmark: nil,
+                sourceAppBundleId: nil, isPinned: false,
+                createdAt: now, lastUsedAt: now
+            )
+        }
+
+        // ⓒ 텍스트 — 가장 일반적, 마지막 fallback
+        if let text = pasteboard.string(forType: .string) {
+            return Clip(
+                id: id, type: .text, body: text,
+                filePath: nil, isFileExternal: false,
+                fileOriginalPath: nil, fileBookmark: nil,
                 sourceAppBundleId: nil, isPinned: false,
                 createdAt: now, lastUsedAt: now
             )

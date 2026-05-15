@@ -63,9 +63,10 @@ final class GRDBClipRepository: ClipRepository {
     func updateLastUsedAt(id: UUID) async throws {
         Logger.database.debug("updateLastUsedAt — id: \(id)")
         try await dbQueue.write { db in
+            // UUID 그대로 binding — GRDB가 BLOB로 변환해 저장된 BLOB id와 매칭 (uuidString String 비교는 dynamic typing 불일치).
             try db.execute(
                 sql: "UPDATE clips SET last_used_at = ? WHERE id = ?",
-                arguments: [Date(), id.uuidString]
+                arguments: [Date(), id]
             )
         }
     }
@@ -73,7 +74,8 @@ final class GRDBClipRepository: ClipRepository {
     func togglePin(id: UUID) async throws {
         Logger.database.debug("togglePin — id: \(id)")
         try await dbQueue.write { db in
-            guard var clip = try Clip.filter(Column("id") == id.uuidString).fetchOne(db) else { return }
+            // UUID 그대로 비교 (BLOB ↔ BLOB) — uuidString 비교는 0 row 매칭 문제 있음.
+            guard var clip = try Clip.filter(Column("id") == id).fetchOne(db) else { return }
             if !clip.isPinned {
                 let pinnedCount = try Clip.filter(Column("is_pinned") == 1).fetchCount(db)
                 if pinnedCount >= Constants.maxPinnedClips {
@@ -90,11 +92,12 @@ final class GRDBClipRepository: ClipRepository {
     func delete(id: UUID) async throws -> Clip? {
         Logger.database.debug("delete — id: \(id)")
         return try await dbQueue.write { db in
-            guard let clip = try Clip.filter(Column("id") == id.uuidString).fetchOne(db) else {
+            // GRDB가 UUID를 16바이트 BLOB로 저장 — String 비교 (id.uuidString)는 dynamic typing 차이로 0 row 매칭. UUID 그대로 비교 필수 (TASK-016 D-2 root cause).
+            guard let clip = try Clip.filter(Column("id") == id).fetchOne(db) else {
                 Logger.database.debug("delete — id 없음")
                 return nil
             }
-            try clip.delete(db)
+            try Clip.filter(Column("id") == id).deleteAll(db)
             Logger.database.debug("delete — 완료")
             return clip
         }
