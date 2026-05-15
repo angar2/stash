@@ -1,5 +1,6 @@
-// NSStatusItem 등록 + 좌클릭 Method1Window (NSPanel, Liquid Glass) / 우클릭 NSMenu + 권한 상태 추종 아이콘 페어
+// NSStatusItem 등록 + 좌클릭 PopoverWindow(.method1) / 우클릭 NSMenu + 권한 상태 추종 아이콘 페어
 // 메뉴바 아이콘 = SwiftUI Canvas (TrayIconView variant 2) → ImageRenderer → NSImage Template
+// TASK-018 — Method1Window 폐기 후 PopoverWindow 단일 인스턴스 (StashApp이 주입) 공유.
 import AppKit
 import SwiftUI
 import Combine
@@ -8,20 +9,16 @@ import OSLog
 @MainActor
 final class StatusItemController {
     private let statusItem: NSStatusItem
-    private let method1Window: Method1Window
+    private let popoverWindow: PopoverWindow
     private let menu: NSMenu
     private var permissionCancellable: AnyCancellable?
 
     init(
         permissionStatusPublisher: AnyPublisher<PermissionStatus, Never>,
-        clipsViewModel: ClipsViewModel,
-        onOpenSettings: @MainActor @escaping () -> Void
+        popoverWindow: PopoverWindow
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        self.method1Window = Method1Window(
-            viewModel: clipsViewModel,
-            onOpenSettings: onOpenSettings
-        )
+        self.popoverWindow = popoverWindow
 
         let m = NSMenu()
         let quitItem = NSMenuItem(
@@ -91,10 +88,10 @@ final class StatusItemController {
 
     private func togglePopover() {
         guard let button = statusItem.button else { return }
-        if method1Window.isVisible {
-            method1Window.hide()
+        if popoverWindow.isVisible {
+            popoverWindow.hide()
         } else {
-            method1Window.show(below: button)
+            popoverWindow.show(below: button)
         }
     }
 

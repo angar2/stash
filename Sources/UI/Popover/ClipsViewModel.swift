@@ -1,8 +1,14 @@
-// 방식 1·3 popover의 클립 리스트 + 검색 + paste/pop/pin/delete 액션 ViewModel (API-SPEC §9-2 ViewModel 예외 룰 정합)
+// 1·2·3 popover 공통 클립 리스트 + 검색 + paste/pop/pin/delete 액션 ViewModel (API-SPEC §9-2 ViewModel 예외 룰 정합)
 import Foundation
 import Observation
 import OSLog
 import AppKit
+
+/// 키보드 네비 시 ScrollView 페이징 anchor 힌트 (TASK-018 Phase 3) — SwiftUI UnitPoint 의존 X (ViewModel 순수성 유지).
+enum ScrollAnchorHint {
+    case top
+    case bottom
+}
 
 @MainActor
 @Observable
@@ -18,9 +24,16 @@ final class ClipsViewModel {
     var pinSidebarOpen: Bool = false      // Pin 사이드 펼침 여부
     var pinHoverActive: Bool = false      // Pin 행 hover 상태
     var pinSelectedIdx: Int = 0           // Pin 사이드바 안 선택 idx
-    /// 키보드 nav (↑↓·1·2)로 selectedIdx 변경 시만 set — ScrollView가 anchor: .center로 follow.
-    /// hover로 변경 시 nil 유지 → onHover 무한 스크롤 루프 차단 (Bug 1 fix).
+    /// 키보드 nav (↑↓·1·2)로 가시 영역 *경계 진출* 시에만 set — ScrollView가 anchor 위치로 1행 시프트 (TASK-018 Phase 3, 행 단위 페이징 모델).
+    /// 가시 영역 안 커서 이동 / hover 변경은 nil 유지 → 가시 영역 안 스크롤 발생 차단.
     var pendingScrollToId: UUID? = nil
+    /// pendingScrollToId 동반 — ScrollView가 어느 anchor 위치로 옮길지. top = top index 시프트 / bottom = wrap 시 마지막 행을 하단으로.
+    var pendingScrollAnchor: ScrollAnchorHint = .top
+    /// 키보드 네비 가시 윈도우의 top idx — 화면 최상단에 보이는 clip의 visibleClips 안 index. 키보드 nav가 가시 영역 *밖*으로 selectedIdx 시프트 시에만 ±1 갱신.
+    var visibleTopIdx: Int = 0
+    /// 가시 행 수 — `clipListMaxHeight(312) ÷ (rowMinHeight 44 + rowGap 2) ≒ 6` (single-line 기준).
+    /// multi-line 행이 섞이면 실제 화면 가시는 더 적을 수 있으나, 시프트 동작은 본 상한으로 정확. 마우스 휠 스크롤은 추적 X — 다음 키 입력 시 ScrollView가 visibleTopIdx 기준 재동기화.
+    private let visibleRowCount: Int = 6
     private var pinExpandTask: Task<Void, Never>?
     private var pinCloseTask: Task<Void, Never>?
     /// popover 열림 직후 짧은 시간 동안 hover (setFocusZone) 무시 — 마우스가 검색바/클립 위에 이미 있어도 자동 활성 차단.
@@ -59,8 +72,10 @@ final class ClipsViewModel {
         clips.filter { $0.isPinned }
     }
 
+    /// 일반 히스토리 영역이 비어 있는 상태 — 검색어 없고 unpinned 0건. Pin 있더라도 빈 상태 안내 노출 (TASK-018 Phase 5).
+    /// Pin 메뉴란은 `hasPinned` 분기로 별도 유지 (FEATURES.md §빈 상태 표시 적용 범위 정합).
     var isEmptyState: Bool {
-        clips.isEmpty && searchQuery.isEmpty
+        visibleClips.isEmpty && searchQuery.isEmpty
     }
 
     var isSearchEmptyResult: Bool {
@@ -88,14 +103,35 @@ final class ClipsViewModel {
         }
     }
 
-    // MARK: - Navigation
+    // MARK: - Navigation (행 단위 페이징 — TASK-018 Phase 3)
     func moveSelectionDown() {
         let list = visibleClips
         let count = list.count
         guard count > 0 else { return }
         focusZone = .clip
-        selectedIdx = (selectedIdx + 1) % count
-        pendingScrollToId = list[selectedIdx].id  // 키보드 nav → ScrollView follow 신호
+
+        let prev = selectedIdx
+        selectedIdx = (prev + 1) % count
+
+        // wrap (count-1 → 0) — 리스트 끝에서 처음으로 돌아감
+        if prev == count - 1 && selectedIdx == 0 {
+            visibleTopIdx = 0
+            pendingScrollAnchor = .top
+            pendingScrollToId = list[0].id
+            return
+        }
+
+        // 가시 영역 마지막 행 진출 → 정확히 1행 시프트
+        let lastVisible = visibleTopIdx + visibleRowCount - 1
+        if selectedIdx > lastVisible {
+            visibleTopIdx = selectedIdx - visibleRowCount + 1
+            pendingScrollAnchor = .top
+            pendingScrollToId = list[visibleTopIdx].id
+            return
+        }
+
+        // 가시 영역 안 — 스크롤 발생 X (커서만 이동)
+        pendingScrollToId = nil
     }
 
     func moveSelectionUp() {
@@ -103,8 +139,28 @@ final class ClipsViewModel {
         let count = list.count
         guard count > 0 else { return }
         focusZone = .clip
-        selectedIdx = (selectedIdx - 1 + count) % count
-        pendingScrollToId = list[selectedIdx].id  // 키보드 nav → ScrollView follow 신호
+
+        let prev = selectedIdx
+        selectedIdx = (prev - 1 + count) % count
+
+        // wrap (0 → count-1) — 리스트 처음에서 끝으로 돌아감
+        if prev == 0 && selectedIdx == count - 1 {
+            visibleTopIdx = max(0, count - visibleRowCount)
+            pendingScrollAnchor = .bottom
+            pendingScrollToId = list[count - 1].id
+            return
+        }
+
+        // 가시 영역 첫 행 진출 → 정확히 1행 시프트
+        if selectedIdx < visibleTopIdx {
+            visibleTopIdx = selectedIdx
+            pendingScrollAnchor = .top
+            pendingScrollToId = list[visibleTopIdx].id
+            return
+        }
+
+        // 가시 영역 안 — 스크롤 발생 X
+        pendingScrollToId = nil
     }
 
     /// hover 시 호출 — selectedIdx만 갱신, pendingScrollToId 미설정 (스크롤 루프 차단).
@@ -153,11 +209,13 @@ final class ClipsViewModel {
     func resetForOpen() {
         focusZone = .clip
         selectedIdx = 0
+        visibleTopIdx = 0
         searchInputActive = false
         searchQuery = ""
         pinSidebarOpen = false
         pinHoverActive = false
         pendingScrollToId = nil
+        pendingScrollAnchor = .top
         ignoreHoverUntil = Date().addingTimeInterval(0.2)
     }
 
@@ -314,8 +372,17 @@ final class ClipsViewModel {
         let count = visibleClips.count
         if count == 0 {
             selectedIdx = 0
-        } else if selectedIdx >= count {
+            visibleTopIdx = 0
+            return
+        }
+        if selectedIdx >= count {
             selectedIdx = count - 1
+        }
+        if visibleTopIdx > selectedIdx {
+            visibleTopIdx = selectedIdx
+        }
+        if visibleTopIdx + visibleRowCount > count {
+            visibleTopIdx = max(0, count - visibleRowCount)
         }
     }
 

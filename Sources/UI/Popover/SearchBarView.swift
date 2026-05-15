@@ -3,7 +3,12 @@ import SwiftUI
 
 struct PopoverHeaderView: View {
     @Bindable var viewModel: ClipsViewModel
+    /// 방식 2 — popover form은 동일 노출, 검색 입력 + 전체 삭제 클릭 모두 차단 (TASK-018).
+    let mode: PopoverInvocationMode
     @State private var deleteAllHovered: Bool = false
+
+    /// 방식 2일 때 true — 검색바·"전체 삭제" 등 인터랙션 일체 차단.
+    private var isInteractionDisabled: Bool { mode == .method3 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -28,9 +33,16 @@ struct PopoverHeaderView: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(deleteAllHovered ? DesignTokens.Colors.searchDeleteAllLabelHover : deleteAllColor)
                     .contentShape(Rectangle())
-                    .onHover { isHover in deleteAllHovered = isHover }
-                    .onTapGesture { Task { await viewModel.deleteAllExceptPinned() } }
+                    .onHover { isHover in
+                        guard !isInteractionDisabled else { return }
+                        deleteAllHovered = isHover
+                    }
+                    .onTapGesture {
+                        guard !isInteractionDisabled else { return }
+                        Task { await viewModel.deleteAllExceptPinned() }
+                    }
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: deleteAllHovered)
+                    .allowsHitTesting(!isInteractionDisabled)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.wordmarkPaddingHorz)
@@ -49,6 +61,7 @@ struct PopoverHeaderView: View {
                 .frame(width: 13, height: 13)
 
             // 인풋 — NSTextField wrap. focus change → ViewModel activate/deactivate.
+            // 방식 2 — isEnabled=false로 NSTextField editable/selectable 비활성 + onFocusChange no-op.
             PlainNSTextField(
                 text: $viewModel.searchQuery,
                 placeholder: searchPlaceholder,
@@ -56,12 +69,14 @@ struct PopoverHeaderView: View {
                 font: .systemFont(ofSize: 12.5, weight: .medium),
                 textColor: NSColor.labelColor,
                 onFocusChange: { focused in
+                    guard !isInteractionDisabled else { return }
                     if focused {
                         viewModel.activateSearchInput()
                     } else {
                         viewModel.deactivateSearchInput()
                     }
-                }
+                },
+                isEnabled: !isInteractionDisabled
             )
             .onChange(of: viewModel.searchQuery) { _, _ in
                 Task { await viewModel.performSearch() }
@@ -82,6 +97,7 @@ struct PopoverHeaderView: View {
         .padding(.top, DesignTokens.Spacing.searchContainerPaddingTop)
         .padding(.bottom, DesignTokens.Spacing.searchContainerPaddingBottom)
         .onHover { isHover in
+            guard !isInteractionDisabled else { return }
             if isHover {
                 viewModel.setFocusZone(.search)
             }

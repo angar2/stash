@@ -1,6 +1,5 @@
-// 방식 1 (NSPopover) + 방식 3 (NSPanel)이 공유하는 popover content
-// popover.jsx 100% 정합 — 워드마크 + 검색바 + 클립 리스트 + Pin 행 + 환경설정 행 (휴지통 X) + 힌트바
-// 방식 2 = 미니멀 (검색·환경설정·삭제 버튼 X / 클립 리스트 + Pin 행 + 힌트바만)
+// 1·2·3 popover 공통 content (TASK-018) — popover.jsx 100% 정합. 워드마크 + 검색바 + 클립 리스트 + Pin 행 + 환경설정 행 (휴지통 X) + 힌트바.
+// 방식 2도 1·3과 동일 form 노출 / 검색바·환경설정·전체 삭제·핀·X 클릭은 모두 비활성 (입력 차단).
 import SwiftUI
 import AppKit
 
@@ -14,9 +13,10 @@ struct HistoryPopover: View {
     let handleClipPaste: @MainActor (Int) async -> Void
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
 
-    private var isFull: Bool { mode != .method2 }
     private var hasPinned: Bool { !viewModel.pinnedClips.isEmpty }
     private var visibleClips: [Clip] { viewModel.filteredClips.filter { !$0.isPinned } }
+    /// 방식 2 — 검색·환경설정·전체 삭제 등 일체 인터랙션 차단 (TASK-018, 결정 1-A).
+    private var isInteractionDisabled: Bool { mode == .method3 }
 
     init(
         viewModel: ClipsViewModel,
@@ -41,16 +41,13 @@ struct HistoryPopover: View {
 
     private var popoverBody: some View {
         VStack(spacing: 0) {
-            if isFull {
-                PopoverHeaderView(viewModel: viewModel)
-            }
+            // 1·2·3 동일 form — 방식 2도 검색바·환경설정 노출 (입력 비활성, TASK-018).
+            PopoverHeaderView(viewModel: viewModel, mode: mode)
             clipsArea
             if hasPinned {
                 pinRow
             }
-            if isFull {
-                preferencesRow
-            }
+            preferencesRow
             KeyboardHintsView(mode: mode)
         }
         .frame(width: DesignTokens.WindowSize.popoverWidth)
@@ -115,14 +112,16 @@ struct HistoryPopover: View {
                         .id(clip.id)
                     }
                 }
-                .padding(.horizontal, 2)
+                // TASK-018 Phase 7 — 검색·Pin·환경설정 행과 동일 좌우 outer inset.
+                .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
             }
             .frame(maxHeight: DesignTokens.WindowSize.clipListMaxHeight)
-            // Bug 1 fix — 키보드 nav (↑↓·1·2) 만 ScrollView follow 트리거. hover는 selectedIdx만 갱신해 무한 스크롤 루프 차단.
+            // TASK-018 Phase 3 — 행 단위 페이징. 가시 영역 안 커서 이동은 pendingScrollToId nil이라 호출 안 됨 (스크롤 X). 경계 진출 시에만 anchor 위치로 1행 시프트.
             .onChange(of: viewModel.pendingScrollToId) { _, newId in
                 guard let id = newId else { return }
+                let anchor: UnitPoint = viewModel.pendingScrollAnchor == .top ? .top : .bottom
                 withAnimation(.easeInOut(duration: DesignTokens.Animation.scrollFollowDuration)) {
-                    proxy.scrollTo(id, anchor: .center)
+                    proxy.scrollTo(id, anchor: anchor)
                 }
                 viewModel.consumePendingScroll()
             }
@@ -173,7 +172,8 @@ struct HistoryPopover: View {
 
     // Pin 행 — popover.jsx L422-467
     private var pinRow: some View {
-        let selected = viewModel.focusZone == .pin || viewModel.pinSidebarOpen
+        // TASK-018 Phase 8 — focusZone 단일 진실 소스. pinSidebarOpen은 사이드 펼침 상태이며 popover 안 행 selection과 분리. focusZone == .pin 일 때만 selected.
+        let selected = viewModel.focusZone == .pin
         return HStack(spacing: DesignTokens.Spacing.rowInnerGap) {
             Image(systemName: "pin.fill")
                 .font(.system(size: 11, weight: .regular))
@@ -209,11 +209,18 @@ struct HistoryPopover: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
         .contentShape(Rectangle())
         .onHover { isHover in
-            if mode != .method2 {
-                if isHover { viewModel.pinRowHoverEnter() }
-                else { viewModel.pinRowHoverExit() }
+            if mode != .method3 {
+                if isHover {
+                    // TASK-018 Phase 8 — focusZone 단일 진실 소스. hover 진입 시 .pin 으로 변경 → 다른 행(클립·검색·환경설정) 동시 활성 차단.
+                    viewModel.setFocusZone(.pin)
+                    viewModel.pinRowHoverEnter()
+                } else {
+                    viewModel.pinRowHoverExit()
+                }
             }
         }
+        // TASK-018 Phase 7 — 검색·클립·환경설정 행과 동일 좌우 outer inset (hover background 가로 폭 통일).
+        .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
     }
 
     @ViewBuilder
@@ -257,12 +264,19 @@ struct HistoryPopover: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.preferencesRow, style: .continuous))
         .contentShape(Rectangle())
-        .onTapGesture(perform: onOpenSettings)
+        .onTapGesture {
+            guard !isInteractionDisabled else { return }
+            onOpenSettings()
+        }
         .onHover { isHover in
+            guard !isInteractionDisabled else { return }
             if isHover {
                 viewModel.setFocusZone(.settings)
             }
         }
+        .allowsHitTesting(!isInteractionDisabled)
+        // TASK-018 Phase 7 — 검색·클립·Pin 행과 동일 좌우 outer inset (hover background 가로 폭 통일).
+        .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
     }
 }
 

@@ -10,6 +10,8 @@ struct PlainNSTextField: NSViewRepresentable {
     let font: NSFont
     let textColor: NSColor
     let onFocusChange: (Bool) -> Void
+    /// 입력 활성 여부 (TASK-018) — false면 NSTextField가 editable/selectable 모두 비활성 → first responder 진입 차단. 방식 2 popover에서 검색바를 시각만 노출하고 입력 차단하는 용도.
+    var isEnabled: Bool = true
 
     func makeNSView(context: Context) -> FocusTrackingTextField {
         let tf = FocusTrackingTextField()
@@ -26,6 +28,8 @@ struct PlainNSTextField: NSViewRepresentable {
         tf.delegate = context.coordinator
         tf.target = context.coordinator
         tf.action = #selector(Coordinator.commit(_:))
+        tf.isEditable = isEnabled
+        tf.isSelectable = isEnabled
         // becomeFirstResponder 시 onFocusChange(true) 호출 — controlTextDidBeginEditing보다 신뢰성 있음.
         tf.onBecomeFirstResponder = { onFocusChange(true) }
         return tf
@@ -58,6 +62,12 @@ struct PlainNSTextField: NSViewRepresentable {
         }
         if nsView.textColor != textColor {
             nsView.textColor = textColor
+        }
+        if nsView.isEditable != isEnabled {
+            nsView.isEditable = isEnabled
+        }
+        if nsView.isSelectable != isEnabled {
+            nsView.isSelectable = isEnabled
         }
     }
 

@@ -6,10 +6,11 @@ enum Constants {
     static let clipboardPollingInterval: Duration = .milliseconds(500)
 
     // F-007 호출 모델 임계값
-    static let modifierHoldThreshold: Duration = .milliseconds(200)
+    // TASK-018 Phase 6 — hold 200ms → 500ms. 단순 ⌘+key 단축키 조합(⌘C/V/Z 등) 시 사용자가 ⌘를 잠깐 더 누르고 있어도 popover 발동되던 오트리거 방지.
+    static let modifierHoldThreshold: Duration = .milliseconds(500)
     static let modifierDoubleTapInterval: Duration = .milliseconds(300)
     // HotkeyMonitor — NSEvent 글로벌 modifier 감지 (TimeInterval 형식, DispatchQueue async 용)
-    static let hotkeyHoldThresholdSeconds: TimeInterval = 0.2
+    static let hotkeyHoldThresholdSeconds: TimeInterval = 0.5
     static let hotkeyDoubleTapIntervalSeconds: TimeInterval = 0.25
 
     // F-004 Pin 한도
