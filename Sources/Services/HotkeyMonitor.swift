@@ -33,6 +33,7 @@ final class HotkeyMonitor {
 
     func start() async {
         let status = await permissionService.currentStatus()
+        Logger.hotkey.info("HotkeyMonitor.start called — permission status: \(String(describing: status), privacy: .public)")
         guard status == .granted else {
             Logger.hotkey.warning("HotkeyMonitor start skipped — Accessibility 권한 없음 (\(String(describing: status)))")
             return
@@ -50,7 +51,9 @@ final class HotkeyMonitor {
             }
             return event
         }
-        Logger.hotkey.info("HotkeyMonitor started — global + local flagsChanged monitor 등록")
+        let globalOK = globalMonitor != nil
+        let localOK = localMonitor != nil
+        Logger.hotkey.info("HotkeyMonitor started — global: \(globalOK, privacy: .public) local: \(localOK, privacy: .public)")
     }
 
     func stop() {

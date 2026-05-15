@@ -15,6 +15,8 @@ final class Method1Window {
     private var currentAnchorOffsetX: CGFloat = DesignTokens.WindowSize.popoverWidth / 2
     /// popover 안 mouseDown 잡아 검색바 외부 click 시 first responder reset (D-3 outside click deactivate).
     private var localClickMonitor: Any?
+    /// ESC 키 monitor — 검색 활성 상태에서 ESC 누르면 NSTextView consume 전에 가로채 비활성화 (TASK-017 fix-3 v4).
+    private var escapeKeyMonitor: Any?
 
     init(
         viewModel: ClipsViewModel,
@@ -41,16 +43,32 @@ final class Method1Window {
         NSApp.activate(ignoringOtherApps: true)
         panel.orderFrontRegardless()
         panel.makeKey()
-        // panel 자체를 first responder로 — NSTextField가 자동 first responder 가져가는 것 차단.
+        // panel 자체를 first responder로 — NSTextField 자동 first responder 차단 (TASK-016 D-3).
+        // 키 이벤트는 KeyablePanel.keyDown override + keyDownHandler로 처리 (TASK-017 fix-2 — SwiftUI .onKeyPress 의존 X).
         panel.makeFirstResponder(panel)
         outsideClickMonitor.install()
         installLocalClickMonitor()
+        installEscapeKeyMonitor()
+        installKeyDownHandler()
         Logger.ui.info("Method1Window shown — menu bar left click (tracker prev: \(FrontmostAppTracker.shared.previousApp?.bundleIdentifier ?? "nil", privacy: .public))")
+    }
+
+    private func installKeyDownHandler() {
+        PopoverPanel.installKeyDownHandler(
+            panel: panel,
+            viewModel: viewModel,
+            mode: .method1,
+            onDismiss: { [weak self] in self?.hide() },
+            handleClipPaste: { [weak self] idx in
+                await self?.handleClipPaste(at: idx)
+            }
+        )
     }
 
     func hide() {
         outsideClickMonitor.remove()
         removeLocalClickMonitor()
+        removeEscapeKeyMonitor()
         panel.orderOut(nil)
         Logger.ui.info("Method1Window hidden")
     }
@@ -65,6 +83,18 @@ final class Method1Window {
         if let m = localClickMonitor {
             NSEvent.removeMonitor(m)
             localClickMonitor = nil
+        }
+    }
+
+    private func installEscapeKeyMonitor() {
+        removeEscapeKeyMonitor()
+        escapeKeyMonitor = PopoverPanel.installSearchEscapeMonitor(panel: panel, viewModel: viewModel)
+    }
+
+    private func removeEscapeKeyMonitor() {
+        if let m = escapeKeyMonitor {
+            NSEvent.removeMonitor(m)
+            escapeKeyMonitor = nil
         }
     }
 
