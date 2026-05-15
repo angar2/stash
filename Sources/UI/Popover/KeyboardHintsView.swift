@@ -28,7 +28,7 @@ struct KeyboardHintsView: View {
 
     private var hints: [Hint] {
         switch mode {
-        case .method1, .method3:
+        case .method1, .method2:
             return [
                 Hint(id: "move", parts: [.keys(["↑", "↓"]), .or, .keys(["1", "2"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
@@ -37,7 +37,7 @@ struct KeyboardHintsView: View {
                 Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
                 Hint(id: "pin", parts: [.keys(["P"])], label: String(localized: "hint.pin"))
             ]
-        case .method2:
+        case .method3:
             return [
                 Hint(id: "move", parts: [.keys(["⌘↑", "⌘↓"]), .or, .keys(["⌘1", "⌘2"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),

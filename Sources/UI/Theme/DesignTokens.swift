@@ -357,6 +357,9 @@ enum DesignTokens {
 
         // popover 내부 (popover.jsx L282 padding: 6 + L315 wordmark padding 8/12/2 + L329 search container padding 4/6/8)
         static let popoverPadding:        CGFloat = 6
+        /// popover 내부 모든 행(검색·클립·Pin·환경설정)의 *공통* 좌우 outer inset (TASK-018 Phase 7).
+        /// hover 시 background 활성 영역의 가로 폭을 4 영역 모두 일관되게 박는 단일 진실 소스. 검색 박스 영역과 일치.
+        static let rowOuterHorzInset:     CGFloat = 6
         static let wordmarkPaddingTop:    CGFloat = 8
         static let wordmarkPaddingBottom: CGFloat = 2
         static let wordmarkPaddingHorz:   CGFloat = 12
@@ -493,9 +496,11 @@ enum DesignTokens {
     enum WindowSize {
         // popover
         static let popoverWidth:        CGFloat = 380
+        static let popoverHeight:       CGFloat = 520  // 1·2·3 통합 단일 height (TASK-018) — Method1=520·Method2=320·Method3=480 통합
         static let popoverInsetBottom:  CGFloat = 28  // 방식 2/3 우하단 inset
         static let popoverInsetRight:   CGFloat = 28
-        static let clipListMaxHeight:   CGFloat = 312
+        // 312 → 276 (TASK-018 Phase 4) — single-line 행(44) + rowGap(2) × 6행 - 마지막 gap(2) = 274 + 행 외곽 2px 여유. Pin 행이 잘린 마지막 행을 가리던 현상 제거.
+        static let clipListMaxHeight:   CGFloat = 276
 
         // Pin Sidebar
         static let pinSidebarWidth:     CGFloat = 220

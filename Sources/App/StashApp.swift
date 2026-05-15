@@ -29,8 +29,8 @@ struct StashApp: App {
 
     // MARK: - UI controllers (NSStatusItem retain — App lifetime)
     let statusItemController: StatusItemController
-    let method2Window: Method2Window
-    let method3Window: Method3Window
+    /// 1·2·3 호출 방식 통합 popover Window (TASK-018) — Method1/2/3Window 폐기 후 단일 인스턴스.
+    let popoverWindow: PopoverWindow
     let toastQueue: ToastQueue
     let toastWindowController: ToastWindowController
     let permissionToastNotifier: PermissionToastNotifier
@@ -113,32 +113,26 @@ struct StashApp: App {
         )
 
         // ⑧ UI controllers (NSStatusItem retain) — HistoryPopover 호스팅
-        self.statusItemController = StatusItemController(
-            permissionStatusPublisher: permSvc.statusPublisher,
-            clipsViewModel: clipsVM,
-            onOpenSettings: { Self.openSettings() }
-        )
-        let m2 = Method2Window(viewModel: clipsVM)
-        let m3 = Method3Window(
+        // 1·2·3 호출 방식 통합 popover Window (TASK-018). StatusItemController 와 HotkeyMonitor 모두 동일 인스턴스 공유.
+        let popover = PopoverWindow(
             viewModel: clipsVM,
             onOpenSettings: { Self.openSettings() }
         )
-        self.method2Window = m2
-        self.method3Window = m3
+        self.popoverWindow = popover
+        self.statusItemController = StatusItemController(
+            permissionStatusPublisher: permSvc.statusPublisher,
+            popoverWindow: popover
+        )
 
-        // ⑨ HotkeyMonitor callback 연결 — 방식 2/3 진입
+        // ⑨ HotkeyMonitor callback 연결 — 새 방식 2 (⌘ double-tap) 진입만 연결.
+        // TASK-018 Phase 9 — 새 방식 3 (⌘ hold) v1.0 *보류*. 사유: (a) 일반 ⌘+key 단축키 사용 중 의도 안 한 popover 오트리거 사용성 저해, (b) 방식 1/2 popover 열린 상태에서 단축키 입력 시 방식 3 진입으로 전환되어 사용성 저해. 코드 분기(`PopoverWindow.mode == .method3`)는 유지 (미래 부활 가능). onHoldStart/onHoldEnd 콜백 미연결 = 호출 사이트 X.
         let hotkeyMon = self.hotkeyMonitor
-        hotkeyMon.onHoldStart = { [m2, clipsVM] in
+        hotkeyMon.onHoldStart = nil
+        hotkeyMon.onHoldEnd = nil
+        hotkeyMon.onDoubleTap = { [popover, clipsVM] in
             Task { @MainActor in
                 await clipsVM.reload()
-                m2.show()
-            }
-        }
-        hotkeyMon.onHoldEnd = { [m2] in m2.hide() }
-        hotkeyMon.onDoubleTap = { [m3, clipsVM] in
-            Task { @MainActor in
-                await clipsVM.reload()
-                m3.show()
+                popover.show(mode: .method2)
             }
         }
 

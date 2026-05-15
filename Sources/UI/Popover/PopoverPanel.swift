@@ -215,7 +215,7 @@ enum PopoverPanel {
             Task { await viewModel.togglePin(at: viewModel.selectedIdx) }
             return true
         case .expandPinSidebar:
-            guard !viewModel.pinnedClips.isEmpty, mode != .method2 else { return false }
+            guard !viewModel.pinnedClips.isEmpty, mode != .method3 else { return false }
             viewModel.expandPinSidebarImmediately()
             return true
         case .collapsePinSidebar:

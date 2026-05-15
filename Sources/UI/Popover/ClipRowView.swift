@@ -175,7 +175,7 @@ struct ClipRowView: View {
     @ViewBuilder
     private var actionButton: some View {
         if clip.isPinned {
-            // 핀 표시 (방식 2는 표시만, 클릭 X)
+            // 핀 표시 (방식 2는 시각만, 클릭 차단 — TASK-018)
             Image(systemName: "pin.fill")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.accent)
@@ -184,11 +184,11 @@ struct ClipRowView: View {
                 .contentShape(Rectangle())
                 .highPriorityGesture(
                     TapGesture().onEnded {
-                        if mode != .method2 { onTogglePin() }
+                        if mode != .method3 { onTogglePin() }
                     }
                 )
-        } else if mode != .method2 {
-            // 비핀: 선택된 행에서만 X 버튼 노출
+        } else {
+            // 비핀: 선택된 행에서만 X 버튼 노출. 방식 2도 시각 노출하되 클릭 차단 (TASK-018 결정 1-A).
             if visuallySelected {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .semibold))
@@ -197,8 +197,15 @@ struct ClipRowView: View {
                     .background(xHovered ? DesignTokens.Colors.clipDeleteBgHover : deleteBg)
                     .clipShape(Circle())
                     .contentShape(Circle())
-                    .onHover { isHover in xHovered = isHover }
-                    .onTapGesture(perform: onDelete)
+                    .onHover { isHover in
+                        guard mode != .method3 else { return }
+                        xHovered = isHover
+                    }
+                    .onTapGesture {
+                        guard mode != .method3 else { return }
+                        onDelete()
+                    }
+                    .allowsHitTesting(mode != .method3)
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: xHovered)
             } else {
                 Color.clear

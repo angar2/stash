@@ -104,6 +104,16 @@ struct ClipsViewModelTests {
         #expect(vm.isSearchEmptyResult == true)
     }
 
+    @Test("isEmptyState — Pin 만 남고 unpinned 0인 상태도 일반 히스토리 빈 상태 (TASK-018 Phase 5)")
+    func isEmptyStateWithOnlyPinned() async {
+        let pinned = makeClip(body: "pinned-1", pinned: true)
+        let (vm, _) = await makeViewModel(prefilled: [pinned])
+        await vm.reload()
+        #expect(vm.visibleClips.isEmpty == true)  // unpinned 0
+        #expect(vm.pinnedClips.count == 1)
+        #expect(vm.isEmptyState == true)  // 일반 히스토리 빈 → 안내 노출 (Pin 메뉴란은 별도 hasPinned 분기로 유지)
+    }
+
     @Test("delete — 행 제거 후 selectedIdx clamp")
     func deleteAndClamp() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
@@ -142,31 +152,83 @@ struct ClipsViewModelTests {
         #expect(vm.pendingScrollToId == nil)  // hover로는 절대 set 안 됨
     }
 
-    @Test("키보드 moveSelectionDown — pendingScrollToId set")
-    func keyboardMoveDown_SetsPendingScrollToId() async {
+    // TASK-018 Phase 3 — 행 단위 페이징 모델 (visibleRowCount=6 안에선 커서만 이동 / 경계 진출 시에만 시프트)
+
+    @Test("키보드 moveSelectionDown — 가시 영역 안 이동은 pendingScrollToId 미설정 (스크롤 X)")
+    func keyboardMoveDown_InsideVisibleWindow_NoScroll() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
         let (vm, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.moveSelectionDown()
-        #expect(vm.pendingScrollToId == vm.visibleClips[1].id)
+        #expect(vm.selectedIdx == 1)
+        #expect(vm.pendingScrollToId == nil)  // 가시 영역 안 — 스크롤 발생 X
+        #expect(vm.visibleTopIdx == 0)
     }
 
-    @Test("키보드 moveSelectionUp — pendingScrollToId set")
-    func keyboardMoveUp_SetsPendingScrollToId() async {
+    @Test("키보드 moveSelectionDown — 가시 영역 마지막 행에서 한 번 더 ↓ 시 정확히 1행 시프트")
+    func keyboardMoveDown_AtBoundary_ShiftsByOneRow() async {
+        // visibleRowCount=6 → 7개 두고 마지막(idx=5)에서 한 번 더 ↓ 시 idx=6, visibleTopIdx 0→1 시프트.
+        let prefilled = (0..<7).map { makeClip(body: "\($0)") }
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        // selectedIdx=5 (가시 마지막) 직접 도달
+        for _ in 0..<5 { vm.moveSelectionDown() }
+        #expect(vm.selectedIdx == 5)
+        #expect(vm.visibleTopIdx == 0)
+        #expect(vm.pendingScrollToId == nil)
+        // 경계에서 한 번 더 ↓
+        vm.moveSelectionDown()
+        #expect(vm.selectedIdx == 6)
+        #expect(vm.visibleTopIdx == 1)
+        #expect(vm.pendingScrollToId == vm.visibleClips[1].id)
+        #expect(vm.pendingScrollAnchor == .top)
+    }
+
+    @Test("키보드 moveSelectionDown — 리스트 끝 wrap 시 visibleTopIdx 0 + 첫 행 .top")
+    func keyboardMoveDown_WrapsAndResetsTopIdx() async {
+        let prefilled = (0..<3).map { makeClip(body: "\($0)") }
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 2  // 마지막
+        vm.moveSelectionDown()
+        #expect(vm.selectedIdx == 0)
+        #expect(vm.visibleTopIdx == 0)
+        #expect(vm.pendingScrollToId == vm.visibleClips[0].id)
+        #expect(vm.pendingScrollAnchor == .top)
+    }
+
+    @Test("키보드 moveSelectionUp — 가시 영역 안 이동은 pendingScrollToId 미설정")
+    func keyboardMoveUp_InsideVisibleWindow_NoScroll() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
         let (vm, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
-        vm.selectedIdx = 1
+        vm.selectedIdx = 2
         vm.moveSelectionUp()
-        #expect(vm.pendingScrollToId == vm.visibleClips[0].id)
+        #expect(vm.selectedIdx == 1)
+        #expect(vm.pendingScrollToId == nil)
+        #expect(vm.visibleTopIdx == 0)
+    }
+
+    @Test("키보드 moveSelectionUp — 첫 행에서 ↑ wrap 시 visibleTopIdx 끝쪽으로 시프트 + .bottom")
+    func keyboardMoveUp_WrapsToBottom() async {
+        let prefilled = (0..<8).map { makeClip(body: "\($0)") }
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        #expect(vm.selectedIdx == 0)
+        vm.moveSelectionUp()
+        #expect(vm.selectedIdx == 7)
+        #expect(vm.visibleTopIdx == 2)  // count(8) - visibleRowCount(6) = 2
+        #expect(vm.pendingScrollToId == vm.visibleClips[7].id)
+        #expect(vm.pendingScrollAnchor == .bottom)
     }
 
     @Test("consumePendingScroll — id를 nil로 reset")
     func consumePendingScroll_ResetsToNil() async {
-        let prefilled = [makeClip(body: "a"), makeClip(body: "b")]
+        // 경계 진출 시점에서 pendingScrollToId가 set 됨을 보장 + consume 후 nil 검증.
+        let prefilled = (0..<7).map { makeClip(body: "\($0)") }
         let (vm, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
-        vm.moveSelectionDown()
+        for _ in 0..<6 { vm.moveSelectionDown() }
         #expect(vm.pendingScrollToId != nil)
         vm.consumePendingScroll()
         #expect(vm.pendingScrollToId == nil)

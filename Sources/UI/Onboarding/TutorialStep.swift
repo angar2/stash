@@ -1,5 +1,6 @@
-// Onboarding 3단계 — onboarding-toast.jsx OB_Tutorial L144-202 100% 정합
-// 헤더 + 3 카드 (메뉴바 클릭 / ⌘ hold / ⌘ double-tap) + 완료 버튼
+// Onboarding 3단계 — onboarding-toast.jsx OB_Tutorial L144-202 정합
+// 헤더 + 2 카드 (메뉴바 클릭 / ⌘ double-tap) + 완료 버튼.
+// TASK-018 Phase 9 — 새 방식 3 (⌘ hold) v1.0 보류. onboarding 안내에서 제거.
 import SwiftUI
 
 struct TutorialStep: View {
@@ -19,7 +20,7 @@ struct TutorialStep: View {
             }
             .padding(.bottom, 22)
 
-            // 3 카드
+            // 2 카드 — 방식 1 (메뉴바 클릭) / 방식 2 (⌘ double-tap). 방식 3 (⌘ hold) v1.0 보류 (TASK-018 Phase 9).
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
                     keys: String(localized: "onboarding.tutorial.method1.keys"),
@@ -30,11 +31,6 @@ struct TutorialStep: View {
                     keys: String(localized: "onboarding.tutorial.method2.keys"),
                     title: String(localized: "onboarding.tutorial.method2.title"),
                     desc:  String(localized: "onboarding.tutorial.method2.detail")
-                )
-                tutorialCard(
-                    keys: String(localized: "onboarding.tutorial.method3.keys"),
-                    title: String(localized: "onboarding.tutorial.method3.title"),
-                    desc:  String(localized: "onboarding.tutorial.method3.detail")
                 )
             }
             .padding(.bottom, 22)
