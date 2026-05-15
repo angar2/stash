@@ -138,6 +138,11 @@ enum DesignTokens {
             light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.10),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.10)
         )
+        /// X 버튼 hover 시 배경 — baseline opacity 0.10 → 0.22 (시각 피드백).
+        static let clipDeleteBgHover = Color(
+            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.22),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.22)
+        )
         // 선택된 행의 X 아이콘
         static let clipDeleteIcon = Color(
             light: Color(red: 13/255, green: 111/255, blue: 255/255),
@@ -152,6 +157,11 @@ enum DesignTokens {
         static let searchDeleteAllLabel = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.30),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.35)
+        )
+        /// 전체 삭제 버튼 hover 시 — opacity 진해짐 (시각 피드백).
+        static let searchDeleteAllLabelHover = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.65),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
         )
 
         // ─── Pin Sidebar 헤더 ────────────────────────────────────────
@@ -562,6 +572,15 @@ enum DesignTokens {
         // popover fade
         static let popoverFadeIn: TimeInterval = 0.18
         static let popoverFadeOut: TimeInterval = 0.12
+
+        // 키보드 nav 시 ScrollView가 selected 행을 anchor: .center로 follow하는 duration
+        static let scrollFollowDuration: TimeInterval = 0.10
+
+        // 클립 행 selection / flash 그라데이션 fade — popover.jsx L344 transition: "all 0.12s"
+        static let clipRowSelectionFade: TimeInterval = 0.12
+
+        // popover dismiss 후 destination 앱 활성화 안정 대기 — NSRunningApplication.activate가 비동기 frontmost 전환을 유발해 ⌘V CGEvent가 새 frontmost에 도달할 시간 필요
+        static let appActivationDelay: TimeInterval = 0.05  // 50ms
 
         // Toast TTL
         static let toastTTLDefault: TimeInterval = 3.0

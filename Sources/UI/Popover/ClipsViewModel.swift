@@ -18,8 +18,13 @@ final class ClipsViewModel {
     var pinSidebarOpen: Bool = false      // Pin 사이드 펼침 여부
     var pinHoverActive: Bool = false      // Pin 행 hover 상태
     var pinSelectedIdx: Int = 0           // Pin 사이드바 안 선택 idx
+    /// 키보드 nav (↑↓·1·2)로 selectedIdx 변경 시만 set — ScrollView가 anchor: .center로 follow.
+    /// hover로 변경 시 nil 유지 → onHover 무한 스크롤 루프 차단 (Bug 1 fix).
+    var pendingScrollToId: UUID? = nil
     private var pinExpandTask: Task<Void, Never>?
     private var pinCloseTask: Task<Void, Never>?
+    /// popover 열림 직후 짧은 시간 동안 hover (setFocusZone) 무시 — 마우스가 검색바/클립 위에 이미 있어도 자동 활성 차단.
+    private var ignoreHoverUntil: Date = .distantPast
 
     // MARK: - Dependencies
     private let repository: any ClipRepository
@@ -85,23 +90,41 @@ final class ClipsViewModel {
 
     // MARK: - Navigation
     func moveSelectionDown() {
-        let count = visibleClips.count
+        let list = visibleClips
+        let count = list.count
         guard count > 0 else { return }
         focusZone = .clip
         selectedIdx = (selectedIdx + 1) % count
+        pendingScrollToId = list[selectedIdx].id  // 키보드 nav → ScrollView follow 신호
     }
 
     func moveSelectionUp() {
-        let count = visibleClips.count
+        let list = visibleClips
+        let count = list.count
         guard count > 0 else { return }
         focusZone = .clip
         selectedIdx = (selectedIdx - 1 + count) % count
+        pendingScrollToId = list[selectedIdx].id  // 키보드 nav → ScrollView follow 신호
     }
 
+    /// hover 시 호출 — selectedIdx만 갱신, pendingScrollToId 미설정 (스크롤 루프 차단).
+    /// 검색 input 활성화 단계 2 (cursor)는 hover로 해제 X — click 트리거에서만 해제 (지크 요구).
+    /// popover 열림 직후 200ms 동안 hover 무시 (자동 활성 차단).
     func setSelectedIdx(_ idx: Int) {
+        if isHoverIgnored { return }
         guard idx >= 0 && idx < visibleClips.count else { return }
         focusZone = .clip
         selectedIdx = idx
+    }
+
+    /// popover 열림 직후 ignoreHoverUntil 시점 전에는 true — hover 자동 활성 차단.
+    private var isHoverIgnored: Bool {
+        Date() < ignoreHoverUntil
+    }
+
+    /// HistoryPopover ScrollView가 follow 완료 후 호출 — 다음 키보드 nav까지 nil 유지.
+    func consumePendingScroll() {
+        pendingScrollToId = nil
     }
 
     func enterSearchZone() {
@@ -109,8 +132,11 @@ final class ClipsViewModel {
         searchInputActive = false
     }
 
-    /// hover 시 focusZone 자동 변경 (popover.jsx L329 / L470 정합)
+    /// hover 시 focusZone 자동 변경 (popover.jsx L329 / L470 정합).
+    /// 검색 input 활성화 단계 2 (cursor)는 hover로 해제 X — *click* 트리거에서만 해제 (지크 요구).
+    /// popover 열림 직후 200ms는 hover 무시 — 마우스가 검색바 위에 미리 있어도 비활성 상태 유지.
     func setFocusZone(_ zone: FocusZone) {
+        if isHoverIgnored { return }
         if focusZone != zone {
             focusZone = zone
         }
@@ -119,6 +145,28 @@ final class ClipsViewModel {
     func activateSearchInput() {
         focusZone = .search
         searchInputActive = true
+    }
+
+    /// popover 열림 시 호출 — 초기 상태 reset (focusZone=.clip + selectedIdx=0 + searchInputActive=false + searchQuery 비움).
+    /// 사용자가 popover 열 때마다 가장 최신 클립이 선택 커서로 활성된 상태.
+    /// 마우스가 검색바 위에 이미 있어도 200ms 동안 hover 무시 — 자동 활성 차단.
+    func resetForOpen() {
+        focusZone = .clip
+        selectedIdx = 0
+        searchInputActive = false
+        searchQuery = ""
+        pinSidebarOpen = false
+        pinHoverActive = false
+        pendingScrollToId = nil
+        ignoreHoverUntil = Date().addingTimeInterval(0.2)
+    }
+
+    /// 외부 클릭 등으로 TextField focus를 잃었을 때 호출 — searchInputActive만 해제 (검색어 / focusZone 보존).
+    /// `deactivateSearchInputAndClear()`와 분리 — 본 메서드는 검색어 보존이 핵심.
+    func deactivateSearchInput() {
+        if searchInputActive {
+            searchInputActive = false
+        }
     }
 
     /// ESC 1번 동작 — 인풋 해제 + 검색어 리셋 + focusZone="search" 유지

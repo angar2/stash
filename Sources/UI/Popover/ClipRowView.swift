@@ -14,6 +14,7 @@ struct ClipRowView: View {
     let onDelete: () -> Void
 
     @State private var hovering: Bool = false
+    @State private var xHovered: Bool = false
 
     private var isMultiline: Bool {
         (clip.body ?? "").contains("\n") || (clip.body ?? "").count > 50
@@ -25,10 +26,15 @@ struct ClipRowView: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
-            typeIconArea
-            content
-            Spacer(minLength: 4)
-            timeLabel
+            HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
+                typeIconArea
+                content
+                Spacer(minLength: 4)
+                timeLabel
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onClick)
+
             actionButton
         }
         .padding(.horizontal, DesignTokens.Spacing.rowPaddingMultiH)
@@ -37,14 +43,14 @@ struct ClipRowView: View {
         .background(rowBackground)
         .overlay(rowBorder)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
+        // hover 영역 명시 — outer 전체 (padding 포함, 시각 파란색 영역과 일치) 잡도록.
         .contentShape(Rectangle())
         .onHover { isHover in
             hovering = isHover
             if isHover { onHover() }
         }
-        .onTapGesture(perform: onClick)
-        .animation(.easeInOut(duration: 0.12), value: visuallySelected)
-        .animation(.easeInOut(duration: 0.12), value: isFlashing)
+        .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: visuallySelected)
+        .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: isFlashing)
     }
 
     // MARK: - Type icon
@@ -71,10 +77,10 @@ struct ClipRowView: View {
                         .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
                 )
         case .text, .file:
-            // 14×14 라인 아이콘 (file=폴더 / text=3선)
+            // 14×14 라인 아이콘 — file 타입은 *폴더 vs 파일* sub-분기 (TASK-016 D-7/D-8 fix v3, FileManager isDirectory 검사로 DB 모델 변경 X)
             ZStack {
                 if clip.type == .file {
-                    Image(systemName: "folder")
+                    Image(systemName: isFileADirectory ? "folder" : "doc")
                         .font(.system(size: 12, weight: .regular))
                 } else {
                     Image(systemName: "text.alignleft")
@@ -84,6 +90,15 @@ struct ClipRowView: View {
             .foregroundStyle(typeIconColor)
             .frame(width: DesignTokens.WindowSize.clipTypeIconArea, alignment: .center)
         }
+    }
+
+    /// .file 클립의 path가 폴더인지 일반 파일인지 — fileOriginalPath 우선, 없으면 filePath fallback. 둘 다 없으면 false (doc 아이콘).
+    private var isFileADirectory: Bool {
+        let path = clip.fileOriginalPath ?? clip.filePath
+        guard let path else { return false }
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
+        return exists && isDir.boolValue
     }
 
     private var typeIconColor: SwiftUI.Color {
@@ -155,32 +170,36 @@ struct ClipRowView: View {
         return "\(days)\(String(localized: "time.suffix.days"))"
     }
 
-    // MARK: - Action button (Pin or X)
+    // MARK: - Action button (Pin or X) — Bug 2 fix v4
+    // hit-test 영역 분리 (body의 outer/inner HStack 구조)에 더해 X·Pin에 .highPriorityGesture로 자식 우선권 명시 (이중 안전망).
     @ViewBuilder
     private var actionButton: some View {
         if clip.isPinned {
-            // 핀 표시 (선택 시만 클릭 가능 / 방식 2는 표시만)
-            Button(action: { if mode != .method2 { onTogglePin() } }) {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(DesignTokens.Colors.accent)
-                    .rotationEffect(.degrees(45))  // 곧은 압정 메타포 (시각 보강)
-            }
-            .buttonStyle(.plain)
-            .disabled(mode == .method2)
+            // 핀 표시 (방식 2는 표시만, 클릭 X)
+            Image(systemName: "pin.fill")
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(DesignTokens.Colors.accent)
+                .rotationEffect(.degrees(45))  // 곧은 압정 메타포
+                .frame(width: DesignTokens.WindowSize.clipActionSize, height: DesignTokens.WindowSize.clipActionSize)
+                .contentShape(Rectangle())
+                .highPriorityGesture(
+                    TapGesture().onEnded {
+                        if mode != .method2 { onTogglePin() }
+                    }
+                )
         } else if mode != .method2 {
             // 비핀: 선택된 행에서만 X 버튼 노출
             if visuallySelected {
-                Button(action: onDelete) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(deleteIconColor)
-                }
-                .buttonStyle(.plain)
-                .frame(width: DesignTokens.WindowSize.clipActionSize, height: DesignTokens.WindowSize.clipActionSize)
-                .background(deleteBg)
-                .clipShape(Circle())
-                .transition(.opacity)
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(deleteIconColor)
+                    .frame(width: DesignTokens.WindowSize.clipActionSize, height: DesignTokens.WindowSize.clipActionSize)
+                    .background(xHovered ? DesignTokens.Colors.clipDeleteBgHover : deleteBg)
+                    .clipShape(Circle())
+                    .contentShape(Circle())
+                    .onHover { isHover in xHovered = isHover }
+                    .onTapGesture(perform: onDelete)
+                    .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: xHovered)
             } else {
                 Color.clear
                     .frame(width: DesignTokens.WindowSize.clipActionSize, height: DesignTokens.WindowSize.clipActionSize)

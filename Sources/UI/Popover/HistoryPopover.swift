@@ -9,6 +9,9 @@ struct HistoryPopover: View {
     let mode: PopoverInvocationMode
     let onOpenSettings: () -> Void
     let onDismiss: () -> Void
+    /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
+    /// HistoryPopover는 idx만 전달하면 Window 측이 hide → restore → sleep → viewModel.paste 순서 보장.
+    let handleClipPaste: @MainActor (Int) async -> Void
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
 
     private var isFull: Bool { mode != .method2 }
@@ -20,12 +23,14 @@ struct HistoryPopover: View {
         mode: PopoverInvocationMode,
         onOpenSettings: @escaping () -> Void,
         onDismiss: @escaping () -> Void,
+        handleClipPaste: @escaping @MainActor (Int) async -> Void,
         anchorOffsetX: CGFloat? = nil
     ) {
         self.viewModel = viewModel
         self.mode = mode
         self.onOpenSettings = onOpenSettings
         self.onDismiss = onDismiss
+        self.handleClipPaste = handleClipPaste
         self.anchorOffsetX = anchorOffsetX
     }
 
@@ -52,6 +57,9 @@ struct HistoryPopover: View {
         .padding(DesignTokens.Spacing.popoverPadding)
         // NSVisualEffectView가 panel.contentView 레벨에서 base blur + vibrancy 100% 담당. SwiftUI body는 완전 투명.
         .background(Color.clear)
+        // Bug 3-2 fix v2 — popover 빈 영역 클릭으로 deactivateSearchInput 박았던 .background { Color.clear.onTapGesture }
+        // 패턴은 자식 view 클릭을 모두 흡수하는 부작용이 있어 제거. 자동 해제는 setFocusZone 진입 시 처리 (hover 경로).
+        // 빈 영역 클릭 deactivate는 별도 NSEvent 모니터로 우회 검토 — 본 task 범위 밖.
         .task { await viewModel.reload() }
         .onKeyPress(.upArrow) {
             viewModel.moveSelectionUp()
@@ -66,7 +74,9 @@ struct HistoryPopover: View {
                 viewModel.activateSearchInput()
                 return .handled
             }
-            Task { await viewModel.paste(at: viewModel.selectedIdx) }
+            // Bug 4·5 fix — Enter paste도 dismiss + 이전 앱 복원 흐름 적용 (Window 측 handleClipPaste).
+            let idx = viewModel.selectedIdx
+            Task { @MainActor in await handleClipPaste(idx) }
             return .handled
         }
         .onKeyPress(.escape) {
@@ -153,7 +163,7 @@ struct HistoryPopover: View {
                             isFocused: viewModel.focusZone == .clip,
                             isFlashing: clip.id == viewModel.flashedClipId,
                             mode: mode,
-                            onClick: { Task { await viewModel.paste(at: idx) } },
+                            onClick: { Task { @MainActor in await handleClipPaste(idx) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화
                             onHover: { viewModel.setSelectedIdx(idx) },
                             onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
                             onDelete: { Task { await viewModel.delete(at: idx) } }
@@ -164,12 +174,13 @@ struct HistoryPopover: View {
                 .padding(.horizontal, 2)
             }
             .frame(maxHeight: DesignTokens.WindowSize.clipListMaxHeight)
-            .onChange(of: viewModel.selectedIdx) { _, newIdx in
-                let list = visibleClips
-                guard newIdx >= 0 && newIdx < list.count else { return }
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    proxy.scrollTo(list[newIdx].id, anchor: .center)
+            // Bug 1 fix — 키보드 nav (↑↓·1·2) 만 ScrollView follow 트리거. hover는 selectedIdx만 갱신해 무한 스크롤 루프 차단.
+            .onChange(of: viewModel.pendingScrollToId) { _, newId in
+                guard let id = newId else { return }
+                withAnimation(.easeInOut(duration: DesignTokens.Animation.scrollFollowDuration)) {
+                    proxy.scrollTo(id, anchor: .center)
                 }
+                viewModel.consumePendingScroll()
             }
         }
     }
