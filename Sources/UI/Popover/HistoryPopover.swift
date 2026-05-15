@@ -61,64 +61,8 @@ struct HistoryPopover: View {
         // 패턴은 자식 view 클릭을 모두 흡수하는 부작용이 있어 제거. 자동 해제는 setFocusZone 진입 시 처리 (hover 경로).
         // 빈 영역 클릭 deactivate는 별도 NSEvent 모니터로 우회 검토 — 본 task 범위 밖.
         .task { await viewModel.reload() }
-        .onKeyPress(.upArrow) {
-            viewModel.moveSelectionUp()
-            return .handled
-        }
-        .onKeyPress(.downArrow) {
-            viewModel.moveSelectionDown()
-            return .handled
-        }
-        .onKeyPress(.return) {
-            if viewModel.focusZone == .search && !viewModel.searchInputActive {
-                viewModel.activateSearchInput()
-                return .handled
-            }
-            // Bug 4·5 fix — Enter paste도 dismiss + 이전 앱 복원 흐름 적용 (Window 측 handleClipPaste).
-            let idx = viewModel.selectedIdx
-            Task { @MainActor in await handleClipPaste(idx) }
-            return .handled
-        }
-        .onKeyPress(.escape) {
-            if viewModel.searchInputActive {
-                viewModel.deactivateSearchInputAndClear()
-                return .handled
-            }
-            if viewModel.pinSidebarOpen {
-                viewModel.collapsePinSidebar()
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress(.rightArrow) {
-            if !viewModel.pinnedClips.isEmpty && mode != .method2 {
-                viewModel.expandPinSidebarImmediately()
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress(.leftArrow) {
-            if viewModel.pinSidebarOpen {
-                viewModel.collapsePinSidebar()
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress("1") {
-            guard !viewModel.searchInputActive else { return .ignored }
-            viewModel.moveSelectionUp()
-            return .handled
-        }
-        .onKeyPress("2") {
-            guard !viewModel.searchInputActive else { return .ignored }
-            viewModel.moveSelectionDown()
-            return .handled
-        }
-        .onKeyPress("p") {
-            guard !viewModel.searchInputActive else { return .ignored }
-            Task { await viewModel.togglePin(at: viewModel.selectedIdx) }
-            return .handled
-        }
+        // 단축키 처리: SwiftUI .onKeyPress가 NSPanel(.nonactivatingPanel) 환경에서 발화 안 해
+        // KeyablePanel.keyDown override + PopoverPanel.installKeyDownHandler에서 PopoverHotkey enum 매칭으로 처리 (TASK-017).
     }
 
     // MARK: - Arrow tail (방식 1 only) — popover.jsx L301-310 정합

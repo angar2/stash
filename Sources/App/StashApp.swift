@@ -34,6 +34,10 @@ struct StashApp: App {
     let toastQueue: ToastQueue
     let toastWindowController: ToastWindowController
     let permissionToastNotifier: PermissionToastNotifier
+    /// 권한 변경 시 hotkeyMonitor 자동 start/stop — App lifetime 보관 (구독 유지).
+    let permissionMonitorBridge: AnyCancellable
+    /// NSWorkspace 앱 활성화 감지 시 권한 recheck — 사용자가 시스템 설정에서 권한 부여 후 다른 앱으로 돌아올 때 자동 감지 (TASK-017 fix-3).
+    let permissionRefresherObserver: NSObjectProtocol
 
     init() {
         // ① Persistence — 가장 안쪽부터 (ARCHITECTURE §9-4 step 2-3)
@@ -136,6 +140,35 @@ struct StashApp: App {
                 await clipsVM.reload()
                 m3.show()
             }
+        }
+
+        // ⑨-2 권한 변경 시 hotkeyMonitor 자동 재시작 (TASK-017 Phase 2-A) —
+        // 권한 부여 *전* 상태였으면 init 1회 start()가 skip됨. 이후 사용자가 권한 부여해도 재시작 트리거 없음 → 영원히 미동작.
+        // statusPublisher 구독해서 .granted 변경 시 start, .denied/.unknown 변경 시 stop. start()는 stop() 선행 호출로 멱등.
+        self.permissionMonitorBridge = permSvc.statusPublisher
+            .receive(on: RunLoop.main)
+            .sink { [hotkeyMon] status in
+                Task { @MainActor in
+                    switch status {
+                    case .granted:
+                        Logger.hotkey.info("Permission status changed → granted — hotkeyMonitor 자동 start")
+                        await hotkeyMon.start()
+                    case .denied, .unknown:
+                        Logger.hotkey.info("Permission status changed → \(String(describing: status), privacy: .public) — hotkeyMonitor 자동 stop")
+                        hotkeyMon.stop()
+                    }
+                }
+            }
+
+        // ⑨-3 권한 변경 감지 트리거 (TASK-017 fix-3) — stash는 LSUIElement=true (메뉴바 상주)라 background.
+        // 사용자가 시스템 설정에서 Accessibility 권한 부여 후 시스템 설정을 닫고 다른 앱으로 돌아올 때 NSWorkspace.didActivateApplicationNotification 발화.
+        // 그 시점에 permSvc.recheck() 호출 → status .denied → .granted 변경 감지 → publisher emit → bridge → hotkeyMon.start() 자동.
+        self.permissionRefresherObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [permSvc] _ in
+            Task { await permSvc.recheck() }
         }
 
         // ⑧ Startup — async 작업은 Task로 위임 (ARCHITECTURE §9-4 step 8-9)

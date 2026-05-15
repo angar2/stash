@@ -23,6 +23,18 @@ final class Method2Window {
     func show() {
         PopoverPanel.positionAtBottomRight(panel)
         panel.orderFrontRegardless()
+        // key window 활성화 — SwiftUI .onKeyPress가 키 이벤트 받으려면 panel이 key window여야 함 (TASK-017 Phase 3).
+        panel.makeKey()
+        // KeyablePanel.keyDownHandler 셋업 — AppKit 단 키 직접 처리 (TASK-017 fix-2).
+        PopoverPanel.installKeyDownHandler(
+            panel: panel,
+            viewModel: viewModel,
+            mode: .method2,
+            onDismiss: { [weak self] in self?.hide() },
+            handleClipPaste: { [weak self] idx in
+                await self?.handleClipPaste(at: idx)
+            }
+        )
         Logger.ui.info("Method2Window shown — ⌘ hold (tracker prev: \(FrontmostAppTracker.shared.previousApp?.bundleIdentifier ?? "nil", privacy: .public))")
     }
 
