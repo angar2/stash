@@ -3,16 +3,14 @@ import AppKit
 import SwiftUI
 import OSLog
 
-/// popover 안 단축키 정의 — 키코드 + modifier 조합의 단일 진실 소스 (TASK-017).
-/// FEATURES §4 정합 + 사용자 결정 (방식 1/2/3 통일): 모든 행 조작 단축키 ⌘ 부여. Enter/ESC만 단독 (예외).
+/// popover 안 단축키 정의 — 키코드 + modifier 조합의 단일 진실 소스 (TASK-017 / TASK-021).
+/// FEATURES §4 정합 + 사용자 결정: 행 조작 단축키 중 방향키(↑/↓)·Enter·ESC만 단독, 나머지는 ⌘ 부여.
 /// PopoverPanel.installKeyDownHandler가 본 enum을 순회 매칭 → dispatch 분기.
 enum PopoverHotkey: CaseIterable {
-    case moveSelectionUp        // ⌘+↑
-    case moveSelectionDown      // ⌘+↓
-    case moveSelectionUpAlias   // ⌘+1
-    case moveSelectionDownAlias // ⌘+2
+    case moveSelectionUp        // ↑ 단독 (TASK-021)
+    case moveSelectionDown      // ↓ 단독 (TASK-021)
     case togglePin              // ⌘+P
-    case togglePinSidebar       // ⌘+B (TASK-019 — 이전 ⌘+→/⌘+← 분리 단축키 → 단일 토글 단축키로 통합. FEATURES §3-7 / §4 12항)
+    case togglePinSidebar       // ⌘+B (TASK-019 — 이전 ⌘+→/⌘+← 분리 단축키 → 단일 토글 단축키로 통합. FEATURES §3-7 / §4 9항)
     case deleteOne              // ⌘+⌫
     case deleteAll              // ⌥+⌘+⌫
     case deleteAllAlias         // ⌘+⇧+⌫
@@ -25,8 +23,6 @@ enum PopoverHotkey: CaseIterable {
         switch self {
         case .moveSelectionUp: return 126        // ↑
         case .moveSelectionDown: return 125      // ↓
-        case .moveSelectionUpAlias: return 18    // 1
-        case .moveSelectionDownAlias: return 19  // 2
         case .togglePin: return 35               // P
         case .togglePinSidebar: return 11        // B
         case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
@@ -39,16 +35,15 @@ enum PopoverHotkey: CaseIterable {
     /// meaningful modifier 조합 (.command/.shift/.option/.control 4개만). .numericPad/.function 제외.
     var modifiers: NSEvent.ModifierFlags {
         switch self {
-        case .moveSelectionUp, .moveSelectionDown,
-             .moveSelectionUpAlias, .moveSelectionDownAlias,
-             .togglePin, .togglePinSidebar,
+        case .togglePin, .togglePinSidebar,
              .deleteOne, .paste:
             return [.command]
         case .deleteAllAlias:
             return [.command, .shift]
         case .deleteAll:
             return [.command, .option]
-        case .activateSearch, .escape:
+        case .moveSelectionUp, .moveSelectionDown,
+             .activateSearch, .escape:
             return []
         }
     }
@@ -197,10 +192,10 @@ enum PopoverPanel {
         handleClipPaste: @escaping @MainActor (Int) async -> Void
     ) -> Bool {
         switch hotkey {
-        case .moveSelectionUp, .moveSelectionUpAlias:
+        case .moveSelectionUp:
             viewModel.moveSelectionUp()
             return true
-        case .moveSelectionDown, .moveSelectionDownAlias:
+        case .moveSelectionDown:
             viewModel.moveSelectionDown()
             return true
         case .togglePin:

@@ -30,7 +30,7 @@ struct KeyboardHintsView: View {
         switch mode {
         case .method1, .method2:
             return [
-                Hint(id: "move", parts: [.keys(["↑", "↓"]), .or, .keys(["1", "2"])], label: String(localized: "hint.move")),
+                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
                 Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
                 Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
@@ -38,7 +38,7 @@ struct KeyboardHintsView: View {
             ]
         case .method3:
             return [
-                Hint(id: "move", parts: [.keys(["⌘↑", "⌘↓"]), .or, .keys(["⌘1", "⌘2"])], label: String(localized: "hint.move")),
+                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
                 Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
                 Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
