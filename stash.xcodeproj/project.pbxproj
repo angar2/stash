@@ -25,7 +25,6 @@
 		2264E02173A4268697E04849 /* MockHotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD8201294C23DEA833C7D45 /* MockHotkeyRegistrar.swift */; };
 		26781DFB5698CDE637621A4C /* MockPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 583712D469E1F3ED4752F149 /* MockPasteboard.swift */; };
 		2ABF903E87B2F72810F07CAE /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC60EF7B873B2BB39EB01BD9 /* PermissionService.swift */; };
-		7628F93E703943E699757412 /* FrontmostAppTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3C95732CA940568F832697 /* FrontmostAppTracker.swift */; };
 		C6ADC4B02B46472586A2D144 /* PlainNSTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F80FE7237142D5889644C8 /* PlainNSTextField.swift */; };
 		C46AA21EDECA43639DA26864 /* KeyCapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68F53E3FEBB345388DD7C99C /* KeyCapView.swift */; };
 		3248A6FA6E90FEAA7DBFDDFC /* Clip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF515538B2714E20FDDBCC8B /* Clip.swift */; };
@@ -206,7 +205,6 @@
 		B923EDBE5786A27FC11377E1 /* HotkeyMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitorTests.swift; sourceTree = "<group>"; };
 		BB0BF56AE76BBD5260707B92 /* UNNotificationCenterImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNNotificationCenterImpl.swift; sourceTree = "<group>"; };
 		BC60EF7B873B2BB39EB01BD9 /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
-		7E3C95732CA940568F832697 /* FrontmostAppTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontmostAppTracker.swift; sourceTree = "<group>"; };
 		65F80FE7237142D5889644C8 /* PlainNSTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainNSTextField.swift; sourceTree = "<group>"; };
 		68F53E3FEBB345388DD7C99C /* KeyCapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCapView.swift; sourceTree = "<group>"; };
 		BF515538B2714E20FDDBCC8B /* Clip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clip.swift; sourceTree = "<group>"; };
@@ -435,7 +433,6 @@
 				8FB8D2E5A9C6027D6DE14A32 /* NotificationService.swift */,
 				DD6CBE35FD72D968EEF91175 /* PasteService.swift */,
 				BC60EF7B873B2BB39EB01BD9 /* PermissionService.swift */,
-				7E3C95732CA940568F832697 /* FrontmostAppTracker.swift */,
 				6EFFEA3BA0BB94B320D24BA5 /* SMLoginItemRegistrar.swift */,
 				3FB7C47C462D260CBAC144F0 /* SystemPasteboard.swift */,
 				BB0BF56AE76BBD5260707B92 /* UNNotificationCenterImpl.swift */,
@@ -738,7 +735,6 @@
 				11778AE91B463DCB6853667D /* Pasteboard.swift in Sources */,
 				4ADA8D20C0D12EDEAAE39746 /* PermissionError.swift in Sources */,
 				2ABF903E87B2F72810F07CAE /* PermissionService.swift in Sources */,
-				7628F93E703943E699757412 /* FrontmostAppTracker.swift in Sources */,
 				10C22A53AA58557C7D390FDC /* PermissionStatus.swift in Sources */,
 				6DBA7441BFAC6D8322F2D04D /* PermissionStep.swift in Sources */,
 				D2D9EC2BD4302203DC9FC6A8 /* PermissionToastNotifier.swift in Sources */,

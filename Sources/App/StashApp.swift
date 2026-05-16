@@ -102,9 +102,6 @@ struct StashApp: App {
         let onboardingVM = OnboardingViewModel(permissionService: permSvc)
         self.onboardingViewModel = onboardingVM
 
-        // ⑥-2 FrontmostAppTracker 즉시 초기화 — 앱 lifetime 내내 직전 frontmost 앱을 추적해 paste 시 destination 복원에 사용 (TASK-016 Bug 5 fix v3).
-        _ = FrontmostAppTracker.shared
-
         // ⑦ Permission 토스트 + 시스템 알림 발행자
         self.permissionToastNotifier = PermissionToastNotifier(
             publisher: permSvc.statusPublisher,
