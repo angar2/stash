@@ -1,8 +1,12 @@
-// Pin 사이드 메뉴 — popover.jsx L539-602 100% 정합 (220 width / Liquid Glass / "Pin 목록 · N" UPPERCASE 헤더 + 항목 36 height)
+// Pin 사이드 메뉴 — popover.jsx L539-602 100% 정합 + TASK-019 fix 2차 (ClipRowView 재사용)
+// 220 width / Liquid Glass / "Pin 목록 · N" UPPERCASE 헤더 + 항목은 본체 클립 행과 동일 ClipRowView 형태
 import SwiftUI
 
 struct PinSidebarView: View {
     @Bindable var viewModel: ClipsViewModel
+    let mode: PopoverInvocationMode
+    /// 핀 항목 *paste* 시 호출 — PopoverWindow.handleClipPaste 흐름과 동일 (dismiss → frontmost 복원 → sleep → paste).
+    let handleClipPaste: @MainActor (Int) async -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -10,7 +14,38 @@ struct PinSidebarView: View {
             ScrollView {
                 LazyVStack(spacing: DesignTokens.Spacing.rowGap) {
                     ForEach(Array(viewModel.pinnedClips.enumerated()), id: \.element.id) { idx, clip in
-                        pinItem(clip: clip, idx: idx)
+                        // TASK-019 fix 2차 — 본체 ClipRowView 컴포넌트 그대로 사용 (타입 아이콘 + 본문 + 핀해제 버튼).
+                        // TASK-019 fix 3차 — showTimeLabel: false 박아 시간 영역 제거 (220 너비 안 본문 truncate 완화 — B8).
+                        ClipRowView(
+                            clip: clip,
+                            isSelected: viewModel.pinSelectedIdx == idx,
+                            isFocused: viewModel.focusZone == .pin,
+                            isFlashing: viewModel.flashedClipId == clip.id,
+                            mode: mode,
+                            showTimeLabel: false,
+                            onClick: {
+                                // 클릭 시 paste 흐름 — focusZone=.pin 보장 후 handleClipPaste 호출.
+                                viewModel.focusZone = .pin
+                                viewModel.pinSelectedIdx = idx
+                                Task { @MainActor in
+                                    await handleClipPaste(idx)
+                                }
+                            },
+                            onHover: {
+                                // hover 시 pinSelectedIdx 갱신 — 키보드 nav와 동일 cursor 위치.
+                                viewModel.setPinSelectedIdx(idx)
+                            },
+                            onTogglePin: {
+                                // 핀해제 (파란 압정 아이콘 클릭) — id 기반 unpin 호출.
+                                Task { @MainActor in
+                                    await viewModel.togglePin(id: clip.id, trackSelection: .pin)
+                                }
+                            },
+                            onDelete: {
+                                // 핀 항목 행 우측은 항상 pin.fill 아이콘 분기라 onDelete 호출 X.
+                                // (clip.isPinned == true 이므로 ClipRowView 의 X 아이콘 분기 진입 X)
+                            }
+                        )
                     }
                     if viewModel.pinnedClips.isEmpty {
                         Text(String(localized: "pin.sidebar.empty"))
@@ -20,6 +55,7 @@ struct PinSidebarView: View {
                             .padding(.vertical, 20)
                     }
                 }
+                .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
             }
         }
         .padding(DesignTokens.Spacing.pinSidebarPadding)
@@ -35,38 +71,14 @@ struct PinSidebarView: View {
     }
 
     private var header: some View {
+        // TASK-019 fix 3차 — `textCase(.uppercase)` 제거 (B9). "Pin 목록 · N" 원형 표시.
         Text(String(localized: "pin.sidebar.title") + " · \(viewModel.pinnedClips.count)")
             .font(DesignTokens.Typography.pinSidebarHeader)
-            .tracking(0.8)  // 0.08em
-            .textCase(.uppercase)
+            .tracking(0.4)
             .foregroundStyle(DesignTokens.Colors.pinSidebarHeader)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DesignTokens.Spacing.pinRowPaddingHorz)
             .padding(.top, DesignTokens.Spacing.pinSidebarHeaderPadTop)
             .padding(.bottom, DesignTokens.Spacing.pinSidebarHeaderPadBottom)
-    }
-
-    private func pinItem(clip: Clip, idx: Int) -> some View {
-        let isSelected = viewModel.focusZone == .pin && viewModel.pinSelectedIdx == idx
-        return HStack(spacing: DesignTokens.Spacing.pinSidebarItemGap) {
-            Image(systemName: "pin.fill")
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(DesignTokens.Colors.accent)
-                .rotationEffect(.degrees(45))
-            Text(firstLine(clip.body ?? ""))
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(DesignTokens.Colors.labelPrimary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, DesignTokens.Spacing.pinSidebarItemPadH)
-        .frame(height: DesignTokens.Spacing.pinSidebarItemHeight)
-        .background(isSelected ? AnyShapeStyle(LinearGradient(colors: [DesignTokens.Colors.clipRowSelectionTop, DesignTokens.Colors.clipRowSelectionBottom], startPoint: .top, endPoint: .bottom)) : AnyShapeStyle(Color.clear))
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pinSidebarItem, style: .continuous))
-    }
-
-    private func firstLine(_ s: String) -> String {
-        s.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? s
     }
 }

@@ -24,6 +24,10 @@ final class PopoverWindow {
     /// ESC 키 monitor — 검색 활성 상태에서 ESC를 NSTextView consume 전 가로채 비활성화 (TASK-017 fix-3 v4). 방식 1·3만 설치.
     private var escapeKeyMonitor: Any?
 
+    /// Pin 사이드바 별도 floating panel — popover 좌측에 분리 노출 (TASK-019 fix). 단일 인스턴스 재사용.
+    private let pinSidebarPanel: KeyablePanel
+    private let pinSidebarVisualEffect: NSVisualEffectView
+
     init(
         viewModel: ClipsViewModel,
         onOpenSettings: @MainActor @escaping () -> Void
@@ -36,6 +40,44 @@ final class PopoverWindow {
         )
         self.panel = p
         self.visualEffectView = ve
+        // TASK-019 — Pin 사이드바 별도 NSPanel. popover 좌측 floating. height 는 PinSidebarView 의 자연 사이즈를 따르되 popover height 상한.
+        let (sp, sve) = PopoverPanel.make(
+            width: DesignTokens.WindowSize.pinSidebarWidth,
+            height: DesignTokens.WindowSize.popoverHeight
+        )
+        self.pinSidebarPanel = sp
+        self.pinSidebarVisualEffect = sve
+
+        // ClipsViewModel.pinSidebarOpen 변경 콜백 등록 — true → show / false → hide.
+        viewModel.onPinSidebarOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            if isOpen {
+                self.showPinSidebar()
+            } else {
+                self.hidePinSidebar()
+            }
+        }
+        // pinnedClips count 변화 콜백 — 사이드바 열려있으면 panel size 재조정.
+        viewModel.onPinnedClipsChange = { [weak self] in
+            guard let self, self.viewModel.pinSidebarOpen else { return }
+            self.resizePinSidebarPanel()
+        }
+    }
+
+    /// TASK-019 fix 2차 — pinnedClips count 변화 시 panel size 재조정 (bottom-aligned 유지).
+    private func resizePinSidebarPanel() {
+        guard pinSidebarPanel.isVisible else { return }
+        let popoverFrame = panel.frame
+        let gap = DesignTokens.Spacing.pinSidebarGap
+        let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
+        let sidebarHeight = computePinSidebarHeight()
+        let originX = popoverFrame.origin.x - gap - sidebarWidth
+        let originY = popoverFrame.origin.y  // bottom-aligned
+        pinSidebarPanel.setFrame(
+            NSRect(x: originX, y: originY, width: sidebarWidth, height: sidebarHeight),
+            display: true,
+            animate: false
+        )
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -63,9 +105,71 @@ final class PopoverWindow {
             removeLocalClickMonitor()
             removeEscapeKeyMonitor()
         }
+        // Pin 사이드바도 동반 닫음 (popover 닫히면 사이드바 단독 노출 의미 없음).
+        if viewModel.pinSidebarOpen {
+            viewModel.collapsePinSidebar()  // didSet → hidePinSidebar()
+        } else {
+            hidePinSidebar()  // 안전망 — pinSidebarOpen=false 인데 패널만 떠 있는 비정상 상태 정리.
+        }
         panel.orderOut(nil)
         Logger.ui.info("PopoverWindow hidden — mode=\(String(describing: mode), privacy: .public)")
         currentMode = nil
+    }
+
+    // MARK: - Pin 사이드바 별도 패널 (TASK-019 fix)
+
+    private func showPinSidebar() {
+        // popover 좌측 외부 — popover.origin.x - gap - sidebar.width. y는 popover.origin.y (bottom-aligned).
+        guard panel.isVisible, let mode = currentMode else {
+            Logger.ui.warning("showPinSidebar called while popover hidden — skip")
+            return
+        }
+        // hosting rebuild — 매 show마다 fresh SwiftUI tree (pinnedClips 변화 반영). mode + handleClipPaste 전달.
+        _ = PopoverPanel.mount(
+            PinSidebarView(
+                viewModel: viewModel,
+                mode: mode,
+                handleClipPaste: { [weak self] idx in
+                    await self?.handleClipPaste(at: idx)
+                }
+            ),
+            in: pinSidebarVisualEffect
+        )
+
+        let popoverFrame = panel.frame
+        let gap = DesignTokens.Spacing.pinSidebarGap
+        let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
+        let sidebarHeight = computePinSidebarHeight()
+        let originX = popoverFrame.origin.x - gap - sidebarWidth
+        // bottom-aligned — popover 바닥과 사이드바 바닥 일치.
+        let originY = popoverFrame.origin.y
+        // TASK-019 fix 3차 — display:true + animate:false 박아 panel size 즉시 redraw (B6 — 첫 show 옛 size 잔존 차단).
+        pinSidebarPanel.setFrame(
+            NSRect(x: originX, y: originY, width: sidebarWidth, height: sidebarHeight),
+            display: true,
+            animate: false
+        )
+        pinSidebarPanel.orderFrontRegardless()
+        Logger.ui.info("Pin sidebar panel shown — origin=(\(originX, privacy: .public),\(originY, privacy: .public)) h=\(sidebarHeight, privacy: .public)")
+    }
+
+    /// TASK-019 — Pin 사이드바 동적 height 계산. pinnedClips count 기반 + 본체 popoverHeight 미만 상한.
+    /// 모든 상수는 `DesignTokens.Spacing` 으로 분리 (`pinSidebarHeaderHeight` / `pinSidebarHeightSafety` / `pinSidebarHeightBottomMargin`).
+    /// ClipRowView 의 실제 single-line 행 height = `rowMinHeight + rowGap`. multiline 시 ScrollView 내부 스크롤이 흡수.
+    private func computePinSidebarHeight() -> CGFloat {
+        let itemH = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap
+        let outerPad = DesignTokens.Spacing.pinSidebarPadding * 2 + DesignTokens.Spacing.pinSidebarHeightSafety
+        let count = max(1, viewModel.pinnedClips.count)
+        let contentH = DesignTokens.Spacing.pinSidebarHeaderHeight + CGFloat(count) * itemH + outerPad
+        let upperBound = DesignTokens.WindowSize.popoverHeight - DesignTokens.Spacing.pinSidebarHeightBottomMargin
+        return min(contentH, upperBound)
+    }
+
+    private func hidePinSidebar() {
+        if pinSidebarPanel.isVisible {
+            pinSidebarPanel.orderOut(nil)
+            Logger.ui.info("Pin sidebar panel hidden")
+        }
     }
 
     // MARK: - 내부 표시 흐름

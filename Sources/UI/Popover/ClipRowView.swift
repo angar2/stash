@@ -8,6 +8,8 @@ struct ClipRowView: View {
     let isFocused: Bool      // focusZone === "clip" 일 때만 시각 활성
     let isFlashing: Bool
     let mode: PopoverInvocationMode
+    /// 시간 라벨 표시 여부 — Pin 사이드바(220 너비) 안에서는 false 박아 본문 truncate 완화 (TASK-019 fix 3차 B8).
+    var showTimeLabel: Bool = true
     let onClick: () -> Void
     let onHover: () -> Void
     let onTogglePin: () -> Void
@@ -15,6 +17,8 @@ struct ClipRowView: View {
 
     @State private var hovering: Bool = false
     @State private var xHovered: Bool = false
+    /// TASK-019 fix 4차 — 핀 아이콘 hover state. 본체 + Pin 사이드바 양쪽 동일 (사용자 결정).
+    @State private var pinHovered: Bool = false
 
     private var isMultiline: Bool {
         (clip.body ?? "").contains("\n") || (clip.body ?? "").count > 50
@@ -30,7 +34,9 @@ struct ClipRowView: View {
                 typeIconArea
                 content
                 Spacer(minLength: 4)
-                timeLabel
+                if showTimeLabel {
+                    timeLabel
+                }
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: onClick)
@@ -175,18 +181,26 @@ struct ClipRowView: View {
     @ViewBuilder
     private var actionButton: some View {
         if clip.isPinned {
-            // 핀 표시 (방식 2는 시각만, 클릭 차단 — TASK-018)
+            // 핀 표시 — *visuallySelected 무관 항상 표시* (X 아이콘과 차별점). 방식 2는 시각만, 클릭 차단 (TASK-018).
+            // TASK-019 fix 4차 — hover 시 원형 배경 (X 아이콘과 동일 패턴, 사용자 결정).
             Image(systemName: "pin.fill")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.accent)
                 .rotationEffect(.degrees(45))  // 곧은 압정 메타포
                 .frame(width: DesignTokens.WindowSize.clipActionSize, height: DesignTokens.WindowSize.clipActionSize)
-                .contentShape(Rectangle())
+                .background(pinHovered ? DesignTokens.Colors.clipDeleteBgHover : Color.clear)
+                .clipShape(Circle())
+                .contentShape(Circle())
+                .onHover { isHover in
+                    guard mode != .method3 else { return }
+                    pinHovered = isHover
+                }
                 .highPriorityGesture(
                     TapGesture().onEnded {
                         if mode != .method3 { onTogglePin() }
                     }
                 )
+                .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: pinHovered)
         } else {
             // 비핀: 선택된 행에서만 X 버튼 노출. 방식 2도 시각 노출하되 클릭 차단 (TASK-018 결정 1-A).
             if visuallySelected {

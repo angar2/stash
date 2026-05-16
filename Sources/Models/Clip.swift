@@ -14,6 +14,8 @@ struct Clip: Identifiable, Codable, Sendable {
     var isPinned: Bool
     let createdAt: Date
     var lastUsedAt: Date
+    /// 핀 처리 시점 (TASK-019) — `isPinned=false → true` 시 `Date()` 박힘 / `true → false` 시 `nil`. Pin 사이드바 정렬 기준 (최근 핀 우선). 기존 init 호출 사이트 영향 X — 기본값 nil.
+    var pinnedAt: Date? = nil
 }
 
 extension Clip: FetchableRecord, PersistableRecord {
@@ -31,5 +33,6 @@ extension Clip: FetchableRecord, PersistableRecord {
         case isPinned = "is_pinned"
         case createdAt = "created_at"
         case lastUsedAt = "last_used_at"
+        case pinnedAt = "pinned_at"
     }
 }
