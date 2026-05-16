@@ -12,6 +12,8 @@ final class GRDBClipRepository: ClipRepository {
         self.dbQueue = try DatabaseQueue(path: dbPath.path)
         var migrator = DatabaseMigrator()
         V1_InitialSchema.register(in: &migrator)
+        V2_DedupSameBody.register(in: &migrator)
+        V3_AddPinnedAt.register(in: &migrator)
         try migrator.migrate(dbQueue)
         Logger.database.info("GRDBClipRepository 초기화 완료 — \(dbPath.lastPathComponent)")
     }
@@ -22,7 +24,7 @@ final class GRDBClipRepository: ClipRepository {
         Logger.database.debug("fetchAll — 시작")
         let clips = try await dbQueue.read { db in
             try Clip
-                .order(Column("is_pinned").desc, Column("last_used_at").desc)
+                .order(Column("last_used_at").desc)
                 .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
                 .fetchAll(db)
         }
@@ -46,13 +48,13 @@ final class GRDBClipRepository: ClipRepository {
         let clips = try await dbQueue.read { db in
             if query.isEmpty {
                 return try Clip
-                    .order(Column("is_pinned").desc, Column("last_used_at").desc)
+                    .order(Column("last_used_at").desc)
                     .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
                     .fetchAll(db)
             }
             return try Clip
                 .filter(Column("body").like("%\(query)%"))
-                .order(Column("is_pinned").desc, Column("last_used_at").desc)
+                .order(Column("last_used_at").desc)
                 .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
                 .fetchAll(db)
         }
@@ -83,8 +85,10 @@ final class GRDBClipRepository: ClipRepository {
                 }
             }
             clip.isPinned.toggle()
+            // TASK-019 — 핀 시점 기록. isPinned=true 면 now / false 면 nil. Pin 사이드바 정렬(최근 핀 우선) 기준.
+            clip.pinnedAt = clip.isPinned ? Date() : nil
             try clip.update(db)
-            Logger.database.debug("togglePin — isPinned: \(clip.isPinned)")
+            Logger.database.debug("togglePin — isPinned: \(clip.isPinned) pinnedAt: \(clip.pinnedAt?.description ?? "nil")")
         }
     }
 
@@ -125,6 +129,8 @@ final class GRDBClipRepository: ClipRepository {
             let newQueue = try DatabaseQueue(path: dbPath.path)
             var migrator = DatabaseMigrator()
             V1_InitialSchema.register(in: &migrator)
+            V2_DedupSameBody.register(in: &migrator)
+            V3_AddPinnedAt.register(in: &migrator)
             try migrator.migrate(newQueue)
             dbQueue = newQueue
             Logger.database.info("recoverFromCorruption 완료 — 백업: \(backupPath)")
@@ -136,6 +142,22 @@ final class GRDBClipRepository: ClipRepository {
     // MARK: - Private helpers
 
     private func performInsert(_ clip: Clip, in db: Database) throws {
+        // TASK-019 — 동일 (type, body) 텍스트 클립 dedup. 기존 row 의 last_used_at 갱신 + 새 row 추가 X.
+        // image / file 은 file_path UUID 라 자연 중복 X — dedup 안 함.
+        if clip.type == .text, let body = clip.body {
+            if let existingId = try UUID.fetchOne(
+                db,
+                sql: "SELECT id FROM clips WHERE type = ? AND body = ? LIMIT 1",
+                arguments: [clip.type.rawValue, body]
+            ) {
+                try db.execute(
+                    sql: "UPDATE clips SET last_used_at = ? WHERE id = ?",
+                    arguments: [clip.lastUsedAt, existingId]
+                )
+                Logger.database.debug("performInsert — dedup hit, updated last_used_at for existing id: \(existingId)")
+                return
+            }
+        }
         try clip.insert(db)
     }
 

@@ -12,8 +12,7 @@ enum PopoverHotkey: CaseIterable {
     case moveSelectionUpAlias   // ⌘+1
     case moveSelectionDownAlias // ⌘+2
     case togglePin              // ⌘+P
-    case expandPinSidebar       // ⌘+→
-    case collapsePinSidebar     // ⌘+←
+    case togglePinSidebar       // ⌘+B (TASK-019 — 이전 ⌘+→/⌘+← 분리 단축키 → 단일 토글 단축키로 통합. FEATURES §3-7 / §4 12항)
     case deleteOne              // ⌘+⌫
     case deleteAll              // ⌥+⌘+⌫
     case deleteAllAlias         // ⌘+⇧+⌫
@@ -30,8 +29,7 @@ enum PopoverHotkey: CaseIterable {
         case .moveSelectionUpAlias: return 18    // 1
         case .moveSelectionDownAlias: return 19  // 2
         case .togglePin: return 35               // P
-        case .expandPinSidebar: return 124       // →
-        case .collapsePinSidebar: return 123     // ←
+        case .togglePinSidebar: return 11        // B
         case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
         case .paste, .pop: return 9              // V
         case .activateSearch: return 36          // Enter (return)
@@ -44,7 +42,7 @@ enum PopoverHotkey: CaseIterable {
         switch self {
         case .moveSelectionUp, .moveSelectionDown,
              .moveSelectionUpAlias, .moveSelectionDownAlias,
-             .togglePin, .expandPinSidebar, .collapsePinSidebar,
+             .togglePin, .togglePinSidebar,
              .deleteOne, .paste:
             return [.command]
         case .pop, .deleteAllAlias:
@@ -212,29 +210,34 @@ enum PopoverPanel {
             viewModel.moveSelectionDown()
             return true
         case .togglePin:
-            Task { await viewModel.togglePin(at: viewModel.selectedIdx) }
+            // TASK-019 — focusZone == .pin 이면 *pinnedClips 안 항목 unpin*. .clip 이면 본체 toggle.
+            if viewModel.focusZone == .pin {
+                let pinIdx = viewModel.pinSelectedIdx
+                if pinIdx >= 0 && pinIdx < viewModel.pinnedClips.count {
+                    let targetId = viewModel.pinnedClips[pinIdx].id
+                    Task { await viewModel.togglePin(id: targetId, trackSelection: .pin) }
+                }
+            } else {
+                Task { await viewModel.togglePin(at: viewModel.selectedIdx) }
+            }
             return true
-        case .expandPinSidebar:
-            guard !viewModel.pinnedClips.isEmpty, mode != .method3 else { return false }
-            viewModel.expandPinSidebarImmediately()
-            return true
-        case .collapsePinSidebar:
-            guard viewModel.pinSidebarOpen else { return false }
-            viewModel.collapsePinSidebar()
+        case .togglePinSidebar:
+            // TASK-019 — ⌘+B 단일 토글 단축키. 빈 핀 상태에서 togglePinSidebar() 내부 가드로 no-op. 방식 3 (보류) 차단.
+            guard mode != .method3 else { return false }
+            viewModel.togglePinSidebar()
             return true
         case .deleteOne:
-            Task { await viewModel.delete(at: viewModel.selectedIdx) }
+            Task { await viewModel.delete(at: viewModel.activeIdx) }
             return true
         case .deleteAll, .deleteAllAlias:
             Task { await viewModel.deleteAllExceptPinned() }
             return true
         case .paste:
-            let idx = viewModel.selectedIdx
-            Task { @MainActor in await handleClipPaste(idx) }
+            Task { @MainActor in await handleClipPaste(viewModel.activeIdx) }
             return true
         case .pop:
             // pop = dismiss → frontmost 복원 → sleep → viewModel.pop (paste + delete)
-            let idx = viewModel.selectedIdx
+            let idx = viewModel.activeIdx
             Task { @MainActor in
                 onDismiss()
                 if let prev = FrontmostAppTracker.shared.previousApp {

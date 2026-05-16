@@ -14,14 +14,16 @@ struct InMemoryClipRepositoryTests {
         #expect(result.isEmpty)
     }
 
-    @Test func fetchAllSortedPinnedFirst() async throws {
+    @Test func fetchAllSortedByLastUsedAtIgnoringPin() async throws {
+        // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만. 핀 우선 정렬 제거 (핀 토글 시 행 위치 변동 X).
         let repo = InMemoryClipRepository()
-        let unpinned = ClipFixture.makeText(body: "unpinned", isPinned: false)
-        let pinned = ClipFixture.makeText(body: "pinned", isPinned: true)
-        try await repo.insert(unpinned)
-        try await repo.insert(pinned)
+        let pinnedOlder = ClipFixture.makeText(body: "pinned-older", isPinned: true, lastUsedAt: Date(timeIntervalSinceNow: -100))
+        let unpinnedNewer = ClipFixture.makeText(body: "unpinned-newer", isPinned: false, lastUsedAt: Date(timeIntervalSinceNow: -10))
+        try await repo.insert(pinnedOlder)
+        try await repo.insert(unpinnedNewer)
         let result = try await repo.fetchAll()
-        #expect(result.first?.isPinned == true)
+        // 정렬 = last_used_at DESC 만 → 시간 더 최근인 unpinned 가 first (핀 우선 정렬이었으면 pinned 가 first).
+        #expect(result.first?.body == "unpinned-newer")
     }
 
     @Test func fetchAllSortedByLastUsedAt() async throws {

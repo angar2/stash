@@ -14,7 +14,9 @@ struct HistoryPopover: View {
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
 
     private var hasPinned: Bool { !viewModel.pinnedClips.isEmpty }
-    private var visibleClips: [Clip] { viewModel.filteredClips.filter { !$0.isPinned } }
+    // TASK-019 fix 6차 — `filter { !$0.isPinned }` 제거. 핀 항목도 본체 일반 히스토리에 *시간순 자연 노출* (FEATURES F-002 / §3-4 정합).
+    // TASK-015 에서 박힌 줄. fix 1~5차 동안 ClipsViewModel.visibleClips 만 보면서 못 잡았던 root cause.
+    private var visibleClips: [Clip] { viewModel.visibleClips }
     /// 방식 2 — 검색·환경설정·전체 삭제 등 일체 인터랙션 차단 (TASK-018, 결정 1-A).
     private var isInteractionDisabled: Bool { mode == .method3 }
 
@@ -116,12 +118,11 @@ struct HistoryPopover: View {
                 .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
             }
             .frame(maxHeight: DesignTokens.WindowSize.clipListMaxHeight)
-            // TASK-018 Phase 3 — 행 단위 페이징. 가시 영역 안 커서 이동은 pendingScrollToId nil이라 호출 안 됨 (스크롤 X). 경계 진출 시에만 anchor 위치로 1행 시프트.
+            // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.
             .onChange(of: viewModel.pendingScrollToId) { _, newId in
                 guard let id = newId else { return }
-                let anchor: UnitPoint = viewModel.pendingScrollAnchor == .top ? .top : .bottom
                 withAnimation(.easeInOut(duration: DesignTokens.Animation.scrollFollowDuration)) {
-                    proxy.scrollTo(id, anchor: anchor)
+                    proxy.scrollTo(id)
                 }
                 viewModel.consumePendingScroll()
             }
@@ -190,6 +191,8 @@ struct HistoryPopover: View {
                 .background(DesignTokens.Colors.pinRowBadgeBg)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             Spacer()
+            // TASK-019 — Pin 사이드바 토글 단축키 안내 키캡. mode == .method3 (보류) 시도 시각만 노출 (단축키 자체 차단).
+            pinRowShortcutKeycap("⌘B")
             Image(systemName: viewModel.pinSidebarOpen ? "chevron.left" : "chevron.right")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(DesignTokens.Colors.pinRowHeader.opacity(0.6))
@@ -219,6 +222,7 @@ struct HistoryPopover: View {
                 }
             }
         }
+        // TASK-019 fix 2차 — Pin Row 클릭 토글 *제거* (사용자 결정 M1). 트리거는 hover 200ms + ⌘B 단축키 2가지만.
         // TASK-018 Phase 7 — 검색·클립·환경설정 행과 동일 좌우 outer inset (hover background 가로 폭 통일).
         .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
     }
@@ -233,6 +237,23 @@ struct HistoryPopover: View {
         } else {
             Color.clear
         }
+    }
+
+    // Pin Row 우측 단축키 안내 키캡 (TASK-019) — DesignTokens 의 키캡 토큰 통합.
+    private func pinRowShortcutKeycap(_ label: String) -> some View {
+        Text(label)
+            .font(DesignTokens.Typography.pinRowKeycap)
+            .foregroundStyle(DesignTokens.Colors.pinRowHeader.opacity(0.7))
+            .padding(.horizontal, DesignTokens.Spacing.keycapPaddingHorz)
+            .padding(.vertical, DesignTokens.Spacing.keycapPaddingVert)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.pinRowKeycap, style: .continuous)
+                    .fill(DesignTokens.Colors.pinRowKeycapBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.pinRowKeycap, style: .continuous)
+                    .stroke(DesignTokens.Colors.divider, lineWidth: DesignTokens.Spacing.keycapStrokeWidth)
+            )
     }
 
     // 환경설정 행 — popover.jsx L470-497 (톱니 + "환경설정" only / 휴지통 X)

@@ -125,6 +125,11 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
         )
+        // Pin Row 우측 단축키 안내 키캡 배경 — TASK-019
+        static let pinRowKeycapBg = Color(
+            light: Color.white.opacity(0.6),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.06)
+        )
 
         // ─── 환경설정 행 색 ──────────────────────────────────────────
         static let preferencesRow = Color(
@@ -314,6 +319,8 @@ enum DesignTokens {
         static let timeMeta        = Font.system(size: 10.5, weight: .medium)
         // 키캡
         static let keycap          = Font.system(size: 9, weight: .semibold, design: .monospaced)
+        // Pin Row 우측 단축키 안내 키캡 — TASK-019 (hint bar keycap 보다 약간 큰 ⌘B 표시)
+        static let pinRowKeycap    = Font.system(size: 10, weight: .semibold, design: .monospaced)
         // 힌트 라벨
         static let hintLabel       = Font.system(size: 9.5, weight: .medium)
         // 빈 상태 큰 제목
@@ -400,13 +407,22 @@ enum DesignTokens {
         static let hintsLabelMarginLeft:   CGFloat = 2
 
         // Pin Sidebar (popover.jsx L539-595)
-        static let pinSidebarGap:          CGFloat = 10  // popover 왼쪽 간격
+        static let pinSidebarGap:          CGFloat = 2   // popover 왼쪽 간격 (TASK-019 fix 6차 — 10 → 2, 사용자 요구)
         static let pinSidebarPadding:      CGFloat = 6
         static let pinSidebarHeaderPadTop: CGFloat = 8
         static let pinSidebarHeaderPadBottom: CGFloat = 6
         static let pinSidebarItemHeight:   CGFloat = 36
         static let pinSidebarItemPadH:     CGFloat = 10
         static let pinSidebarItemGap:      CGFloat = 8
+        // Pin sidebar 동적 height 계산 상수 (TASK-019 fix 2차 ~ 6차 — `PopoverWindow.computePinSidebarHeight`)
+        static let pinSidebarHeaderHeight: CGFloat = 32  // 헤더 ("Pin 목록 · N") 영역 height
+        static let pinSidebarHeightSafety: CGFloat = 20  // outer padding 위에 추가 안전 여유
+        static let pinSidebarHeightBottomMargin: CGFloat = 40  // popoverHeight 와의 최소 간격 (사이드바가 본체보다 항상 작게)
+
+        // 단축키 키캡 (Pin Row 우측 `⌘B` 안내 등 — TASK-019)
+        static let keycapPaddingHorz:      CGFloat = 5
+        static let keycapPaddingVert:      CGFloat = 1
+        static let keycapStrokeWidth:      CGFloat = 0.5
 
         // 빈 상태 (popover.jsx L386-406)
         static let emptyPaddingTop:        CGFloat = 48
@@ -460,6 +476,8 @@ enum DesignTokens {
         static let preferencesRow:  CGFloat = 8
         // 키캡 — popover.jsx L42
         static let keycap:          CGFloat = 3.5
+        // Pin Row 우측 단축키 안내 키캡 — TASK-019
+        static let pinRowKeycap:    CGFloat = 4
         // 검색 box — popover.jsx L341
         static let searchBox:       CGFloat = 10
         // Pin Sidebar 항목 — popover.jsx L583
@@ -586,6 +604,9 @@ enum DesignTokens {
 
         // popover dismiss 후 destination 앱 활성화 안정 대기 — NSRunningApplication.activate가 비동기 frontmost 전환을 유발해 ⌘V CGEvent가 새 frontmost에 도달할 시간 필요
         static let appActivationDelay: TimeInterval = 0.05  // 50ms
+
+        // popover 열림 직후 짧은 시간 hover 무시 — 마우스가 검색바/클립 위에 이미 있어도 자동 활성 차단 (TASK-016 D-3).
+        static let popoverOpenHoverIgnoreDelay: TimeInterval = 0.2  // 200ms
 
         // Toast TTL
         static let toastTTLDefault: TimeInterval = 3.0

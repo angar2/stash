@@ -7,18 +7,22 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
     var enforceMaxHistorySizeEnabled: Bool = true
 
     func fetchAll() async throws -> [Clip] {
+        // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만 (`is_pinned DESC` 제거). GRDBClipRepository 정합.
         Array(
             clips
-                .sorted {
-                    if $0.isPinned != $1.isPinned { return $0.isPinned }
-                    return $0.lastUsedAt > $1.lastUsedAt
-                }
+                .sorted { $0.lastUsedAt > $1.lastUsedAt }
                 .prefix(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
         )
     }
 
     @discardableResult
     func insert(_ clip: Clip) async throws -> [Clip] {
+        // TASK-019 fix 5차 — 동일 (type=text, body) dedup. 기존 row 의 lastUsedAt 갱신 + 새 row 추가 X. image/file 은 dedup 안 함.
+        if clip.type == .text, let body = clip.body,
+           let existingIdx = clips.firstIndex(where: { $0.type == .text && $0.body == body }) {
+            clips[existingIdx].lastUsedAt = clip.lastUsedAt
+            return []
+        }
         clips.append(clip)
         guard enforceMaxHistorySizeEnabled else { return [] }
         let unpinned = clips.filter { !$0.isPinned }.sorted { $0.lastUsedAt < $1.lastUsedAt }
@@ -32,10 +36,8 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
     func search(query: String) async throws -> [Clip] {
         if query.isEmpty { return try await fetchAll() }
         let matched = clips.filter { $0.body?.localizedCaseInsensitiveContains(query) == true }
-        return matched.sorted {
-            if $0.isPinned != $1.isPinned { return $0.isPinned }
-            return $0.lastUsedAt > $1.lastUsedAt
-        }
+        // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만 (`is_pinned DESC` 제거).
+        return matched.sorted { $0.lastUsedAt > $1.lastUsedAt }
     }
 
     func updateLastUsedAt(id: UUID) async throws {
@@ -52,6 +54,8 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
             }
         }
         clips[index].isPinned.toggle()
+        // TASK-019 — 핀 시점 기록 (GRDBClipRepository 정합).
+        clips[index].pinnedAt = clips[index].isPinned ? Date() : nil
     }
 
     @discardableResult
