@@ -104,13 +104,20 @@ struct HotkeyMonitorTests {
 @Suite("PopoverHotkey")
 struct PopoverHotkeyTests {
     /// keyCode + modifiers 매핑이 FEATURES §4 사양과 일치하는지 검증.
-    @Test("⌘+↑ keyCode=126 modifiers=[.command]")
-    func upArrow_matchesCommandUp() {
+    @Test("↑ 단독 keyCode=126 modifiers=[] (TASK-021)")
+    func upArrow_matchesPlainUp() {
         #expect(PopoverHotkey.moveSelectionUp.keyCode == 126)
-        #expect(PopoverHotkey.moveSelectionUp.modifiers == [.command])
+        #expect(PopoverHotkey.moveSelectionUp.modifiers == [])
+    }
+
+    @Test("↓ 단독 keyCode=125 modifiers=[] (TASK-021)")
+    func downArrow_matchesPlainDown() {
+        #expect(PopoverHotkey.moveSelectionDown.keyCode == 125)
+        #expect(PopoverHotkey.moveSelectionDown.modifiers == [])
     }
 
     // TASK-020 — pop (⌘⇧V) 단축키 폐기로 pop_matchesCommandShiftV 케이스 삭제.
+    // TASK-021 — moveSelectionUpAlias / moveSelectionDownAlias (⌘+1 / ⌘+2) enum 폐기로 alias 검증 케이스 삭제.
 
     @Test("⌥+⌘+⌫ keyCode=51 modifiers=[.command,.option] (deleteAll)")
     func deleteAll_matchesOptionCommandDelete() {
@@ -130,14 +137,14 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.escape.modifiers == [])
     }
 
-    /// 방향키 키 자동 .numericPad/.function modifier가 매칭에 영향 X 검증 (TASK-017 fix-2 회귀 방지).
-    @Test("matches — 방향키 .numericPad+.function modifier 자동 박혀도 ⌘+↑ 매칭 OK")
+    /// 방향키 키 자동 .numericPad/.function modifier가 매칭에 영향 X 검증 (TASK-017 fix-2 회귀 방지, TASK-021 정합).
+    @Test("matches — 방향키 .numericPad+.function modifier 자동 박혀도 ↑ 단독 매칭 OK")
     func matches_ignoresNumericPadAndFunctionModifiers() {
-        // ⌘+↑ event 시뮬레이션 — modifierFlags에 .command + .numericPad + .function 박힘
+        // ↑ event 시뮬레이션 — modifierFlags에 .numericPad + .function 박힘 (modifier-less 방향키)
         let event = NSEvent.keyEvent(
             with: .keyDown,
             location: .zero,
-            modifierFlags: [.command, .numericPad, .function],
+            modifierFlags: [.numericPad, .function],
             timestamp: 0,
             windowNumber: 0,
             context: nil,
