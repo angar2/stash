@@ -17,7 +17,6 @@ enum PopoverHotkey: CaseIterable {
     case deleteAll              // ⌥+⌘+⌫
     case deleteAllAlias         // ⌘+⇧+⌫
     case paste                  // ⌘+V
-    case pop                    // ⌘+⇧+V
     case activateSearch         // Enter 단독 (예외 — macOS 표준 검색 활성화)
     case escape                 // ESC 단독 (예외 — macOS 표준 닫기/취소)
 
@@ -31,7 +30,7 @@ enum PopoverHotkey: CaseIterable {
         case .togglePin: return 35               // P
         case .togglePinSidebar: return 11        // B
         case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
-        case .paste, .pop: return 9              // V
+        case .paste: return 9                    // V
         case .activateSearch: return 36          // Enter (return)
         case .escape: return 53                  // ESC
         }
@@ -45,7 +44,7 @@ enum PopoverHotkey: CaseIterable {
              .togglePin, .togglePinSidebar,
              .deleteOne, .paste:
             return [.command]
-        case .pop, .deleteAllAlias:
+        case .deleteAllAlias:
             return [.command, .shift]
         case .deleteAll:
             return [.command, .option]
@@ -155,13 +154,8 @@ enum PopoverPanel {
         sourceLabel: String,
         hide: () -> Void
     ) async {
+        // TASK-020 — NSApp.activate / prev.activate 호출 모두 제거. 외부 앱이 frontmost 유지 상태라 별도 activate 단계 없이 panel hide + sleep + viewModel.paste만으로 정확 paste 보장.
         hide()
-        if let prev = FrontmostAppTracker.shared.previousApp {
-            prev.activate(options: [])
-            Logger.ui.info("\(sourceLabel, privacy: .public): restored frontmost app \(prev.bundleIdentifier ?? "unknown", privacy: .public) before paste")
-        } else {
-            Logger.ui.warning("\(sourceLabel, privacy: .public): tracker.previousApp is nil — paste will go to current frontmost")
-        }
         try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
         await viewModel.paste(at: idx)
     }
@@ -234,18 +228,6 @@ enum PopoverPanel {
             return true
         case .paste:
             Task { @MainActor in await handleClipPaste(viewModel.activeIdx) }
-            return true
-        case .pop:
-            // pop = dismiss → frontmost 복원 → sleep → viewModel.pop (paste + delete)
-            let idx = viewModel.activeIdx
-            Task { @MainActor in
-                onDismiss()
-                if let prev = FrontmostAppTracker.shared.previousApp {
-                    prev.activate(options: [])
-                }
-                try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
-                await viewModel.pop(at: idx)
-            }
             return true
         case .activateSearch:
             // Enter 단독 — focusZone=.search & 비활성 시만 활성화. 그 외는 NSTextField로 흐름.

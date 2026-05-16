@@ -254,29 +254,7 @@ final class ClipsViewModel {
         }
     }
 
-    func pop(at idx: Int) async {
-        let clip: Clip
-        if focusZone == .pin {
-            guard idx >= 0 && idx < pinnedClips.count else { return }
-            clip = pinnedClips[idx]
-        } else {
-            let list = visibleClips
-            guard idx >= 0 && idx < list.count else { return }
-            clip = list[idx]
-        }
-        do {
-            try await pasteService.paste(clip: clip, mode: pasteMode)
-            if !clip.isPinned {
-                _ = try? await repository.delete(id: clip.id)
-                await reload()
-            } else {
-                Logger.ui.info("Pop on pinned clip — silent fallback to paste only")
-            }
-            triggerPasteFlash(for: clip.id)
-        } catch {
-            Logger.ui.error("ClipsViewModel.pop error: \(error.localizedDescription, privacy: .public)")
-        }
-    }
+    // TASK-020 — pop(at:) 함수 제거 (⌘⇧V 단축키·기능 일괄 폐기로 호출처 0건).
 
     /// TASK-019 fix 2차 — 본체 클립 선택 상태에서 토글. 정렬 변동(is_pinned DESC)으로 같은 클립이 다른 idx로 이동하므로 토글 후 `selectedIdx`를 같은 id의 새 idx로 갱신 (B1 fix).
     func togglePin(at idx: Int) async {

@@ -5,7 +5,6 @@ import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
     static let paste = Self("stash.paste")
-    static let pop = Self("stash.pop")
     static let pinToggle = Self("stash.pinToggle")
     static let deleteOne = Self("stash.deleteOne")
     static let deleteAll = Self("stash.deleteAll")
@@ -27,7 +26,6 @@ struct ShortcutsTab: View {
         .init(id: "cursorUpNum", name: .cursorUpNum, labelKey: "shortcuts.cursor.upNum"),
         .init(id: "cursorDownNum", name: .cursorDownNum, labelKey: "shortcuts.cursor.downNum"),
         .init(id: "paste", name: .paste, labelKey: "shortcuts.paste"),
-        .init(id: "pop", name: .pop, labelKey: "shortcuts.pop"),
         .init(id: "pinToggle", name: .pinToggle, labelKey: "shortcuts.pinToggle"),
         .init(id: "deleteOne", name: .deleteOne, labelKey: "shortcuts.deleteOne"),
         .init(id: "deleteAll", name: .deleteAll, labelKey: "shortcuts.deleteAll"),

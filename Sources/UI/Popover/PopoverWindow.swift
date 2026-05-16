@@ -197,11 +197,7 @@ final class PopoverWindow {
         // hosting rebuild — 매 show마다 새 SwiftUI tree 박음 (mode 인자 변경 반영).
         rebuildHosting(mode: mode)
 
-        // activate — 방식 1·3만. 방식 2는 ⌘ hold 중 frontmost 보존 위해 skip (paste 시 직전 앱 복원).
-        if mode != .method3 {
-            NSApp.activate(ignoringOtherApps: true)
-        }
-
+        // TASK-020 — NSApp.activate 호출 제거 (nonactivatingPanel 본질 보존). stash app이 active되지 않으므로 외부 앱이 frontmost 유지 + first responder 보존 + cursor 깜빡임 유지. paste 시점에 CGEvent ⌘V가 외부 앱의 마지막 cursor 위치에 정확히 도달.
         panel.orderFrontRegardless()
         panel.makeKey()
 
