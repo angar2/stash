@@ -598,35 +598,7 @@ struct ClipsViewModelTests {
         #expect(vm.pendingScrollToId == nil)
     }
 
-    // MARK: - TASK-017 Phase 4·6: pop (⌘+Enter) 동작 — 비핀 클립 paste + delete
-
-    @Test("pop — 비핀 클립: paste + delete (clips count 감소)")
-    func pop_NonPinned_PastesAndDeletes() async {
-        let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, repo) = await makeViewModel(prefilled: prefilled)
-        await vm.reload()
-        #expect(vm.visibleClips.count == 3)
-
-        await vm.pop(at: 0)
-
-        // pasteService는 MockPasteSynthesizer를 통해 호출됨 — 권한 검증 통과 가정
-        // pop은 비핀이므로 delete 후 reload — clips count 1 감소
-        let after = (try? await repo.fetchAll()) ?? []
-        #expect(after.count == 2)
-        #expect(vm.clips.count == 2)
-    }
-
-    @Test("pop — idx 범위 밖: guard로 무동작")
-    func pop_OutOfRange_NoOp() async {
-        let prefilled = [makeClip(body: "a")]
-        let (vm, repo) = await makeViewModel(prefilled: prefilled)
-        await vm.reload()
-
-        await vm.pop(at: 99)
-
-        let after = (try? await repo.fetchAll()) ?? []
-        #expect(after.count == 1)  // 변화 없음
-    }
+    // TASK-020 — pop (⌘⇧V) 단축키·기능 폐기로 pop_NonPinned_PastesAndDeletes / pop_OutOfRange_NoOp 케이스 삭제.
 
     @Test("deleteAllExceptPinned — 핀 클립만 보존 + 토스트 발행 (⌘+⇧+⌫ 동작)")
     func deleteAllExceptPinned_PreservesPinned() async {

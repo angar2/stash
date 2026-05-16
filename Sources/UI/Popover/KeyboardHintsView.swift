@@ -32,7 +32,6 @@ struct KeyboardHintsView: View {
             return [
                 Hint(id: "move", parts: [.keys(["↑", "↓"]), .or, .keys(["1", "2"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
-                Hint(id: "pop", parts: [.keys(["⌘⇧V"])], label: String(localized: "hint.pop")),
                 Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
                 Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
                 Hint(id: "pin", parts: [.keys(["P"])], label: String(localized: "hint.pin"))
@@ -41,7 +40,6 @@ struct KeyboardHintsView: View {
             return [
                 Hint(id: "move", parts: [.keys(["⌘↑", "⌘↓"]), .or, .keys(["⌘1", "⌘2"])], label: String(localized: "hint.move")),
                 Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
-                Hint(id: "pop", parts: [.keys(["⌘⇧V"])], label: String(localized: "hint.pop")),
                 Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
                 Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
                 Hint(id: "pin", parts: [.keys(["⌘P"])], label: String(localized: "hint.pin"))

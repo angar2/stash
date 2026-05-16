@@ -110,11 +110,7 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.moveSelectionUp.modifiers == [.command])
     }
 
-    @Test("⌘+⇧+V keyCode=9 modifiers=[.command,.shift] (pop)")
-    func pop_matchesCommandShiftV() {
-        #expect(PopoverHotkey.pop.keyCode == 9)
-        #expect(PopoverHotkey.pop.modifiers == [.command, .shift])
-    }
+    // TASK-020 — pop (⌘⇧V) 단축키 폐기로 pop_matchesCommandShiftV 케이스 삭제.
 
     @Test("⌥+⌘+⌫ keyCode=51 modifiers=[.command,.option] (deleteAll)")
     func deleteAll_matchesOptionCommandDelete() {
