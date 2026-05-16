@@ -217,7 +217,7 @@ final class PopoverWindow {
         // 키 이벤트 핸들러 — 모든 mode 설치.
         installKeyDownHandler(mode: mode)
 
-        Logger.ui.info("PopoverWindow shown — mode=\(String(describing: mode), privacy: .public) (tracker prev: \(FrontmostAppTracker.shared.previousApp?.bundleIdentifier ?? "nil", privacy: .public))")
+        Logger.ui.info("PopoverWindow shown — mode=\(String(describing: mode), privacy: .public)")
     }
 
     private func installKeyDownHandler(mode: PopoverInvocationMode) {
