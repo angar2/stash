@@ -137,21 +137,27 @@ struct StashApp: App {
             }
         }
 
-        // ⑨-2 권한 변경 시 hotkeyMonitor 자동 재시작 (TASK-017 Phase 2-A) —
+        // ⑨-2 권한 변경 시 hotkeyMonitor 자동 재시작 + ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024) —
         // 권한 부여 *전* 상태였으면 init 1회 start()가 skip됨. 이후 사용자가 권한 부여해도 재시작 트리거 없음 → 영원히 미동작.
         // statusPublisher 구독해서 .granted 변경 시 start, .denied/.unknown 변경 시 stop. start()는 stop() 선행 호출로 멱등.
+        // TASK-024 — 동일 sink 안에서 ClipsViewModel + SettingsViewModel 의 `accessibilityGranted` 동시 갱신. (1) ClipsViewModel 의 ⌘V 권한 게이트 동적 토글 + 힌트바 회색조 분기. (2) SettingsViewModel 의 *autoPaste 라디오 활성 분기* 의 호출처 누락 fix — 기존 `updateAccessibilityGranted` 정의만 되어 있고 호출처 0건이라 권한 O 사용자도 autoPaste 선택 불가했던 결함 정합.
         self.permissionMonitorBridge = permSvc.statusPublisher
             .receive(on: RunLoop.main)
-            .sink { [hotkeyMon] status in
+            .sink { [hotkeyMon, clipsVM, settingsVM] status in
                 Task { @MainActor in
+                    let granted: Bool
                     switch status {
                     case .granted:
-                        Logger.hotkey.info("Permission status changed → granted — hotkeyMonitor 자동 start")
+                        Logger.hotkey.info("Permission status changed → granted — hotkeyMonitor 자동 start + ViewModel state 갱신")
                         await hotkeyMon.start()
+                        granted = true
                     case .denied, .unknown:
-                        Logger.hotkey.info("Permission status changed → \(String(describing: status), privacy: .public) — hotkeyMonitor 자동 stop")
+                        Logger.hotkey.info("Permission status changed → \(String(describing: status), privacy: .public) — hotkeyMonitor 자동 stop + ViewModel state 갱신")
                         hotkeyMon.stop()
+                        granted = false
                     }
+                    clipsVM.updateAccessibilityGranted(granted)
+                    settingsVM.updateAccessibilityGranted(granted)
                 }
             }
 

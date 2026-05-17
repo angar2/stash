@@ -1,4 +1,4 @@
-// 1·2·3 popover 공통 클립 리스트 + 검색 + paste/pop/pin/delete 액션 ViewModel (API-SPEC §9-2 ViewModel 예외 룰 정합)
+// 1·2·3 popover 공통 클립 리스트 + 검색 + paste/copy/pin/delete 액션 ViewModel (API-SPEC §9-2 ViewModel 예외 룰 정합)
 import Foundation
 import Observation
 import OSLog
@@ -15,6 +15,8 @@ final class ClipsViewModel {
     var searchInputActive: Bool = false  // 검색란 인풋 활성 여부 (Enter / 클릭 시 true)
     var flashedClipId: UUID?              // paste 직후 플래시 대상
     var pasteMode: PasteMode = .autoPaste
+    /// TASK-024 — Accessibility 권한 게이트 state. `PermissionService.statusPublisher` 구독으로 Composition Root 가 갱신. 권한 X 시 ⌘V 비활성 (PopoverPanel.dispatch 게이트) + 힌트바 회색조 (KeyboardHintsView 분기).
+    var accessibilityGranted: Bool = false
     var pinSidebarOpen: Bool = false {    // Pin 사이드 펼침 여부
         didSet {
             // TASK-019 — `PopoverWindow`가 별도 NSPanel 호스팅 토글. @Observable stored property 의 didSet 정상 동작.
@@ -49,6 +51,14 @@ final class ClipsViewModel {
 
     func setToastQueue(_ queue: ToastQueue) {
         self.toastQueue = queue
+    }
+
+    /// TASK-024 — Composition Root 가 `PermissionService.statusPublisher` 구독 → 본 메서드로 권한 상태 갱신. 동적 토글 (사용자가 시스템 환경설정에서 권한 변경) 즉시 반영. SettingsViewModel.updateAccessibilityGranted 와 동일 패턴.
+    func updateAccessibilityGranted(_ granted: Bool) {
+        if accessibilityGranted != granted {
+            accessibilityGranted = granted
+            Logger.ui.info("ClipsViewModel.accessibilityGranted → \(granted, privacy: .public)")
+        }
     }
 
     // MARK: - Derived
@@ -225,6 +235,7 @@ final class ClipsViewModel {
 
     // MARK: - Actions
     /// TASK-019 fix 2차 — focusZone == .pin 일 때 *pinnedClips 안 항목* paste. 본체 visibleClips 는 focusZone == .clip 일 때만.
+    /// TASK-024 — 권한 X 시 effective mode 를 `.copyBack` 강제. 마우스 클릭 진입점 대비 안전망 (⌘V 단축키는 `PopoverPanel.dispatch` 단계에서 차단되어 본 메서드 호출 X).
     func paste(at idx: Int) async {
         let clip: Clip
         if focusZone == .pin {
@@ -235,23 +246,50 @@ final class ClipsViewModel {
             guard idx >= 0 && idx < list.count else { return }
             clip = list[idx]
         }
+        let effectiveMode: PasteMode = accessibilityGranted ? pasteMode : .copyBack
         do {
-            try await pasteService.paste(clip: clip, mode: pasteMode)
+            try await pasteService.paste(clip: clip, mode: effectiveMode)
             triggerPasteFlash(for: clip.id)
-            publishPasteToast(for: clip)
+            publishPasteToast(for: clip, mode: effectiveMode)
         } catch {
             Logger.ui.error("ClipsViewModel.paste error: \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    private func publishPasteToast(for clip: Clip) {
+    private func publishPasteToast(for clip: Clip, mode: PasteMode) {
         guard let toastQueue else { return }
         let snippet = String((clip.body ?? "").prefix(20))
-        if pasteMode == .autoPaste {
+        if mode == .autoPaste {
             toastQueue.enqueue(.success, String(localized: "toast.paste.done") + ": \(snippet)", ttl: DesignTokens.Animation.toastTTLShort)
         } else {
             toastQueue.enqueue(.info, String(localized: "toast.copyBack.done"), ttl: DesignTokens.Animation.toastTTLDefault)
         }
+    }
+
+    /// TASK-024 — ⌘+C 복사 단축키 액션. Settings `pasteMode` 라디오 무관 *항상* `.copyBack` 모드 호출 — 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관 항상 활성. focusZone == .pin / .clip 분기는 paste(at:) 와 동일.
+    func copy(at idx: Int) async {
+        let clip: Clip
+        if focusZone == .pin {
+            guard idx >= 0 && idx < pinnedClips.count else { return }
+            clip = pinnedClips[idx]
+        } else {
+            let list = visibleClips
+            guard idx >= 0 && idx < list.count else { return }
+            clip = list[idx]
+        }
+        Logger.ui.info("Copy invoked: clipId=\(clip.id.uuidString, privacy: .public), type=\(clip.type.rawValue, privacy: .public)")
+        do {
+            try await pasteService.paste(clip: clip, mode: .copyBack)
+            triggerPasteFlash(for: clip.id)
+            publishCopyToast()
+        } catch {
+            Logger.ui.error("ClipsViewModel.copy error: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func publishCopyToast() {
+        guard let toastQueue else { return }
+        toastQueue.enqueue(.success, String(localized: "toast.copy.done"), ttl: DesignTokens.Animation.toastTTLShort)
     }
 
     // TASK-020 — pop(at:) 함수 제거 (⌘⇧V 단축키·기능 일괄 폐기로 호출처 0건).

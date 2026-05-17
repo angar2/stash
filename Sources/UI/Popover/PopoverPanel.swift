@@ -14,7 +14,8 @@ enum PopoverHotkey: CaseIterable {
     case deleteOne              // ⌘+⌫
     case deleteAll              // ⌥+⌘+⌫
     case deleteAllAlias         // ⌘+⇧+⌫
-    case paste                  // ⌘+V
+    case copy                   // ⌘+C (TASK-024 — 항상 .copyBack 호출, 권한 무관 활성)
+    case paste                  // ⌘+V (TASK-024 — Accessibility 권한 게이트 조건부 활성)
     case activateSearch         // Enter 단독 (예외 — macOS 표준 검색 활성화)
     case escape                 // ESC 단독 (예외 — macOS 표준 닫기/취소)
 
@@ -26,6 +27,7 @@ enum PopoverHotkey: CaseIterable {
         case .togglePin: return 35               // P
         case .togglePinSidebar: return 11        // B
         case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
+        case .copy: return 8                     // C (TASK-024)
         case .paste: return 9                    // V
         case .activateSearch: return 36          // Enter (return)
         case .escape: return 53                  // ESC
@@ -36,7 +38,7 @@ enum PopoverHotkey: CaseIterable {
     var modifiers: NSEvent.ModifierFlags {
         switch self {
         case .togglePin, .togglePinSidebar,
-             .deleteOne, .paste:
+             .deleteOne, .copy, .paste:
             return [.command]
         case .deleteAllAlias:
             return [.command, .shift]
@@ -155,6 +157,18 @@ enum PopoverPanel {
         await viewModel.paste(at: idx)
     }
 
+    /// 클립 copy 흐름 (TASK-024) — popover dismiss → 안정 대기 → viewModel.copy. `performPasteFlow` 와 동일 패턴 (mode 만 `.copyBack` 강제). Settings `pasteMode` 라디오 무관 항상 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관.
+    static func performCopyFlow(
+        viewModel: ClipsViewModel,
+        idx: Int,
+        sourceLabel: String,
+        hide: () -> Void
+    ) async {
+        hide()
+        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        await viewModel.copy(at: idx)
+    }
+
     /// KeyablePanel.keyDownHandler 셋업 — Method1/2/3 공통 키 이벤트 처리 (TASK-017).
     /// SwiftUI .onKeyPress가 NSPanel(.nonactivatingPanel) 환경에서 발화 안 해 AppKit 단에서 직접 처리.
     /// 단축키 정의는 PopoverHotkey enum (단일 진실 소스) — 본 함수는 매칭 후 dispatch만.
@@ -163,7 +177,8 @@ enum PopoverPanel {
         viewModel: ClipsViewModel,
         mode: PopoverInvocationMode,
         onDismiss: @escaping @MainActor () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void
+        handleClipPaste: @escaping @MainActor (Int) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int) async -> Void
     ) {
         panel.keyDownHandler = { [weak viewModel, weak panel] event in
             guard let viewModel, let panel else { return false }
@@ -174,7 +189,8 @@ enum PopoverPanel {
                     panel: panel,
                     mode: mode,
                     onDismiss: onDismiss,
-                    handleClipPaste: handleClipPaste
+                    handleClipPaste: handleClipPaste,
+                    handleClipCopy: handleClipCopy
                 )
             }
             return false  // 매칭 단축키 없음 → super 호출 (NSTextField로 forward)
@@ -189,7 +205,8 @@ enum PopoverPanel {
         panel: KeyablePanel,
         mode: PopoverInvocationMode,
         onDismiss: @escaping @MainActor () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void
+        handleClipPaste: @escaping @MainActor (Int) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int) async -> Void
     ) -> Bool {
         switch hotkey {
         case .moveSelectionUp:
@@ -221,7 +238,16 @@ enum PopoverPanel {
         case .deleteAll, .deleteAllAlias:
             Task { await viewModel.deleteAllExceptPinned() }
             return true
+        case .copy:
+            // TASK-024 — ⌘+C 권한 무관 항상 활성. Settings `pasteMode` 라디오 무관 항상 `.copyBack` 호출.
+            Task { @MainActor in await handleClipCopy(viewModel.activeIdx) }
+            return true
         case .paste:
+            // TASK-024 — Accessibility 권한 게이트. 권한 X 시 event consume + 무반응 (NSTextField forward 차단).
+            guard viewModel.accessibilityGranted else {
+                Logger.ui.debug("⌘V blocked — accessibility denied (TASK-024 게이트)")
+                return true
+            }
             Task { @MainActor in await handleClipPaste(viewModel.activeIdx) }
             return true
         case .activateSearch:

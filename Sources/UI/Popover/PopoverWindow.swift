@@ -228,6 +228,9 @@ final class PopoverWindow {
             onDismiss: { [weak self] in self?.hide() },
             handleClipPaste: { [weak self] idx in
                 await self?.handleClipPaste(at: idx)
+            },
+            handleClipCopy: { [weak self] idx in
+                await self?.handleClipCopy(at: idx)
             }
         )
     }
@@ -260,6 +263,17 @@ final class PopoverWindow {
     private func handleClipPaste(at idx: Int) async {
         let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
         await PopoverPanel.performPasteFlow(
+            viewModel: viewModel,
+            idx: idx,
+            sourceLabel: label,
+            hide: { [weak self] in self?.hide() }
+        )
+    }
+
+    /// TASK-024 — 클립 copy 흐름 (⌘+C 단축키). PopoverPanel.performCopyFlow 헬퍼로 위임. performPasteFlow 와 동일 패턴 (mode 만 `.copyBack` 강제).
+    private func handleClipCopy(at idx: Int) async {
+        let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
+        await PopoverPanel.performCopyFlow(
             viewModel: viewModel,
             idx: idx,
             sourceLabel: label,
