@@ -35,12 +35,14 @@ final class GRDBClipRepository: ClipRepository {
     @discardableResult
     func insert(_ clip: Clip) async throws -> [Clip] {
         Logger.database.debug("insert — id: \(clip.id)")
-        let deleted = try await dbQueue.write { db in
-            try self.performInsert(clip, in: db)
-            return try self.enforceMaxHistorySize(in: db)
+        let result = try await dbQueue.write { db -> [Clip] in
+            let dedupHit = try self.performInsert(clip, in: db)
+            let lruDeleted = try self.enforceMaxHistorySize(in: db)
+            // TASK-023 회귀 (f) — dedup hit 시 *원래 새 clip 자체* 도 cleanup 대상 (내부 clips/UUID 카피본 orphan 정리).
+            return dedupHit ? lruDeleted + [clip] : lruDeleted
         }
-        Logger.database.debug("insert — LRU 정리 \(deleted.count)개 삭제")
-        return deleted
+        Logger.database.debug("insert — cleanup \(result.count)개 (LRU + dedup orphan)")
+        return result
     }
 
     func search(query: String) async throws -> [Clip] {
@@ -141,24 +143,43 @@ final class GRDBClipRepository: ClipRepository {
 
     // MARK: - Private helpers
 
-    private func performInsert(_ clip: Clip, in db: Database) throws {
-        // TASK-019 — 동일 (type, body) 텍스트 클립 dedup. 기존 row 의 last_used_at 갱신 + 새 row 추가 X.
-        // image / file 은 file_path UUID 라 자연 중복 X — dedup 안 함.
-        if clip.type == .text, let body = clip.body {
-            if let existingId = try UUID.fetchOne(
-                db,
-                sql: "SELECT id FROM clips WHERE type = ? AND body = ? LIMIT 1",
-                arguments: [clip.type.rawValue, body]
-            ) {
-                try db.execute(
-                    sql: "UPDATE clips SET last_used_at = ? WHERE id = ?",
-                    arguments: [clip.lastUsedAt, existingId]
-                )
-                Logger.database.debug("performInsert — dedup hit, updated last_used_at for existing id: \(existingId)")
-                return
-            }
+    /// 반환값: dedup hit 여부 (true 면 새 row 추가 X — caller 가 새 clip 의 disk 파일 cleanup).
+    private func performInsert(_ clip: Clip, in db: Database) throws -> Bool {
+        // TASK-019 — 동일 (type=text, body) 텍스트 클립 dedup.
+        if clip.type == .text, let body = clip.body,
+           try dedupByEquality(in: db, type: .text, column: "body", value: body, newLastUsedAt: clip.lastUsedAt) {
+            return true
+        }
+        // TASK-023 회귀 (f) — file / 이미지 파일 (C 케이스) dedup by fileOriginalPath (원본 절대 경로 = 원초적 식별자).
+        // 메모리 비트맵 (B 케이스 = fileOriginalPath nil) 은 분기 진입 X — 매 캡쳐 별개 row.
+        if (clip.type == .file || clip.type == .image), let originalPath = clip.fileOriginalPath,
+           try dedupByEquality(in: db, type: clip.type, column: "file_original_path", value: originalPath, newLastUsedAt: clip.lastUsedAt) {
+            return true
         }
         try clip.insert(db)
+        return false
+    }
+
+    /// `(type, <column>) = (type, value)` 매칭되는 기존 row 발견 시 `last_used_at` 만 갱신하고 true 반환. 미매칭 시 false.
+    /// dedup helper — text body / file·image fileOriginalPath 양쪽 호출 사이트 공통화 (TASK-023 리팩토링).
+    /// 주의: `column` 인자는 *컴파일 타임 상수* 만 박음. 외부 입력 직접 전달 금지 (SQL 인젝션 위험).
+    private func dedupByEquality(
+        in db: Database,
+        type: ClipType,
+        column: String,
+        value: String,
+        newLastUsedAt: Date
+    ) throws -> Bool {
+        let selectSQL = "SELECT id FROM clips WHERE type = ? AND \(column) = ? LIMIT 1"
+        guard let existingId = try UUID.fetchOne(db, sql: selectSQL, arguments: [type.rawValue, value]) else {
+            return false
+        }
+        try db.execute(
+            sql: "UPDATE clips SET last_used_at = ? WHERE id = ?",
+            arguments: [newLastUsedAt, existingId]
+        )
+        Logger.database.debug("performInsert — dedup hit (\(type.rawValue), \(column)), updated existing id: \(existingId)")
+        return true
     }
 
     private func enforceMaxHistorySize(in db: Database) throws -> [Clip] {

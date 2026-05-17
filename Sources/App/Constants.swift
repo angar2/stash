@@ -33,4 +33,10 @@ enum Constants {
 
     // F-004 Pin 사이드 메뉴 펼침 지연
     static let pinSideMenuExpandDelay: Duration = .milliseconds(200)
+
+    // TASK-023 이미지 파일 확장자 화이트리스트 — Finder file URL 분류 시 .image / .file 분기에 사용.
+    // 소문자 비교 (대소문자 무관 매칭은 lowercased 변환 후 lookup).
+    static let imageFileExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "gif", "tiff", "tif", "bmp", "heic", "heif", "webp"
+    ]
 }
