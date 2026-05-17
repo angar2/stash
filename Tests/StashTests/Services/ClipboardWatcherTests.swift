@@ -96,7 +96,8 @@ struct ClipboardWatcherTests {
     @Test func tickInsertsFileClip() async throws {
         let pb = MockPasteboard()
         pb.changeCount = 1
-        pb.strings[NSPasteboard.PasteboardType("public.file-url")] = "file:///tmp/test.pdf"
+        // TASK-026 — readFileURLs 통합 진입점. 단일 file URL → 기존 단일 분기.
+        pb.fileURLs = [URL(fileURLWithPath: "/tmp/test.pdf")]
         let fileSvc = MockFileClipService()
         let repo = InMemoryClipRepository()
         let watcher = makeWatcher(pasteboard: pb, fileClipService: fileSvc, repository: repo)
@@ -105,6 +106,7 @@ struct ClipboardWatcherTests {
         let clips = try await repo.fetchAll()
         #expect(clips.count == 1)
         #expect(clips[0].type == .file)
+        #expect(clips[0].filePathsJson == nil)  // 단일 파일 — 다중 컬럼 NULL
         #expect(fileSvc.savedFiles.count == 1)
     }
 
@@ -114,7 +116,7 @@ struct ClipboardWatcherTests {
     @Test func tickReclassifiesTxtFileWithImagePreviewAsFile() async throws {
         let pb = MockPasteboard()
         pb.changeCount = 1
-        pb.strings[.fileURL] = "file:///tmp/test.txt"
+        pb.fileURLs = [URL(fileURLWithPath: "/tmp/test.txt")]
         pb.availableTypes = [.fileURL, .tiff]
         pb.dataStore[.tiff] = Data("preview".utf8)
         let fileSvc = MockFileClipService()
@@ -135,7 +137,7 @@ struct ClipboardWatcherTests {
     @Test func tickClassifiesImageFileURLAsImageClip() async throws {
         let pb = MockPasteboard()
         pb.changeCount = 1
-        pb.strings[.fileURL] = "file:///tmp/photo.png"
+        pb.fileURLs = [URL(fileURLWithPath: "/tmp/photo.png")]
         pb.availableTypes = [.fileURL, .tiff]
         pb.dataStore[.tiff] = Data("img".utf8)
         let fileSvc = MockFileClipService()
@@ -177,7 +179,7 @@ struct ClipboardWatcherTests {
     @Test func tickHandlesUppercaseImageExtension() async throws {
         let pb = MockPasteboard()
         pb.changeCount = 1
-        pb.strings[.fileURL] = "file:///tmp/PHOTO.PNG"
+        pb.fileURLs = [URL(fileURLWithPath: "/tmp/PHOTO.PNG")]
         pb.availableTypes = [.fileURL]
         let fileSvc = MockFileClipService()
         let repo = InMemoryClipRepository()
@@ -309,5 +311,113 @@ struct ClipboardWatcherTests {
         await watcher.tick()
 
         #expect(fileSvc.deletedClips.count >= 1)
+    }
+
+    // MARK: - TASK-026 다중 파일 묶음 캡쳐
+
+    /// N=3 다중 file URL → 단일 클립 행 (type=file, filePathsJson 박힘, 단일 컬럼 NULL).
+    @Test func tickInsertsMultiFileClip() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.fileURLs = [
+            URL(fileURLWithPath: "/tmp/a.txt"),
+            URL(fileURLWithPath: "/tmp/b.png"),
+            URL(fileURLWithPath: "/tmp/c.pdf")
+        ]
+        let fileSvc = MockFileClipService()
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, fileClipService: fileSvc, repository: repo)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].type == .file)
+        #expect(clips[0].isMultiFile == true)
+        #expect(clips[0].filePath == nil)  // 단일 컬럼 NULL
+        #expect(clips[0].fileOriginalPath == nil)
+        #expect(clips[0].isFileExternal == false)
+        let entries = clips[0].fileEntries
+        #expect(entries?.count == 3)
+        #expect(entries?[0].originalPath == "/tmp/a.txt")
+        #expect(entries?[1].originalPath == "/tmp/b.png")
+        #expect(entries?[2].originalPath == "/tmp/c.pdf")
+        #expect(fileSvc.savedFilesBatch.count == 1)
+        #expect(fileSvc.savedFilesBatch[0].count == 3)
+    }
+
+    /// 임계 초과 (N=101) → onUserMessage 콜백 호출 + 클립 생성 X.
+    @Test func tickSkipsMultiFileWhenLimitExceeded() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.fileURLs = (1...101).map { URL(fileURLWithPath: "/tmp/file\($0).txt") }
+        let fileSvc = MockFileClipService()
+        let repo = InMemoryClipRepository()
+        let messageBox: MessageBox = MessageBox()
+        let watcher = ClipboardWatcher(
+            pasteboard: pb,
+            fileClipService: fileSvc,
+            repository: repo,
+            onUserMessage: { msg in await messageBox.record(msg) }
+        )
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.isEmpty)
+        #expect(fileSvc.savedFilesBatch.isEmpty)  // saveFiles 호출 X
+        let recorded = await messageBox.values
+        #expect(recorded.count == 1)
+        #expect(!recorded[0].isEmpty)  // i18n 메시지 박힘
+    }
+
+    /// 부분 실패 (saveFiles throw at index 1) → onUserMessage 콜백 호출 + 클립 생성 X (옵션 A).
+    @Test func tickSkipsMultiFileOnPartialFailure() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.fileURLs = [
+            URL(fileURLWithPath: "/tmp/a.txt"),
+            URL(fileURLWithPath: "/tmp/b.txt"),
+            URL(fileURLWithPath: "/tmp/c.txt")
+        ]
+        let fileSvc = MockFileClipService()
+        fileSvc.throwAtIndex = 1  // 2번째 entry 에서 실패
+        let repo = InMemoryClipRepository()
+        let messageBox: MessageBox = MessageBox()
+        let watcher = ClipboardWatcher(
+            pasteboard: pb,
+            fileClipService: fileSvc,
+            repository: repo,
+            onUserMessage: { msg in await messageBox.record(msg) }
+        )
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.isEmpty)
+        let recorded = await messageBox.values
+        #expect(recorded.count == 1)
+        #expect(!recorded[0].isEmpty)  // multiFileSaveFailed 메시지 박힘
+    }
+
+    /// N=0 (file URL 없음) → ⓑ 메모리 비트맵 분기로 fall-through 회귀 가드.
+    @Test func tickFallsThroughWhenNoFileURLs() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        // fileURLs 미박음 → readFileURLs() == nil
+        pb.availableTypes = [.tiff]
+        pb.dataStore[.tiff] = Data("img".utf8)
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, repository: repo)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].type == .image)  // 메모리 비트맵 분기 정상 동작
+    }
+}
+
+/// 다중 파일 임계/실패 테스트용 — actor 캡쳐 안전 메시지 박스. 다른 테스트 파일 노출 X (fileprivate).
+fileprivate actor MessageBox {
+    private(set) var values: [String] = []
+    func record(_ msg: String) {
+        values.append(msg)
     }
 }

@@ -69,11 +69,22 @@ struct StashApp: App {
         self.notificationService = NotificationService(center: UNNotificationCenterImpl())
         self.loginItemService = LoginItemService(registrar: SMLoginItemRegistrar())
 
-        // ④ 도메인 Service — 생성자 주입 (ARCHITECTURE §9-4 step 5)
+        // ④ ToastQueue + ToastWindow (모든 ViewModel에서 발행) — TASK-026: ClipboardWatcher onUserMessage 콜백 주입 위해 Watcher 생성 전으로 이동.
+        let toastQ = ToastQueue()
+        self.toastQueue = toastQ
+        self.toastWindowController = ToastWindowController(queue: toastQ)
+
+        // ⑤ 도메인 Service — 생성자 주입 (ARCHITECTURE §9-4 step 5)
         let watcher = ClipboardWatcher(
             pasteboard: pb,
             fileClipService: fcs,
-            repository: grdbRepo
+            repository: grdbRepo,
+            // TASK-026 — 임계 초과 / 부분 실패 시 인앱 토스트 dispatch.
+            onUserMessage: { msg in
+                await MainActor.run {
+                    toastQ.enqueue(.warn, msg)
+                }
+            }
         )
         self.clipboardWatcher = watcher
         self.hotkeyManager = HotkeyManager(
@@ -89,14 +100,13 @@ struct StashApp: App {
             // TASK-023 회귀 (e) fix — paste 직후 watcher 에 own-write 통보해 다음 tick 에서 자기 자신 박은 변경 idle.
             onPasteboardWritten: { [watcher] in
                 await watcher.acknowledgeOwnWrite()
+            },
+            // TASK-026 fix — paste 진행 동안 watcher tick 자체 차단. 다중 파일 saveFiles race 차단.
+            setPastePending: { [watcher] pending in
+                await watcher.setPastePending(pending)
             }
         )
         self.pasteService = pasteSvc
-
-        // ⑤ ToastQueue + ToastWindow (모든 ViewModel에서 발행)
-        let toastQ = ToastQueue()
-        self.toastQueue = toastQ
-        self.toastWindowController = ToastWindowController(queue: toastQ)
 
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
         let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, toastQueue: toastQ)

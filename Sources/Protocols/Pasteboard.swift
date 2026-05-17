@@ -11,4 +11,13 @@ protocol Pasteboard: Sendable {
     func setData(_ data: Data, forType dataType: NSPasteboard.PasteboardType)
     /// 클립보드를 비우고 사용할 타입을 등록 (NSPasteboard.clearContents + declareTypes).
     func clearAndDeclareTypes(_ types: [NSPasteboard.PasteboardType])
+
+    /// TASK-026 — 시스템 클립보드의 다중 file URL 추출.
+    /// `NSPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])` 래핑.
+    /// 결과 nil/empty 시 nil 반환.
+    func readFileURLs() -> [URL]?
+
+    /// TASK-026 — 시스템 클립보드에 다중 file URL 박음.
+    /// 내부에서 `clearContents()` + `writeObjects([NSURL])` 통합 (별도 clear 노출 X). Finder ⌘V 호환.
+    func writeFileURLs(_ urls: [URL])
 }

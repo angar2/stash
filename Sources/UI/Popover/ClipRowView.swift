@@ -68,9 +68,12 @@ struct ClipRowView: View {
             // 이미지 썸네일 — 36×32. clip.filePath NSImage 로드 시도 (TASK-023). 실패 시 기존 그라데이션 fallback.
             imageThumbnail
         case .text, .file:
-            // 14×14 라인 아이콘 — file 타입은 *폴더 vs 파일* sub-분기 (TASK-016 D-7/D-8 fix v3, FileManager isDirectory 검사로 DB 모델 변경 X)
+            // 14×14 라인 아이콘 — file 타입은 *다중 묶음 / 폴더 / 파일* sub-분기 (TASK-026 / TASK-016).
             ZStack {
-                if clip.type == .file {
+                if clip.type == .file && clip.isMultiFile {
+                    // TASK-026 — 다중 파일 묶음. doc.on.doc + 우상단 N 배지.
+                    multiFileIconWithBadge
+                } else if clip.type == .file {
                     Image(systemName: isFileADirectory ? "folder" : "doc")
                         .font(.system(size: 12, weight: .regular))
                 } else {
@@ -80,6 +83,27 @@ struct ClipRowView: View {
             }
             .foregroundStyle(typeIconColor)
             .frame(width: DesignTokens.WindowSize.clipTypeIconArea, alignment: .center)
+        }
+    }
+
+    /// TASK-026 — 다중 파일 묶음 아이콘 + N 배지. entries decode 실패 시 fallback (`square.stack` 단독).
+    @ViewBuilder
+    private var multiFileIconWithBadge: some View {
+        let count = clip.fileEntries?.count ?? 0
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 12, weight: .regular))
+            if count > 0 {
+                Text("\(count)")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 3)
+                    .frame(minWidth: 12, minHeight: 12)
+                    .background(
+                        Circle().fill(DesignTokens.Colors.accent)
+                    )
+                    .offset(x: 6, y: -6)
+            }
         }
     }
 
@@ -182,6 +206,11 @@ struct ClipRowView: View {
         case .image:
             return [imageDisplayName]
         case .file:
+            // TASK-026 — 다중 파일 묶음 라벨 = `여러 파일` (단순 라벨, N 정보는 배지가 담당).
+            // 파일명 리스트 상세는 TASK-027 *클립 상세 미리보기 sub-window* 에서 별도 표시.
+            if clip.isMultiFile {
+                return [String(localized: "clip.row.multiFile.label")]
+            }
             let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? String(localized: "clip.row.file"))
             return [name]
         case .text:

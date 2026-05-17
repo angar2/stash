@@ -366,6 +366,119 @@ struct PasteServiceTests {
     }
 }
 
+// MARK: - TASK-026 다중 파일 paste
+
+extension PasteServiceTests {
+    private func makeMultiFileClip(entries: [ClipFileEntry]) -> Clip {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let json = (try? ClipFileEntry.encodeJSON(entries)) ?? "[]"
+        return Clip(
+            id: UUID(),
+            type: .file,
+            body: nil,
+            filePath: nil,
+            isFileExternal: false,
+            fileOriginalPath: nil,
+            fileBookmark: nil,
+            sourceAppBundleId: nil,
+            isPinned: false,
+            createdAt: now,
+            lastUsedAt: now,
+            pinnedAt: nil,
+            filePathsJson: json
+        )
+    }
+
+    /// 다중 paste — entries 모두 originalPath 박힘. writeFileURLs 호출 + URL 배열 정합.
+    @Test func pasteMultiFileWritesAllURLs() async throws {
+        let (svc, _, pb, repo) = makeService()
+        let entries = [
+            ClipFileEntry(originalPath: "/tmp/a.txt", filePath: "/Library/copies/a.txt", isFileExternal: false),
+            ClipFileEntry(originalPath: "/tmp/b.png", filePath: "/Library/copies/b.png", isFileExternal: false),
+            ClipFileEntry(originalPath: "/tmp/c.pdf", filePath: "/Library/copies/c.pdf", isFileExternal: false)
+        ]
+        let clip = makeMultiFileClip(entries: entries)
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        #expect(pb.recordedWriteFileURLs.count == 1)
+        let urls = pb.recordedWriteFileURLs[0]
+        #expect(urls.count == 3)
+        #expect(urls[0].path == "/tmp/a.txt")
+        #expect(urls[1].path == "/tmp/b.png")
+        #expect(urls[2].path == "/tmp/c.pdf")
+    }
+
+    /// 다중 paste — 일부 entry isFileExternal=true 여도 originalPath 우선 박힘.
+    @Test func pasteMultiFilePrefersOriginalPath() async throws {
+        let (svc, _, pb, repo) = makeService()
+        let entries = [
+            ClipFileEntry(originalPath: "/tmp/internal.txt", filePath: "/Library/copies/internal.txt", isFileExternal: false),
+            ClipFileEntry(originalPath: "/tmp/external.bin", filePath: "/tmp/external.bin", isFileExternal: true)
+        ]
+        let clip = makeMultiFileClip(entries: entries)
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        let urls = pb.recordedWriteFileURLs[0]
+        #expect(urls[0].path == "/tmp/internal.txt")  // originalPath 우선
+        #expect(urls[1].path == "/tmp/external.bin")  // originalPath 우선
+    }
+
+    /// 단일 파일 paste 회귀 가드 — 기존 setString(.file-url) 흐름. writeFileURLs 호출 X.
+    @Test func pasteSingleFileDoesNotUseWriteFileURLs() async throws {
+        let (svc, _, pb, repo) = makeService()
+        let clip = makeFileClip(originalPath: "/tmp/single.pdf")
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        #expect(pb.recordedWriteFileURLs.isEmpty)  // 다중 분기 진입 X
+        #expect(pb.recordedSetString.contains { $0.1.rawValue == "public.file-url" })
+    }
+
+    /// 다중 paste — filePathsJson 잘못된 JSON → PasteError.fileURLLoadFailed throw + writeFileURLs 호출 X.
+    @Test func pasteMultiFileThrowsOnMalformedJson() async throws {
+        let (svc, _, pb, repo) = makeService()
+        var clip = makeMultiFileClip(entries: [
+            ClipFileEntry(originalPath: "/tmp/a.txt", filePath: "/Library/a.txt", isFileExternal: false)
+        ])
+        clip.filePathsJson = "not-a-json"
+        try await repo.insert(clip)
+
+        var thrown = false
+        do {
+            try await svc.paste(clip: clip, mode: .copyBack)
+        } catch PasteError.fileURLLoadFailed {
+            thrown = true
+        } catch {
+            // 다른 에러는 false
+        }
+        #expect(thrown)
+        #expect(pb.recordedWriteFileURLs.isEmpty)
+    }
+
+    /// 다중 paste — filePathsJson 빈 배열 → PasteError.fileURLLoadFailed throw.
+    @Test func pasteMultiFileThrowsOnEmptyEntries() async throws {
+        let (svc, _, pb, repo) = makeService()
+        let clip = makeMultiFileClip(entries: [])
+        try await repo.insert(clip)
+
+        var thrown = false
+        do {
+            try await svc.paste(clip: clip, mode: .copyBack)
+        } catch PasteError.fileURLLoadFailed {
+            thrown = true
+        } catch {
+            // 다른 에러는 false
+        }
+        #expect(thrown)
+        #expect(pb.recordedWriteFileURLs.isEmpty)
+    }
+}
+
 /// onSynthesize 클로저 안에서 외부 상태 캡처용 (Sendable closure 격리).
 private final class LockedString: @unchecked Sendable {
     var value: String = ""

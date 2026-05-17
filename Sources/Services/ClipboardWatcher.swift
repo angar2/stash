@@ -7,18 +7,26 @@ actor ClipboardWatcher {
     private let pasteboard: Pasteboard
     private let fileClipService: FileClipService
     private let repository: ClipRepository
+    /// TASK-026 — 다중 파일 임계 초과 / 부분 실패 시 사용자 인지용 메시지 dispatch.
+    /// Composition Root가 `{ msg in await MainActor.run { toastQueue.enqueue(.warn, msg) } }` 박음.
+    private let onUserMessage: (@Sendable (String) async -> Void)?
 
     private var lastChangeCount: Int = -1
     private var pollingTask: Task<Void, Never>?
+    /// TASK-026 fix — paste 진행 중에는 tick 자체 skip. 다중 파일 paste의 saveFiles 시간 소요로 인한
+    /// *acknowledgeOwnWrite 대기 → synthesizeCommandV 지연* race 차단. PasteService 가 begin/end 호출.
+    private var pastePending: Bool = false
 
     init(
         pasteboard: Pasteboard = SystemPasteboard.shared,
         fileClipService: FileClipService,
-        repository: ClipRepository
+        repository: ClipRepository,
+        onUserMessage: (@Sendable (String) async -> Void)? = nil
     ) {
         self.pasteboard = pasteboard
         self.fileClipService = fileClipService
         self.repository = repository
+        self.onUserMessage = onUserMessage
     }
 
     func start() {
@@ -43,7 +51,18 @@ actor ClipboardWatcher {
         Logger.clipboard.info("ClipboardWatcher: own-write acknowledged (lastChangeCount=\(self.lastChangeCount))")
     }
 
+    /// TASK-026 fix — paste 진행 시작/종료 시 PasteService 가 호출. 다중 파일 paste의 saveFiles race 차단.
+    /// `true` 시 tick 자체 skip → ack 대기 시간 0 → synthesizeCommandV 즉시 진행.
+    func setPastePending(_ pending: Bool) {
+        pastePending = pending
+        Logger.clipboard.info("ClipboardWatcher: pastePending=\(pending)")
+    }
+
     func tick() async {
+        guard !pastePending else {
+            // TASK-026 fix — paste 진행 중 tick race 차단.
+            return
+        }
         let currentCount = pasteboard.changeCount
         guard currentCount != lastChangeCount else { return }
         lastChangeCount = currentCount
@@ -67,23 +86,33 @@ actor ClipboardWatcher {
         let now = Date()
         let id = UUID()
 
-        // ⓐ 파일 URL 우선 — file URL은 *명시적 출처 정보*. Finder ⌘C 시 Quick Look 썸네일이 .tiff에 박혀도 file URL이 진실값.
-        // 확장자가 이미지면 .image 클립 (DATA-MODEL §case C — `Finder 작은 파일·이미지 → file / image`).
-        // 그 외 확장자(txt/pdf/문서/폴더 등)는 .file 클립. (c) txt 오분류 회귀 차단의 핵심 (TASK-023).
-        if let urlString = pasteboard.string(forType: .fileURL),
-           let url = URL(string: urlString) {
-            let ext = url.pathExtension.lowercased()
-            let isImage = Constants.imageFileExtensions.contains(ext)
-            let clipType: ClipType = isImage ? .image : .file
-            Logger.clipboard.info("buildClip: file URL detected — ext=\(ext, privacy: .public) → type=\(String(describing: clipType), privacy: .public)")
-            let stored = try await fileClipService.saveFile(at: url)
-            return Clip(
-                id: id, type: clipType, body: nil,
-                filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
-                fileOriginalPath: url.path, fileBookmark: nil,
-                sourceAppBundleId: nil, isPinned: false,
-                createdAt: now, lastUsedAt: now
-            )
+        // ⓐ 파일 URL 분기 — TASK-026 다중 파일 통합 진입점.
+        // `readFileURLs()` 단일 호출로 N=0/1/many 분기. 기존 `string(forType: .fileURL)` 단건 호출 폐기.
+        if let urls = pasteboard.readFileURLs(), !urls.isEmpty {
+            // 임계 N > 100 → 토스트 + SKIP
+            if urls.count > Constants.maxMultiFileEntries {
+                Logger.clipboard.info("buildClip: multi-file limit exceeded — count=\(urls.count) skipped")
+                await onUserMessage?(String(localized: "toast.multiFileLimitExceeded"))
+                return nil
+            }
+            // N=1 → 기존 단일 파일 분기 (확장자 화이트리스트로 .image / .file 판별, case C/D 정합).
+            if urls.count == 1 {
+                let url = urls[0]
+                let ext = url.pathExtension.lowercased()
+                let isImage = Constants.imageFileExtensions.contains(ext)
+                let clipType: ClipType = isImage ? .image : .file
+                Logger.clipboard.info("buildClip: file URL detected — ext=\(ext, privacy: .public) → type=\(String(describing: clipType), privacy: .public)")
+                let stored = try await fileClipService.saveFile(at: url)
+                return Clip(
+                    id: id, type: clipType, body: nil,
+                    filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
+                    fileOriginalPath: url.path, fileBookmark: nil,
+                    sourceAppBundleId: nil, isPinned: false,
+                    createdAt: now, lastUsedAt: now
+                )
+            }
+            // N>1 → 다중 파일 묶음 분기 (case F). 별도 helper 위임 (buildClip SRP).
+            return try await buildMultiFileClip(from: urls, now: now, id: id)
         }
 
         // ⓑ 메모리 비트맵 — file URL 없이 .tiff/.png 데이터만 있는 케이스 (스크린샷 / 브라우저 이미지 우클릭 복사).
@@ -119,5 +148,34 @@ actor ClipboardWatcher {
         }
 
         return nil
+    }
+
+    /// TASK-026 — 다중 파일 묶음 (N>1) 캡쳐 분기. 옵션 A — 어느 하나라도 실패 시 전체 SKIP + 토스트 + 카피본 cleanup (saveFiles 내부 처리).
+    private func buildMultiFileClip(from urls: [URL], now: Date, id: UUID) async throws -> Clip? {
+        Logger.clipboard.info("buildClip: multi-file detected — count=\(urls.count)")
+        do {
+            let stored = try await fileClipService.saveFiles(at: urls)
+            let entries = zip(urls, stored).map { (originalURL, sf) in
+                ClipFileEntry(
+                    originalPath: originalURL.path,
+                    filePath: sf.filePath.path,
+                    isFileExternal: sf.isFileExternal
+                )
+            }
+            let json = try ClipFileEntry.encodeJSON(entries)
+            return Clip(
+                id: id, type: .file, body: nil,
+                filePath: nil, isFileExternal: false,
+                fileOriginalPath: nil, fileBookmark: nil,
+                sourceAppBundleId: nil, isPinned: false,
+                createdAt: now, lastUsedAt: now,
+                pinnedAt: nil, filePathsJson: json
+            )
+        } catch {
+            // saveFiles 가 이미 *부분 카피본 cleanup* 수행 — 본 catch 는 토스트 + SKIP 만.
+            Logger.clipboard.error("buildClip: multi-file save failed — \(error)")
+            await onUserMessage?(String(localized: "toast.multiFileSaveFailed"))
+            return nil
+        }
     }
 }
