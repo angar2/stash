@@ -77,4 +77,28 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.copy.keyCode == 8)
         #expect(PopoverHotkey.copy.modifiers == [.command])
     }
+
+    // MARK: - TASK-025: 검색바 always-active 정책 회귀 가드
+
+    @Test("TASK-025 — .activateSearch enum 제거 가드: Enter (keyCode=36) 단독 매칭 0건")
+    func enterKeyMatchesNoHotkey() {
+        let event = makeKeyEvent(keyCode: 36, modifiers: [])
+        let matched = PopoverHotkey.allCases.contains { $0.matches(event: event) }
+        #expect(matched == false)
+    }
+
+    @Test("TASK-025 — PopoverHotkey.allCases.count == 10 (Enter 폐기 후 정합)")
+    func allCasesCountIsTen() {
+        #expect(PopoverHotkey.allCases.count == 10)
+    }
+
+    @Test("TASK-025 — .escape matches: ESC 단독 true / ESC+⌘ false / ESC+⌥ false")
+    func escapeMatching() {
+        let plainEsc = makeKeyEvent(keyCode: 53, modifiers: [])
+        let cmdEsc = makeKeyEvent(keyCode: 53, modifiers: [.command])
+        let optEsc = makeKeyEvent(keyCode: 53, modifiers: [.option])
+        #expect(PopoverHotkey.escape.matches(event: plainEsc) == true)
+        #expect(PopoverHotkey.escape.matches(event: cmdEsc) == false)
+        #expect(PopoverHotkey.escape.matches(event: optEsc) == false)
+    }
 }

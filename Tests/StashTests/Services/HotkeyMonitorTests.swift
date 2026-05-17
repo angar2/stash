@@ -125,11 +125,7 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.deleteAll.modifiers == [.command, .option])
     }
 
-    @Test("Enter 단독 keyCode=36 modifiers=[] (예외)")
-    func activateSearch_matchesPlainReturn() {
-        #expect(PopoverHotkey.activateSearch.keyCode == 36)
-        #expect(PopoverHotkey.activateSearch.modifiers == [])
-    }
+    // TASK-025 — `.activateSearch` enum case 폐기. Enter 동작 자체 제거 (검색바 always-active 정책). `activateSearch_matchesPlainReturn` 케이스 삭제. 회귀 가드는 `PopoverHotkeyTests` 의 `enterKeyMatchesNoHotkey` (Enter 단독 매칭 0건 검증) 에서 담당.
 
     @Test("ESC 단독 keyCode=53 modifiers=[] (예외)")
     func escape_matchesPlainEscape() {
