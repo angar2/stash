@@ -50,7 +50,7 @@ struct HistoryPopover: View {
                 pinRow
             }
             preferencesRow
-            KeyboardHintsView(mode: mode)
+            KeyboardHintsView(mode: mode, accessibilityGranted: viewModel.accessibilityGranted)
         }
         .frame(width: DesignTokens.WindowSize.popoverWidth)
         .padding(DesignTokens.Spacing.popoverPadding)

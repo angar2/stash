@@ -9,6 +9,8 @@ enum PopoverInvocationMode: Sendable {
 
 struct KeyboardHintsView: View {
     let mode: PopoverInvocationMode
+    /// TASK-024 — Accessibility 권한 게이트. `false` 시 ⌘V 행만 회색조 표시 (`enabled=false` 분기). ⌘C 행은 권한 무관 항상 활성.
+    let accessibilityGranted: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,22 +29,25 @@ struct KeyboardHintsView: View {
     }
 
     private var hints: [Hint] {
+        // TASK-024 — ⌘C 복사 hint 신규 (⌘V 왼쪽 위치). ⌘V 행만 `enabled = accessibilityGranted` 분기 — 권한 X 시 회색조.
         switch mode {
         case .method1, .method2:
             return [
-                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move")),
-                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
-                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
-                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
-                Hint(id: "pin", parts: [.keys(["P"])], label: String(localized: "hint.pin"))
+                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
+                Hint(id: "copy", parts: [.keys(["⌘C"])], label: String(localized: "hint.copy"), enabled: true),
+                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
+                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete"), enabled: true),
+                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll"), enabled: true),
+                Hint(id: "pin", parts: [.keys(["P"])], label: String(localized: "hint.pin"), enabled: true)
             ]
         case .method3:
             return [
-                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move")),
-                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste")),
-                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete")),
-                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll")),
-                Hint(id: "pin", parts: [.keys(["⌘P"])], label: String(localized: "hint.pin"))
+                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
+                Hint(id: "copy", parts: [.keys(["⌘C"])], label: String(localized: "hint.copy"), enabled: true),
+                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
+                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete"), enabled: true),
+                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll"), enabled: true),
+                Hint(id: "pin", parts: [.keys(["⌘P"])], label: String(localized: "hint.pin"), enabled: true)
             ]
         }
     }
@@ -54,7 +59,7 @@ struct KeyboardHintsView: View {
                 case .keys(let arr):
                     HStack(spacing: 2) {
                         ForEach(arr, id: \.self) { key in
-                            keyCap(key)
+                            keyCap(key, enabled: hint.enabled)
                         }
                     }
                 case .or:
@@ -65,24 +70,24 @@ struct KeyboardHintsView: View {
             }
             Text(hint.label)
                 .font(DesignTokens.Typography.hintLabel)
-                .foregroundStyle(DesignTokens.Colors.hintLabel)
+                .foregroundStyle(hint.enabled ? DesignTokens.Colors.hintLabel : DesignTokens.Colors.hintLabelDisabled)
                 .padding(.leading, DesignTokens.Spacing.hintsLabelMarginLeft)
         }
     }
 
-    private func keyCap(_ text: String) -> some View {
+    private func keyCap(_ text: String, enabled: Bool) -> some View {
         Text(text)
             .font(DesignTokens.Typography.keycap)
-            .foregroundStyle(DesignTokens.Colors.keycapFg)
+            .foregroundStyle(enabled ? DesignTokens.Colors.keycapFg : DesignTokens.Colors.keycapFgDisabled)
             .tracking(0.18)  // 0.02em ≒ 0.18pt at 9pt
             .frame(minWidth: DesignTokens.WindowSize.keycapMin, minHeight: 14)
             .padding(.horizontal, 4)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                    .fill(DesignTokens.Colors.keycapBg)
+                    .fill(enabled ? DesignTokens.Colors.keycapBg : DesignTokens.Colors.keycapBgDisabled)
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                            .stroke(DesignTokens.Colors.keycapInset, lineWidth: 0.5)
+                            .stroke(enabled ? DesignTokens.Colors.keycapInset : DesignTokens.Colors.keycapInsetDisabled, lineWidth: 0.5)
                     )
             )
     }
@@ -91,6 +96,8 @@ struct KeyboardHintsView: View {
         let id: String
         let parts: [Part]
         let label: String
+        /// TASK-024 — 비활성 시 키캡 + 라벨 회색조. ⌘V 권한 게이트 시각화에 사용.
+        let enabled: Bool
     }
 
     private enum Part {
