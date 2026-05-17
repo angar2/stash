@@ -12,7 +12,7 @@ final class ClipsViewModel {
     var searchQuery: String = ""
     var focusZone: FocusZone = .clip
     var selectedIdx: Int = 0
-    var searchInputActive: Bool = false  // 검색란 인풋 활성 여부 (Enter / 클릭 시 true)
+    // TASK-025 — `searchInputActive` 폐기. 검색바 always-active 정책으로 활성 단계 개념 제거.
     var flashedClipId: UUID?              // paste 직후 플래시 대상
     var pasteMode: PasteMode = .autoPaste
     /// TASK-024 — Accessibility 권한 게이트 state. `PermissionService.statusPublisher` 구독으로 Composition Root 가 갱신. 권한 X 시 ⌘V 비활성 (PopoverPanel.dispatch 게이트) + 힌트바 회색조 (KeyboardHintsView 분기).
@@ -184,14 +184,9 @@ final class ClipsViewModel {
         pendingScrollToId = nil
     }
 
-    func enterSearchZone() {
-        focusZone = .search
-        searchInputActive = false
-    }
-
     /// hover 시 focusZone 자동 변경 (popover.jsx L329 / L470 정합).
-    /// 검색 input 활성화 단계 2 (cursor)는 hover로 해제 X — *click* 트리거에서만 해제 (지크 요구).
-    /// popover 열림 직후 200ms는 hover 무시 — 마우스가 검색바 위에 미리 있어도 비활성 상태 유지.
+    /// TASK-025 — `.search` case 폐기. 검색바 hover 는 focusZone 변경 X (always-active). 행 (`.clip` / `.pin` / `.settings`) hover 만 갱신.
+    /// popover 열림 직후 200ms는 hover 무시 — 마우스가 행 위에 미리 있어도 비활성 상태 유지.
     func setFocusZone(_ zone: FocusZone) {
         if isHoverIgnored { return }
         if focusZone != zone {
@@ -199,38 +194,17 @@ final class ClipsViewModel {
         }
     }
 
-    func activateSearchInput() {
-        focusZone = .search
-        searchInputActive = true
-    }
-
-    /// popover 열림 시 호출 — 초기 상태 reset (focusZone=.clip + selectedIdx=0 + searchInputActive=false + searchQuery 비움).
-    /// 사용자가 popover 열 때마다 가장 최신 클립이 선택 커서로 활성된 상태.
-    /// 마우스가 검색바 위에 이미 있어도 200ms 동안 hover 무시 — 자동 활성 차단.
+    /// popover 열림 시 호출 — 초기 상태 reset (focusZone=.clip + selectedIdx=0 + searchQuery 비움).
+    /// 사용자가 popover 열 때마다 가장 최신 클립이 선택 커서로 활성된 상태. 검색바는 always-active 정책으로 별도 active state 없음 (TASK-025).
+    /// 마우스가 행 위에 이미 있어도 200ms 동안 hover 무시 — 자동 활성 차단.
     func resetForOpen() {
         focusZone = .clip
         selectedIdx = 0
-        searchInputActive = false
         searchQuery = ""
         pinSidebarOpen = false
         pinHoverActive = false
         pendingScrollToId = nil
         ignoreHoverUntil = Date().addingTimeInterval(DesignTokens.Animation.popoverOpenHoverIgnoreDelay)
-    }
-
-    /// 외부 클릭 등으로 TextField focus를 잃었을 때 호출 — searchInputActive만 해제 (검색어 / focusZone 보존).
-    /// `deactivateSearchInputAndClear()`와 분리 — 본 메서드는 검색어 보존이 핵심.
-    func deactivateSearchInput() {
-        if searchInputActive {
-            searchInputActive = false
-        }
-    }
-
-    /// ESC 1번 동작 — 인풋 해제 + 검색어 리셋 + focusZone="search" 유지
-    func deactivateSearchInputAndClear() {
-        searchInputActive = false
-        searchQuery = ""
-        focusZone = .search
     }
 
     // MARK: - Actions

@@ -19,10 +19,10 @@ final class PopoverWindow {
     private lazy var outsideClickMonitor = OutsideClickMonitor { [weak self] in
         self?.hide()
     }
-    /// popover 안 mouseDown 잡아 검색바 외부 click 시 first responder reset (TASK-016 D-3). 방식 1·3만 설치.
+    /// TASK-025 — popover 안 mouseDown 잡아 검색바 외부 click 시 NSTextField first responder *복원* (이전 TASK-016 의 *해제* 방향 반대). 방식 1·2만 설치.
     private var localClickMonitor: Any?
-    /// ESC 키 monitor — 검색 활성 상태에서 ESC를 NSTextView consume 전 가로채 비활성화 (TASK-017 fix-3 v4). 방식 1·3만 설치.
-    private var escapeKeyMonitor: Any?
+    /// TASK-025 — popover 키 라우팅 monitor (NSTextView consume 전 PopoverHotkey 매칭 + Tab consume). 이전 ESC monitor 의 모든 키 라우팅으로 확장. 방식 1·2만 설치.
+    private var popoverKeyMonitor: Any?
 
     /// Pin 사이드바 별도 floating panel — popover 좌측에 분리 노출 (TASK-019 fix). 단일 인스턴스 재사용.
     private let pinSidebarPanel: KeyablePanel
@@ -99,11 +99,11 @@ final class PopoverWindow {
             // 이미 hidden 상태에서 hide() 호출 — 멱등 안전 (⌘ keyUp 등 외부 트리거 멱등).
             return
         }
-        // 방식 1·3 — monitor 정리.
+        // 방식 1·2 — monitor 정리 (method3 보류는 monitor 미설치).
         if mode != .method3 {
             outsideClickMonitor.remove()
             removeLocalClickMonitor()
-            removeEscapeKeyMonitor()
+            removePopoverKeyMonitor()
         }
         // Pin 사이드바도 동반 닫음 (popover 닫히면 사이드바 단독 노출 의미 없음).
         if viewModel.pinSidebarOpen {
@@ -189,7 +189,7 @@ final class PopoverWindow {
             PopoverPanel.positionAtBottomRight(panel)
         }
 
-        // resetForOpen — 방식 1·3만 (방식 2는 ⌘ hold 중 매 재진입마다 reset하면 검색 상태 등 끊김 — 기존 동작 보존).
+        // resetForOpen — 방식 1·2만 (method3 보류는 ⌘ hold 중 매 재진입마다 reset하면 검색 상태 등 끊김 — 기존 동작 보존).
         if mode != .method3 {
             viewModel.resetForOpen()
         }
@@ -201,17 +201,22 @@ final class PopoverWindow {
         panel.orderFrontRegardless()
         panel.makeKey()
 
-        // first responder — 방식 1·3만. panel 자체를 first responder로 박아 NSTextField 자동 first responder 차단 (TASK-016 D-3).
-        // 방식 2는 검색바 노출하되 입력 비활성 (Phase 2)이라 first responder 박지 않음 — NSTextField는 어차피 disabled 상태.
+        // first responder — 방식 1·2만. TASK-025 — NSTextField always-active 정책. find 실패 시 panel 자체로 fallback (안전망).
+        // method3 (보류) 은 검색바 isEnabled=false 라 first responder 진입 못 함 — 기존대로 panel 자체 first responder.
         if mode != .method3 {
-            panel.makeFirstResponder(panel)
+            if let textField = PopoverPanel.findFirstTextField(in: panel.contentView) {
+                panel.makeFirstResponder(textField)
+            } else {
+                Logger.ui.warning("findFirstTextField returned nil — fallback to panel first responder (TASK-025)")
+                panel.makeFirstResponder(panel)
+            }
         }
 
-        // monitor 설치 — 방식 1·3만. 방식 2는 ⌘ keyUp으로만 닫힘.
+        // monitor 설치 — 방식 1·2만. method3 (보류) 는 ⌘ keyUp 으로만 닫힘.
         if mode != .method3 {
             outsideClickMonitor.install()
             installLocalClickMonitor()
-            installEscapeKeyMonitor()
+            installPopoverKeyMonitor(mode: mode)
         }
 
         // 키 이벤트 핸들러 — 모든 mode 설치.
@@ -237,7 +242,8 @@ final class PopoverWindow {
 
     private func installLocalClickMonitor() {
         removeLocalClickMonitor()
-        localClickMonitor = PopoverPanel.installOutsideTextFieldClickMonitor(panel: panel)
+        // TASK-025 — 외부 click 시 NSTextField first responder *복원* 방향.
+        localClickMonitor = PopoverPanel.installSearchFirstResponderRestoreMonitor(panel: panel)
     }
 
     private func removeLocalClickMonitor() {
@@ -247,15 +253,27 @@ final class PopoverWindow {
         }
     }
 
-    private func installEscapeKeyMonitor() {
-        removeEscapeKeyMonitor()
-        escapeKeyMonitor = PopoverPanel.installSearchEscapeMonitor(panel: panel, viewModel: viewModel)
+    /// TASK-025 — popover 키 라우팅 monitor (이전 escapeKeyMonitor 의 superset).
+    private func installPopoverKeyMonitor(mode: PopoverInvocationMode) {
+        removePopoverKeyMonitor()
+        popoverKeyMonitor = PopoverPanel.installPopoverKeyEventMonitor(
+            panel: panel,
+            viewModel: viewModel,
+            mode: mode,
+            onDismiss: { [weak self] in self?.hide() },
+            handleClipPaste: { [weak self] idx in
+                await self?.handleClipPaste(at: idx)
+            },
+            handleClipCopy: { [weak self] idx in
+                await self?.handleClipCopy(at: idx)
+            }
+        )
     }
 
-    private func removeEscapeKeyMonitor() {
-        if let m = escapeKeyMonitor {
+    private func removePopoverKeyMonitor() {
+        if let m = popoverKeyMonitor {
             NSEvent.removeMonitor(m)
-            escapeKeyMonitor = nil
+            popoverKeyMonitor = nil
         }
     }
 
