@@ -210,6 +210,103 @@ struct PasteServiceTests {
         #expect(lastDataType == .tiff || lastDataType == .png)
     }
 
+    // MARK: - TASK-023 회귀 (d) — 이미지 클립 paste 시 file URL 동시 박음
+
+    /// 이미지 파일 클립(fileOriginalPath 존재 + 파일 실재) → declare 에 file-url 포함 + setString 호출 (Finder 폴더 ⌘V 호환).
+    @Test("image clip + fileOriginalPath 실재 → declare 에 .tiff + public.file-url 둘 다 + setData + setString 둘 다 호출")
+    func pasteImage_WithFileOriginalPath_SetsBothFileURLAndImageData() async throws {
+        let imageURL = try makeTempImageFile()
+        defer { try? FileManager.default.removeItem(at: imageURL) }
+        let (svc, _, pb, repo) = makeService()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let clip = Clip(
+            id: UUID(), type: .image, body: nil,
+            filePath: imageURL.path, isFileExternal: false,
+            fileOriginalPath: imageURL.path, fileBookmark: nil,
+            sourceAppBundleId: nil, isPinned: false,
+            createdAt: now, lastUsedAt: now
+        )
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        let lastDeclared = pb.recordedDeclareTypes.last ?? []
+        #expect(lastDeclared.contains(.tiff) || lastDeclared.contains(.png))
+        #expect(lastDeclared.contains(.fileURL))
+        #expect(pb.recordedSetData.count == 1)
+        #expect(pb.recordedSetString.count == 1)
+        #expect(pb.recordedSetString.last?.1 == .fileURL)
+        let urlString = pb.recordedSetString.last?.0 ?? ""
+        #expect(urlString.hasPrefix("file://"))
+        #expect(urlString.contains(imageURL.lastPathComponent))
+    }
+
+    /// 메모리 비트맵 (fileOriginalPath = nil) → image data 만 (기존 동작 유지, file URL 박음 X).
+    @Test("image clip + fileOriginalPath nil → image data 만 박음 (file URL X)")
+    func pasteImage_WithoutFileOriginalPath_SetsOnlyImageData() async throws {
+        let imageURL = try makeTempImageFile()
+        defer { try? FileManager.default.removeItem(at: imageURL) }
+        let (svc, _, pb, repo) = makeService()
+        let clip = makeImageClip(filePath: imageURL.path)  // fileOriginalPath = nil
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        let lastDeclared = pb.recordedDeclareTypes.last ?? []
+        #expect(!lastDeclared.contains(.fileURL))
+        #expect(pb.recordedSetString.isEmpty)
+        #expect(pb.recordedSetData.count == 1)
+    }
+
+    /// fileOriginalPath 가 있지만 *실제 파일이 사라진* 경우 — file URL 박지 X (안전망).
+    @Test("image clip + fileOriginalPath 박혀있어도 파일 미실재 → file URL X")
+    func pasteImage_FileOriginalPathButFileMissing_SetsOnlyImageData() async throws {
+        let imageURL = try makeTempImageFile()
+        defer { try? FileManager.default.removeItem(at: imageURL) }
+        let (svc, _, pb, repo) = makeService()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let clip = Clip(
+            id: UUID(), type: .image, body: nil,
+            filePath: imageURL.path, isFileExternal: false,
+            fileOriginalPath: "/nonexistent/never-existed.png",  // 미실재
+            fileBookmark: nil,
+            sourceAppBundleId: nil, isPinned: false,
+            createdAt: now, lastUsedAt: now
+        )
+        try await repo.insert(clip)
+
+        try await svc.paste(clip: clip, mode: .copyBack)
+
+        let lastDeclared = pb.recordedDeclareTypes.last ?? []
+        #expect(!lastDeclared.contains(.fileURL))
+        #expect(pb.recordedSetString.isEmpty)
+    }
+
+    // MARK: - TASK-023 회귀 (e) — onPasteboardWritten 콜백
+
+    /// PasteService 가 paste 시 onPasteboardWritten 콜백을 정확히 1회 호출.
+    @Test("paste 시 onPasteboardWritten 콜백 1회 호출 — 모든 ClipType")
+    func paste_InvokesOnPasteboardWrittenCallback() async throws {
+        let counter = CallbackCounter()
+        let pb = MockPasteboard()
+        let synth = MockPasteSynthesizer()
+        let repo = InMemoryClipRepository()
+        let svc = PasteService(
+            synthesizer: synth,
+            pasteboard: pb,
+            repository: repo,
+            permissionService: PermissionService(checker: MockPermissionChecker()),
+            onPasteboardWritten: { await counter.increment() }
+        )
+        let textClip = makeClip(body: "hello")
+        try await repo.insert(textClip)
+
+        try await svc.paste(clip: textClip, mode: .copyBack)
+
+        let invocations = await counter.value
+        #expect(invocations == 1)
+    }
+
     @Test("file clip — fileOriginalPath 우선 → setString(public.file-url) 호출")
     func pasteFile_FromOriginalPath_SetsFileURL() async throws {
         let (svc, _, pb, repo) = makeService()
@@ -272,4 +369,10 @@ struct PasteServiceTests {
 /// onSynthesize 클로저 안에서 외부 상태 캡처용 (Sendable closure 격리).
 private final class LockedString: @unchecked Sendable {
     var value: String = ""
+}
+
+/// onPasteboardWritten 콜백 호출 횟수 추적 — Sendable 격리 (TASK-023 회귀 (e) fix 테스트용).
+private actor CallbackCounter {
+    var value: Int = 0
+    func increment() { value += 1 }
 }

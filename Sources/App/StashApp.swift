@@ -85,7 +85,11 @@ struct StashApp: App {
             synthesizer: CGEventPasteSynthesizer(),
             pasteboard: pb,
             repository: grdbRepo,
-            permissionService: permSvc
+            permissionService: permSvc,
+            // TASK-023 회귀 (e) fix — paste 직후 watcher 에 own-write 통보해 다음 tick 에서 자기 자신 박은 변경 idle.
+            onPasteboardWritten: { [watcher] in
+                await watcher.acknowledgeOwnWrite()
+            }
         )
         self.pasteService = pasteSvc
 

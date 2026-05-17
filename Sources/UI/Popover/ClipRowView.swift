@@ -1,6 +1,7 @@
 // 클립 행 — popover.jsx L74-162 100% 정합
-// 좌측 type icon (이미지=썸네일 그라데이션 36x32 / text·file=14px 라인) + 본문 (mono 분기) + 시간 (48px tabular) + Pin/X (선택 시만)
+// 좌측 type icon (이미지=NSImage 썸네일 36x32 + 로드 실패 시 그라데이션 fallback / text·file=14px 라인) + 본문 (mono 분기) + 시간 (48px tabular) + Pin/X (선택 시만)
 import SwiftUI
+import AppKit
 
 struct ClipRowView: View {
     let clip: Clip
@@ -64,7 +65,40 @@ struct ClipRowView: View {
     private var typeIconArea: some View {
         switch clip.type {
         case .image:
-            // 이미지 썸네일 — 36×32 그라데이션 (popover.jsx L80-89)
+            // 이미지 썸네일 — 36×32. clip.filePath NSImage 로드 시도 (TASK-023). 실패 시 기존 그라데이션 fallback.
+            imageThumbnail
+        case .text, .file:
+            // 14×14 라인 아이콘 — file 타입은 *폴더 vs 파일* sub-분기 (TASK-016 D-7/D-8 fix v3, FileManager isDirectory 검사로 DB 모델 변경 X)
+            ZStack {
+                if clip.type == .file {
+                    Image(systemName: isFileADirectory ? "folder" : "doc")
+                        .font(.system(size: 12, weight: .regular))
+                } else {
+                    Image(systemName: "text.alignleft")
+                        .font(.system(size: 12, weight: .regular))
+                }
+            }
+            .foregroundStyle(typeIconColor)
+            .frame(width: DesignTokens.WindowSize.clipTypeIconArea, alignment: .center)
+        }
+    }
+
+    /// 이미지 썸네일 — NSImage 로드 성공 시 실제 이미지, 실패 시 그라데이션 박스 (TASK-023).
+    @ViewBuilder
+    private var imageThumbnail: some View {
+        if let path = clip.filePath, let nsImage = NSImage(contentsOfFile: path) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: DesignTokens.WindowSize.clipImageThumbW, height: DesignTokens.WindowSize.clipImageThumbH)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .shadow(color: Color.black.opacity(0.15), radius: 1.5, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
+                )
+        } else {
+            // 로드 실패 fallback — 그라데이션 (popover.jsx L80-89)
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(
                     LinearGradient(
@@ -82,19 +116,6 @@ struct ClipRowView: View {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
                 )
-        case .text, .file:
-            // 14×14 라인 아이콘 — file 타입은 *폴더 vs 파일* sub-분기 (TASK-016 D-7/D-8 fix v3, FileManager isDirectory 검사로 DB 모델 변경 X)
-            ZStack {
-                if clip.type == .file {
-                    Image(systemName: isFileADirectory ? "folder" : "doc")
-                        .font(.system(size: 12, weight: .regular))
-                } else {
-                    Image(systemName: "text.alignleft")
-                        .font(.system(size: 12, weight: .regular))
-                }
-            }
-            .foregroundStyle(typeIconColor)
-            .frame(width: DesignTokens.WindowSize.clipTypeIconArea, alignment: .center)
         }
     }
 
@@ -125,6 +146,28 @@ struct ClipRowView: View {
         }
     }
 
+    /// 이미지 클립 행 라벨 — 4단계 fallback (TASK-023):
+    ///  1. `fileOriginalPath` 있으면 → lastPathComponent (Finder 이미지 파일, case C).
+    ///  2. `body` 가 http(s) URL 이고 path 유효하면 → URL.lastPathComponent (웹 이미지, 회귀 (g)).
+    ///  3. `body` URL 파싱 실패 또는 path 비어있으면 → body 그대로.
+    ///  4. `body` 도 nil 이면 → localized "이미지" fallback (스크린샷, case B).
+    private var imageDisplayName: String {
+        if let originalPath = clip.fileOriginalPath {
+            return (originalPath as NSString).lastPathComponent
+        }
+        if let body = clip.body {
+            if let url = URL(string: body),
+               let scheme = url.scheme?.lowercased(),
+               ["http", "https"].contains(scheme),
+               !url.lastPathComponent.isEmpty,
+               url.lastPathComponent != "/" {
+                return url.lastPathComponent
+            }
+            return body
+        }
+        return String(localized: "clip.row.image")
+    }
+
     // mono 폰트 분기 — 코드 / URL은 mono. plan은 mono 필드 X. 단순 휴리스틱: 50자 이상이거나 줄바꿈 / 코드 패턴 (^/$/{}/=>/) → mono.
     private var isMonoBody: Bool {
         let body = clip.body ?? ""
@@ -137,7 +180,7 @@ struct ClipRowView: View {
     private var displayLines: [String] {
         switch clip.type {
         case .image:
-            return [clip.body ?? String(localized: "clip.row.image")]
+            return [imageDisplayName]
         case .file:
             let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? String(localized: "clip.row.file"))
             return [name]

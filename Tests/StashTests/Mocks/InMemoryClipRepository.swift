@@ -17,11 +17,18 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
 
     @discardableResult
     func insert(_ clip: Clip) async throws -> [Clip] {
-        // TASK-019 fix 5차 — 동일 (type=text, body) dedup. 기존 row 의 lastUsedAt 갱신 + 새 row 추가 X. image/file 은 dedup 안 함.
+        // TASK-019 fix 5차 — 동일 (type=text, body) dedup. 기존 row 의 lastUsedAt 갱신 + 새 row 추가 X.
         if clip.type == .text, let body = clip.body,
            let existingIdx = clips.firstIndex(where: { $0.type == .text && $0.body == body }) {
             clips[existingIdx].lastUsedAt = clip.lastUsedAt
-            return []
+            return [clip]  // TASK-023 회귀 (f) — text dedup hit 시도 새 clip cleanup 반환 (text 는 disk 파일 X라 noop, 일관성 위해).
+        }
+        // TASK-023 회귀 (f) — file / 이미지 파일 (C 케이스) dedup by fileOriginalPath.
+        if (clip.type == .file || clip.type == .image),
+           let originalPath = clip.fileOriginalPath,
+           let existingIdx = clips.firstIndex(where: { $0.type == clip.type && $0.fileOriginalPath == originalPath }) {
+            clips[existingIdx].lastUsedAt = clip.lastUsedAt
+            return [clip]  // 새 clip 의 carbon 카피본 cleanup 대상.
         }
         clips.append(clip)
         guard enforceMaxHistorySizeEnabled else { return [] }
