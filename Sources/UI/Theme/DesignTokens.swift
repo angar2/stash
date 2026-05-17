@@ -188,10 +188,28 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.05),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.05)
         )
+        // TASK-024 — 비활성 키캡 (⌘V 권한 게이트 시각). 기본 키캡 opacity 의 약 1/3 수준으로 회색조 표시.
+        static let keycapBgDisabled = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.03),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.05)
+        )
+        static let keycapFgDisabled = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.22),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.27)
+        )
+        static let keycapInsetDisabled = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.025),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.025)
+        )
         // 힌트 라벨
         static let hintLabel = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.42),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.45)
+        )
+        // TASK-024 — 비활성 힌트 라벨 (⌘V 권한 게이트 시각).
+        static let hintLabelDisabled = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.18),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.20)
         )
         // "or" 색
         static let hintOr = Color(
