@@ -618,4 +618,140 @@ struct ClipsViewModelTests {
         #expect(after.count == 2)
         #expect(after.allSatisfy { $0.isPinned } == true)
     }
+
+    // MARK: - TASK-024: ⌘+C 복사 단축키 + ⌘+V 권한 게이트
+
+    @Test("TASK-024 — updateAccessibilityGranted: state 변경 시에만 갱신 (멱등)")
+    func updateAccessibilityGrantedTogglesState() async {
+        let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
+        #expect(vm.accessibilityGranted == false)
+        vm.updateAccessibilityGranted(true)
+        #expect(vm.accessibilityGranted == true)
+        vm.updateAccessibilityGranted(true)  // 멱등 — 변화 X
+        #expect(vm.accessibilityGranted == true)
+        vm.updateAccessibilityGranted(false)
+        #expect(vm.accessibilityGranted == false)
+    }
+
+    @Test("TASK-024 — copy(at:) — Settings pasteMode = autoPaste 일 때도 클립보드만 갱신 (⌘V 합성 X)")
+    func copyForcesCopyBackEvenIfPasteModeAutoPaste() async {
+        let prefilled = [makeClip(body: "copy-target")]
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.pasteMode = .autoPaste
+        vm.updateAccessibilityGranted(true)  // 권한 O 라도 ⌘C 는 .copyBack 강제 검증
+        let clipId = vm.visibleClips[0].id
+        await vm.copy(at: 0)
+        // copy 호출 후 flashedClipId 가 target 으로 설정됨 → 정상 호출 흔적.
+        #expect(vm.flashedClipId == clipId)
+    }
+
+    @Test("TASK-024 — copy(at:) — pasteMode = copyBack 일 때도 정상 호출 (동일 동작)")
+    func copyWorksWhenPasteModeIsCopyBack() async {
+        let prefilled = [makeClip(body: "copy-target")]
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.pasteMode = .copyBack
+        vm.updateAccessibilityGranted(false)  // 권한 X 도 ⌘C 는 항상 활성
+        let clipId = vm.visibleClips[0].id
+        await vm.copy(at: 0)
+        #expect(vm.flashedClipId == clipId)
+    }
+
+    @Test("TASK-024 — copy(at:) focusZone == .pin 일 때 pinnedClips 항목 대상")
+    func copyInPinSidebarUsesPinnedClips() async {
+        let prefilled = [
+            makeClip(body: "regular", pinned: false),
+            makeClip(body: "pinned-copy", pinned: true)
+        ]
+        let (vm, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.focusZone = .pin
+        vm.pinSelectedIdx = 0
+        let targetId = vm.pinnedClips[0].id
+        await vm.copy(at: 0)
+        #expect(vm.flashedClipId == targetId)
+    }
+
+    @Test("TASK-024 — copy(at:) out-of-range idx — no-op (flashedClipId 미설정)")
+    func copyOutOfRangeIsNoOp() async {
+        let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
+        await vm.reload()
+        #expect(vm.flashedClipId == nil)
+        await vm.copy(at: 99)  // out-of-range
+        #expect(vm.flashedClipId == nil)
+    }
+
+    @Test("TASK-024 — paste(at:) 권한 X 시 effective mode .copyBack 강제 — pasteMode autoPaste 라도 ⌘V 합성 X")
+    func pasteForcesCopyBackWhenPermissionDenied() async {
+        // pasteService.paste 의 mode 분기를 *MockPasteSynthesizer 호출 여부* 로 간접 검증.
+        // MockPasteSynthesizer.invokedCount > 0 = .autoPaste 분기 진입 / == 0 = .copyBack 분기.
+        let repo = InMemoryClipRepository()
+        let clip = makeClip(body: "paste-target")
+        try? await repo.insert(clip)
+        let synthesizer = MockPasteSynthesizer()
+        let checker = MockPermissionChecker()
+        checker.trusted = false
+        let permSvc = PermissionService(checker: checker)
+        let pasteSvc = PasteService(
+            synthesizer: synthesizer,
+            pasteboard: MockPasteboard(),
+            repository: repo,
+            permissionService: permSvc
+        )
+        let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
+        await vm.reload()
+        vm.pasteMode = .autoPaste
+        vm.updateAccessibilityGranted(false)  // 권한 X — effective mode 가 .copyBack 강제
+        await vm.paste(at: 0)
+        // 권한 X → effective mode .copyBack → synthesizer 호출 0회.
+        #expect(synthesizer.callCount == 0)
+    }
+
+    @Test("TASK-024 — paste(at:) 권한 O + pasteMode autoPaste 시 synthesizer 정상 호출")
+    func pasteInvokesSynthesizerWhenPermissionGrantedAndAutoPaste() async {
+        let repo = InMemoryClipRepository()
+        let clip = makeClip(body: "paste-target")
+        try? await repo.insert(clip)
+        let synthesizer = MockPasteSynthesizer()
+        let checker = MockPermissionChecker()
+        checker.trusted = true
+        let permSvc = PermissionService(checker: checker)
+        let pasteSvc = PasteService(
+            synthesizer: synthesizer,
+            pasteboard: MockPasteboard(),
+            repository: repo,
+            permissionService: permSvc
+        )
+        let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
+        await vm.reload()
+        vm.pasteMode = .autoPaste
+        vm.updateAccessibilityGranted(true)
+        await vm.paste(at: 0)
+        // 권한 O + autoPaste → synthesizer 1회 호출.
+        #expect(synthesizer.callCount == 1)
+    }
+
+    @Test("TASK-024 — paste(at:) 권한 O + pasteMode copyBack 시 synthesizer 호출 X")
+    func pasteSkipsSynthesizerWhenCopyBack() async {
+        let repo = InMemoryClipRepository()
+        let clip = makeClip(body: "paste-target")
+        try? await repo.insert(clip)
+        let synthesizer = MockPasteSynthesizer()
+        let checker = MockPermissionChecker()
+        checker.trusted = true
+        let permSvc = PermissionService(checker: checker)
+        let pasteSvc = PasteService(
+            synthesizer: synthesizer,
+            pasteboard: MockPasteboard(),
+            repository: repo,
+            permissionService: permSvc
+        )
+        let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
+        await vm.reload()
+        vm.pasteMode = .copyBack
+        vm.updateAccessibilityGranted(true)
+        await vm.paste(at: 0)
+        #expect(synthesizer.callCount == 0)
+    }
 }
