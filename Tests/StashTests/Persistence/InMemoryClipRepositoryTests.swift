@@ -190,4 +190,93 @@ struct InMemoryClipRepositoryTests {
         let deleted = try await repo.deleteAllExceptPinned()
         #expect(deleted.count == limit)
     }
+
+    // MARK: - TASK-023 회귀 (f) — file/image dedup by fileOriginalPath
+
+    /// 동일 fileOriginalPath 인 file 클립 두 번 insert → DB row 1개. 두 번째 시도의 새 clip 은 cleanup 반환에 포함.
+    @Test func insertDedupsFileClipWithSameOriginalPath() async throws {
+        let repo = InMemoryClipRepository()
+        let originalPath = "/Users/zeke/Documents/report.pdf"
+        let first = makeFileClipFixture(filePath: "/clips/UUID-1.pdf", originalPath: originalPath, lastUsedAt: Date(timeIntervalSinceNow: -100))
+        let second = makeFileClipFixture(filePath: "/clips/UUID-2.pdf", originalPath: originalPath, lastUsedAt: Date(timeIntervalSinceNow: -10))
+
+        try await repo.insert(first)
+        let cleanup = try await repo.insert(second)
+
+        let all = try await repo.fetchAll()
+        #expect(all.count == 1)
+        #expect(all.first?.fileOriginalPath == originalPath)
+        // 두 번째 시도의 새 clip (internal 카피본 path UUID-2) 가 cleanup 반환에 포함 — orphan 디스크 정리 대상.
+        #expect(cleanup.contains { $0.filePath == "/clips/UUID-2.pdf" })
+    }
+
+    /// 동일 fileOriginalPath 인 image 클립 (C 케이스) 두 번 insert → DB row 1개.
+    @Test func insertDedupsImageClipWithSameOriginalPath() async throws {
+        let repo = InMemoryClipRepository()
+        let originalPath = "/Users/zeke/Downloads/photo.png"
+        let first = makeImageClipFixture(filePath: "/clips/IMG-1.png", originalPath: originalPath, lastUsedAt: Date(timeIntervalSinceNow: -100))
+        let second = makeImageClipFixture(filePath: "/clips/IMG-2.png", originalPath: originalPath, lastUsedAt: Date(timeIntervalSinceNow: -10))
+
+        try await repo.insert(first)
+        let cleanup = try await repo.insert(second)
+
+        let all = try await repo.fetchAll()
+        #expect(all.count == 1)
+        #expect(all.first?.fileOriginalPath == originalPath)
+        #expect(cleanup.contains { $0.filePath == "/clips/IMG-2.png" })
+    }
+
+    /// 메모리 비트맵 image 클립 (fileOriginalPath = nil, B 케이스) 두 번 insert → DB row 2개 (기존 동작 유지).
+    @Test func insertDoesNotDedupMemoryBitmapImageClips() async throws {
+        let repo = InMemoryClipRepository()
+        let first = makeImageClipFixture(filePath: "/clips/IMG-1.png", originalPath: nil, lastUsedAt: Date(timeIntervalSinceNow: -100))
+        let second = makeImageClipFixture(filePath: "/clips/IMG-2.png", originalPath: nil, lastUsedAt: Date(timeIntervalSinceNow: -10))
+
+        try await repo.insert(first)
+        try await repo.insert(second)
+
+        let all = try await repo.fetchAll()
+        #expect(all.count == 2)
+    }
+
+    /// dedup hit 시 기존 row 의 lastUsedAt 가 두 번째 시도 값으로 갱신.
+    @Test func insertDedupHitUpdatesLastUsedAtToNewValue() async throws {
+        let repo = InMemoryClipRepository()
+        let originalPath = "/Users/zeke/Downloads/photo.png"
+        let oldTime = Date(timeIntervalSinceNow: -1000)
+        let newTime = Date(timeIntervalSinceNow: -10)
+        let first = makeImageClipFixture(filePath: "/clips/IMG-1.png", originalPath: originalPath, lastUsedAt: oldTime)
+        let second = makeImageClipFixture(filePath: "/clips/IMG-2.png", originalPath: originalPath, lastUsedAt: newTime)
+
+        try await repo.insert(first)
+        try await repo.insert(second)
+
+        let all = try await repo.fetchAll()
+        #expect(all.count == 1)
+        // 기존 row 의 lastUsedAt 가 newTime 으로 갱신됨 (1초 이내 허용).
+        let delta = abs(all.first!.lastUsedAt.timeIntervalSince(newTime))
+        #expect(delta < 1.0)
+    }
+
+    // MARK: - TASK-023 fixture helpers
+
+    private func makeFileClipFixture(filePath: String, originalPath: String, lastUsedAt: Date) -> Clip {
+        Clip(
+            id: UUID(), type: .file, body: nil,
+            filePath: filePath, isFileExternal: false,
+            fileOriginalPath: originalPath, fileBookmark: nil,
+            sourceAppBundleId: nil, isPinned: false,
+            createdAt: Date(), lastUsedAt: lastUsedAt
+        )
+    }
+
+    private func makeImageClipFixture(filePath: String, originalPath: String?, lastUsedAt: Date) -> Clip {
+        Clip(
+            id: UUID(), type: .image, body: nil,
+            filePath: filePath, isFileExternal: false,
+            fileOriginalPath: originalPath, fileBookmark: nil,
+            sourceAppBundleId: nil, isPinned: false,
+            createdAt: Date(), lastUsedAt: lastUsedAt
+        )
+    }
 }
