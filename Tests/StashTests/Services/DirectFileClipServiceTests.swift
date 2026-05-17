@@ -160,4 +160,109 @@ struct DirectFileClipServiceTests {
 
         #expect(FileManager.default.fileExists(atPath: sourceURL.path))
     }
+
+    // MARK: - TASK-026 — saveFiles + delete 다중 분기
+
+    /// 3 URL 전체 성공 — 모두 ≤maxFileSize → 카피본 생성 + isFileExternal=false.
+    @Test func saveFilesAllSucceed() async throws {
+        let sourceFolder = makeTempFolder()
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(sourceFolder); cleanup(clipsFolder) }
+
+        let url1 = try makeTempFile(in: sourceFolder, name: "a.txt")
+        let url2 = try makeTempFile(in: sourceFolder, name: "b.png")
+        let url3 = try makeTempFile(in: sourceFolder, name: "c.pdf")
+        let svc = makeService(tempFolder: clipsFolder)
+
+        let stored = try await svc.saveFiles(at: [url1, url2, url3])
+
+        #expect(stored.count == 3)
+        for sf in stored {
+            #expect(sf.isFileExternal == false)
+            #expect(FileManager.default.fileExists(atPath: sf.filePath.path))
+        }
+    }
+
+    /// entry 사이즈 분기 — >maxFileSize 시 isFileExternal=true (원본 경로 그대로).
+    @Test func saveFilesEntrySizeBranching() async throws {
+        let sourceFolder = makeTempFolder()
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(sourceFolder); cleanup(clipsFolder) }
+
+        // 1바이트 임계로 — 빈 파일(0 bytes)은 카피, 1바이트 이상은 external.
+        let small = try makeTempFile(in: sourceFolder, name: "small.txt", content: Data())  // 0 bytes
+        let large = try makeTempFile(in: sourceFolder, name: "large.bin", content: Data(repeating: 0xFF, count: 2))
+        let svc = makeService(tempFolder: clipsFolder, maxFileSize: 1)
+
+        let stored = try await svc.saveFiles(at: [small, large])
+
+        #expect(stored.count == 2)
+        #expect(stored[0].isFileExternal == false)
+        #expect(stored[1].isFileExternal == true)
+        #expect(stored[1].filePath == large)  // 원본 경로 그대로
+    }
+
+    /// 중간 실패 — 2번째 URL 존재 X → throw + 1번째 카피본 cleanup.
+    @Test func saveFilesPartialFailureCleansUpCarbonCopies() async throws {
+        let sourceFolder = makeTempFolder()
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(sourceFolder); cleanup(clipsFolder) }
+
+        let url1 = try makeTempFile(in: sourceFolder, name: "exists.txt")
+        let url2 = URL(fileURLWithPath: "/tmp/__nonexistent_\(UUID().uuidString).txt")
+        let svc = makeService(tempFolder: clipsFolder)
+
+        var thrown = false
+        do {
+            _ = try await svc.saveFiles(at: [url1, url2])
+        } catch {
+            thrown = true
+        }
+        #expect(thrown)
+
+        // 1번째 카피본 cleanup 검증 — clips 폴더 안 아무 파일도 없어야 함.
+        let contents = (try? FileManager.default.contentsOfDirectory(atPath: clipsFolder.path)) ?? []
+        #expect(contents.isEmpty)
+    }
+
+    /// 다중 파일 Clip 삭제 — entries 순회 cleanup. isFileExternal=true entry 는 원본 보호.
+    @Test func deleteMultiFileClipCleansUpInternalOnly() async throws {
+        let sourceFolder = makeTempFolder()
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(sourceFolder); cleanup(clipsFolder) }
+
+        // 내부 카피본 1개 (clipsFolder 안) + 외부 원본 1개 (sourceFolder 안)
+        let internalURL = clipsFolder.appendingPathComponent("\(UUID().uuidString)_a.txt")
+        try FileManager.default.createDirectory(at: clipsFolder, withIntermediateDirectories: true)
+        try Data("a".utf8).write(to: internalURL)
+        let externalURL = try makeTempFile(in: sourceFolder, name: "external.bin")
+
+        let entries = [
+            ClipFileEntry(originalPath: "/tmp/a.txt", filePath: internalURL.path, isFileExternal: false),
+            ClipFileEntry(originalPath: externalURL.path, filePath: externalURL.path, isFileExternal: true)
+        ]
+        let json = try ClipFileEntry.encodeJSON(entries)
+
+        var clip = makeClip(filePath: nil, isFileExternal: false)
+        clip.filePathsJson = json
+        let svc = makeService(tempFolder: clipsFolder)
+
+        try await svc.delete(clip)
+
+        #expect(!FileManager.default.fileExists(atPath: internalURL.path))  // 내부 카피본 삭제
+        #expect(FileManager.default.fileExists(atPath: externalURL.path))   // 외부 원본 보호
+    }
+
+    /// 다중 파일 Clip 의 잘못된 JSON — silent return (main 흐름 영향 0).
+    @Test func deleteMultiFileClipMalformedJsonReturnsSilently() async throws {
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(clipsFolder) }
+        var clip = makeClip(filePath: nil, isFileExternal: false)
+        clip.filePathsJson = "not-a-json"
+        let svc = makeService(tempFolder: clipsFolder)
+
+        // throws X — silent return
+        try await svc.delete(clip)
+        #expect(true)
+    }
 }

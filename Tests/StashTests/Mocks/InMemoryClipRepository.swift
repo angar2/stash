@@ -23,6 +23,12 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
             clips[existingIdx].lastUsedAt = clip.lastUsedAt
             return [clip]  // TASK-023 회귀 (f) — text dedup hit 시도 새 clip cleanup 반환 (text 는 disk 파일 X라 noop, 일관성 위해).
         }
+        // TASK-026 — 다중 파일 묶음 (F 케이스) dedup by file_paths_json (단일 정합).
+        if clip.type == .file, let json = clip.filePathsJson,
+           let existingIdx = clips.firstIndex(where: { $0.type == .file && $0.filePathsJson == json }) {
+            clips[existingIdx].lastUsedAt = clip.lastUsedAt
+            return [clip]  // 새 clip 의 entry 카피본 cleanup 대상.
+        }
         // TASK-023 회귀 (f) — file / 이미지 파일 (C 케이스) dedup by fileOriginalPath.
         if (clip.type == .file || clip.type == .image),
            let originalPath = clip.fileOriginalPath,

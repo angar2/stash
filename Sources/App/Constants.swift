@@ -22,6 +22,9 @@ enum Constants {
     // SERVICE-POLICY §4 파일 클립
     static let fileClipCopyMaxSize: Int = 100 * 1024 * 1024  // 100MB
 
+    // SERVICE-POLICY §4-4 다중 파일 묶음 (TASK-026) — 1 row 임계
+    static let maxMultiFileEntries: Int = 100
+
     // UX-UI §6 메뉴바 인라인 토스트
     static let toastAutoDismiss: Duration = .milliseconds(3000)
 

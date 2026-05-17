@@ -86,7 +86,10 @@
     "toast.deleteAll.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "히스토리 전체 삭제됨 (Pin 제외)" } } } },
     "toast.paste.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "붙여넣음" } } } },
     "toast.permissionGranted" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "stash가 활성화되었어요" } } } },
-    "toast.pinLimit" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Pin은 최대 10개까지 가능합니다" } } } }
+    "toast.pinLimit" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Pin은 최대 10개까지 가능합니다" } } } },
+    "toast.multiFileLimitExceeded" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일은 최대 100개까지 한 번에 복사할 수 있어요" } } } },
+    "toast.multiFileSaveFailed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "다중 파일 저장 실패 — 클립으로 추가되지 않았어요" } } } },
+    "clip.row.multiFile.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "여러 파일" } } } }
   },
   "version" : "1.0"
 }

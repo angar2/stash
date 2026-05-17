@@ -20,7 +20,9 @@
 		10C22A53AA58557C7D390FDC /* PermissionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39728CAE9AEC2C7DDAFB5B9 /* PermissionStatus.swift */; };
 		11778AE91B463DCB6853667D /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EF7D2146C3F52D86B84DBCA /* Pasteboard.swift */; };
 		11CB3AAC93A13C202E5D4713 /* ClipType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCFB927BC7FE94689FAA601 /* ClipType.swift */; };
+		A26F1E001000000000000026 /* ClipFileEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F1E002000000000000026 /* ClipFileEntry.swift */; };
 		1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098019976C3EFFA13212432F /* InMemoryClipRepositoryTests.swift */; };
+		A26F1E005000000000000026 /* MultiFileClipModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F1E006000000000000026 /* MultiFileClipModelTests.swift */; };
 		1E7C36D514E03CF7AD9A5B2C /* ClipRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C50E3A1DC1A7DF9FAEC90AC /* ClipRowView.swift */; };
 		2264E02173A4268697E04849 /* MockHotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD8201294C23DEA833C7D45 /* MockHotkeyRegistrar.swift */; };
 		26781DFB5698CDE637621A4C /* MockPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 583712D469E1F3ED4752F149 /* MockPasteboard.swift */; };
@@ -38,6 +40,7 @@
 		48D7FE31707F59FB754E4233 /* V1_InitialSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */; };
 		2E5B3F4FBA734F16955B2F02 /* V2_DedupSameBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5211842305746E5BF27E7D8 /* V2_DedupSameBody.swift */; };
 		C74C3D28234F42A381D7AA4F /* V3_AddPinnedAt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3804F56FF94A3D964B1E4E /* V3_AddPinnedAt.swift */; };
+		A26F1E003000000000000026 /* V4_AddFilePathsJson.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F1E004000000000000026 /* V4_AddFilePathsJson.swift */; };
 		4955BFFEA859CB9FB338884A /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8CE78E45821C6CDDC8E566 /* SearchBarView.swift */; };
 		4AB55E7FE9D73BCA49388FAB /* PrivacyTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D3DAF16879D2F4C4019842 /* PrivacyTab.swift */; };
 		4ADA8D20C0D12EDEAAE39746 /* PermissionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C8821C6DCF342F758E43699 /* PermissionError.swift */; };
@@ -130,6 +133,7 @@
 
 /* Begin PBXFileReference section */
 		098019976C3EFFA13212432F /* InMemoryClipRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryClipRepositoryTests.swift; sourceTree = "<group>"; };
+		A26F1E006000000000000026 /* MultiFileClipModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiFileClipModelTests.swift; sourceTree = "<group>"; };
 		0BAF1E0DC019B85638177245 /* SystemWrapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWrapperTests.swift; sourceTree = "<group>"; };
 		0C91522719500FA76B373310 /* PasteMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteMode.swift; sourceTree = "<group>"; };
 		0DEF29692BE671148BC8B207 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
@@ -141,6 +145,7 @@
 		1E908DDD10A21E78579E39EF /* KeyboardShortcutsRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutsRegistrar.swift; sourceTree = "<group>"; };
 		EA7B51D823654D6A9CA98697 /* PopoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindow.swift; sourceTree = "<group>"; };
 		2BCFB927BC7FE94689FAA601 /* ClipType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipType.swift; sourceTree = "<group>"; };
+		A26F1E002000000000000026 /* ClipFileEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipFileEntry.swift; sourceTree = "<group>"; };
 		2DD8201294C23DEA833C7D45 /* MockHotkeyRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockHotkeyRegistrar.swift; sourceTree = "<group>"; };
 		303C11ECF3EB956EC63B27AC /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		30D3DAF16879D2F4C4019842 /* PrivacyTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyTab.swift; sourceTree = "<group>"; };
@@ -180,6 +185,7 @@
 		7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V1_InitialSchema.swift; sourceTree = "<group>"; };
 		C5211842305746E5BF27E7D8 /* V2_DedupSameBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2_DedupSameBody.swift; sourceTree = "<group>"; };
 		2A3804F56FF94A3D964B1E4E /* V3_AddPinnedAt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V3_AddPinnedAt.swift; sourceTree = "<group>"; };
+		A26F1E004000000000000026 /* V4_AddFilePathsJson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V4_AddFilePathsJson.swift; sourceTree = "<group>"; };
 		82F37D44E2C3029E2174CAEE /* LoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemRegistrar.swift; sourceTree = "<group>"; };
 		897339333BC7339153B401FF /* AccessibilityPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionChecker.swift; sourceTree = "<group>"; };
 		8EF7D2146C3F52D86B84DBCA /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
@@ -314,6 +320,7 @@
 				D38286152C9E4F697E8B7A1E /* ClipFixture.swift */,
 				E6FAAC0DDF288A15C616E2BD /* GRDBClipRepositoryTests.swift */,
 				098019976C3EFFA13212432F /* InMemoryClipRepositoryTests.swift */,
+				A26F1E006000000000000026 /* MultiFileClipModelTests.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -351,6 +358,7 @@
 				7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */,
 				C5211842305746E5BF27E7D8 /* V2_DedupSameBody.swift */,
 				2A3804F56FF94A3D964B1E4E /* V3_AddPinnedAt.swift */,
+				A26F1E004000000000000026 /* V4_AddFilePathsJson.swift */,
 			);
 			path = Migrations;
 			sourceTree = "<group>";
@@ -410,6 +418,7 @@
 			isa = PBXGroup;
 			children = (
 				BF515538B2714E20FDDBCC8B /* Clip.swift */,
+				A26F1E002000000000000026 /* ClipFileEntry.swift */,
 				2BCFB927BC7FE94689FAA601 /* ClipType.swift */,
 				0C91522719500FA76B373310 /* PasteMode.swift */,
 				F39728CAE9AEC2C7DDAFB5B9 /* PermissionStatus.swift */,
@@ -700,6 +709,7 @@
 				88E943BD0312700E5FE4B175 /* ClipRepository.swift in Sources */,
 				1E7C36D514E03CF7AD9A5B2C /* ClipRowView.swift in Sources */,
 				11CB3AAC93A13C202E5D4713 /* ClipType.swift in Sources */,
+				A26F1E001000000000000026 /* ClipFileEntry.swift in Sources */,
 				BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */,
 				5449B9745FE5CC876BE26312 /* ClipboardWatcher.swift in Sources */,
 				E42D7AA581F3313A062068F4 /* ClipsViewModel.swift in Sources */,
@@ -761,6 +771,7 @@
 				48D7FE31707F59FB754E4233 /* V1_InitialSchema.swift in Sources */,
 				2E5B3F4FBA734F16955B2F02 /* V2_DedupSameBody.swift in Sources */,
 				C74C3D28234F42A381D7AA4F /* V3_AddPinnedAt.swift in Sources */,
+				A26F1E003000000000000026 /* V4_AddFilePathsJson.swift in Sources */,
 				7B523209C391078FB715994F /* VisualEffectView.swift in Sources */,
 				C2A67641484C9AAC8048802B /* WelcomeStep.swift in Sources */,
 			);
@@ -787,6 +798,7 @@
 				84851E764809550BD1D5B4E3 /* HotkeyMonitorTests.swift in Sources */,
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */,
+				A26F1E005000000000000026 /* MultiFileClipModelTests.swift in Sources */,
 				42E07A1BC12252DE8CCD0A78 /* LoginItemServiceTests.swift in Sources */,
 				566AB976E56EFC855715420C /* MockFileClipService.swift in Sources */,
 				2264E02173A4268697E04849 /* MockHotkeyRegistrar.swift in Sources */,

@@ -14,6 +14,7 @@ final class GRDBClipRepository: ClipRepository {
         V1_InitialSchema.register(in: &migrator)
         V2_DedupSameBody.register(in: &migrator)
         V3_AddPinnedAt.register(in: &migrator)
+        V4_AddFilePathsJson.register(in: &migrator)
         try migrator.migrate(dbQueue)
         Logger.database.info("GRDBClipRepository 초기화 완료 — \(dbPath.lastPathComponent)")
     }
@@ -148,6 +149,12 @@ final class GRDBClipRepository: ClipRepository {
         // TASK-019 — 동일 (type=text, body) 텍스트 클립 dedup.
         if clip.type == .text, let body = clip.body,
            try dedupByEquality(in: db, type: .text, column: "body", value: body, newLastUsedAt: clip.lastUsedAt) {
+            return true
+        }
+        // TASK-026 — 다중 파일 묶음 (F 케이스) dedup by file_paths_json (JSONEncoder `.sortedKeys` 결정성 보장).
+        // 단일 정합 (단일 파일은 file_original_path dedup) — 동일 set 동일 순서 ⌘C 시 dedup hit.
+        if clip.type == .file, let json = clip.filePathsJson,
+           try dedupByEquality(in: db, type: .file, column: "file_paths_json", value: json, newLastUsedAt: clip.lastUsedAt) {
             return true
         }
         // TASK-023 회귀 (f) — file / 이미지 파일 (C 케이스) dedup by fileOriginalPath (원본 절대 경로 = 원초적 식별자).

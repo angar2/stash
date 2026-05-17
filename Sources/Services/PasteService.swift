@@ -12,19 +12,24 @@ final class PasteService {
     private let permissionService: PermissionService
     /// pasteboard 박기 직후 호출되는 콜백 — Composition Root 가 `ClipboardWatcher.acknowledgeOwnWrite()` 주입해 self-write skip 트리거 (TASK-023 회귀 (e) fix).
     private let onPasteboardWritten: (@Sendable () async -> Void)?
+    /// TASK-026 fix — paste 진행 시작/종료 시 호출. Composition Root 가 `ClipboardWatcher.setPastePending(_:)` 주입.
+    /// 다중 파일 paste의 saveFiles race 차단 — tick이 paste 도중 새 캡쳐 진입해 ack 대기 시간 증가하는 함정 fix.
+    private let setPastePending: (@Sendable (Bool) async -> Void)?
 
     init(
         synthesizer: PasteSynthesizer,
         pasteboard: Pasteboard,
         repository: ClipRepository,
         permissionService: PermissionService,
-        onPasteboardWritten: (@Sendable () async -> Void)? = nil
+        onPasteboardWritten: (@Sendable () async -> Void)? = nil,
+        setPastePending: (@Sendable (Bool) async -> Void)? = nil
     ) {
         self.synthesizer = synthesizer
         self.pasteboard = pasteboard
         self.repository = repository
         self.permissionService = permissionService
         self.onPasteboardWritten = onPasteboardWritten
+        self.setPastePending = setPastePending
     }
 
     /// 클립 paste — ClipType 분기 + mode (auto-paste / copy back) 분기.
@@ -38,17 +43,27 @@ final class PasteService {
     func paste(clip: Clip, mode: PasteMode) async throws {
         Logger.paste.info("Paste start: type=\(clip.type.rawValue, privacy: .public), mode=\(mode.rawValue, privacy: .public), clipId=\(clip.id.uuidString, privacy: .public)")
 
-        try writeToPasteboard(clip: clip)
+        // TASK-026 fix — paste 진행 동안 watcher tick 자체 차단 (race 차단). 다중 파일의 saveFiles 시간 소요로 인한
+        // ack 대기 → synthesizeCommandV 지연 함정 fix. begin 호출은 *write 전*, end 는 *모든 흐름 후* (try/catch finally 보장).
+        await setPastePending?(true)
+        do {
+            try writeToPasteboard(clip: clip)
 
-        // TASK-023 회귀 (e) fix — pasteboard 박은 직후 watcher 에 통보. synthesizer ⌘V 합성은 *읽기* 동작이라 추가 changeCount 증가 X, 콜백은 합성 전 호출 안전.
-        await onPasteboardWritten?()
+            // TASK-023 회귀 (e) fix — pasteboard 박은 직후 watcher 에 통보. synthesizer ⌘V 합성은 *읽기* 동작이라 추가 changeCount 증가 X, 콜백은 합성 전 호출 안전.
+            await onPasteboardWritten?()
 
-        if mode == .autoPaste {
-            try synthesizer.synthesizeCommandV()
+            if mode == .autoPaste {
+                try synthesizer.synthesizeCommandV()
+            }
+
+            try await repository.updateLastUsedAt(id: clip.id)
+            Logger.paste.info("Paste done: type=\(clip.type.rawValue, privacy: .public), mode=\(mode.rawValue, privacy: .public)")
+            await setPastePending?(false)
+        } catch {
+            // TASK-026 fix — paste 실패 시에도 pending 해제 보장 (try/catch finally).
+            await setPastePending?(false)
+            throw error
         }
-
-        try await repository.updateLastUsedAt(id: clip.id)
-        Logger.paste.info("Paste done: type=\(clip.type.rawValue, privacy: .public), mode=\(mode.rawValue, privacy: .public)")
     }
 
     /// ClipType별 NSPasteboard 쓰기 분기 — text / image / file.
@@ -89,7 +104,12 @@ final class PasteService {
             }
 
         case .file:
-            // 외부 파일은 fileOriginalPath 우선 (사용자 원본 위치). 내부 보관본은 filePath fallback.
+            // TASK-026 — 다중 파일 묶음이면 별도 helper 위임 (writeImagePasteboard 형제 패턴).
+            if clip.isMultiFile {
+                try writeMultiFilePasteboard(clip)
+                return
+            }
+            // 단일 파일 (기존 분기) — fileOriginalPath 우선, fallback filePath.
             let pathString = clip.fileOriginalPath ?? clip.filePath
             guard let path = pathString else {
                 Logger.paste.error("Paste failed: file clip has nil fileOriginalPath and filePath, clipId=\(clip.id.uuidString, privacy: .public)")
@@ -101,6 +121,22 @@ final class PasteService {
             pasteboard.clearAndDeclareTypes([fileURLType])
             pasteboard.setString(url.absoluteString, forType: fileURLType)
         }
+    }
+
+    /// TASK-026 — 다중 파일 묶음 paste 헬퍼. entries 디코드 + URL 배열 변환 + `pasteboard.writeFileURLs([URL])`.
+    /// entry별 path 우선순위 = `originalPath ?? filePath` (단일 케이스 C/D 정합 — 원본 존재 시 원본 박음).
+    /// 디코드 실패 / 빈 배열 → `PasteError.fileURLLoadFailed` throw.
+    private func writeMultiFilePasteboard(_ clip: Clip) throws {
+        guard let entries = clip.fileEntries, !entries.isEmpty else {
+            Logger.paste.error("Paste failed: multi-file clip has invalid filePathsJson, clipId=\(clip.id.uuidString, privacy: .public)")
+            throw PasteError.fileURLLoadFailed
+        }
+        let urls = entries.map { entry -> URL in
+            let path = !entry.originalPath.isEmpty ? entry.originalPath : entry.filePath
+            return URL(fileURLWithPath: path)
+        }
+        Logger.paste.info("Paste multi-file: \(urls.count) URLs")
+        pasteboard.writeFileURLs(urls)
     }
 
     /// `.image` 분기 헬퍼 — image data 단일 타입 박음 + `originalFileURL` 박혀있으면 `public.file-url` 동시 박음 (Finder 폴더 ⌘V 호환).
