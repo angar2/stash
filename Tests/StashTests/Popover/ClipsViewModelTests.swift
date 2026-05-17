@@ -80,18 +80,19 @@ struct ClipsViewModelTests {
         #expect(vm.selectedIdx == 2)  // wrap reverse
     }
 
-    @Test("focusZone — activateSearchInput / deactivateSearchInputAndClear")
-    func searchFocusTransitions() async {
+    @Test("TASK-025 — resetForOpen 후 검색 활성 단계 폐기 정합")
+    func resetForOpenNoSearchActiveState() async {
         let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "hello")])
         await vm.reload()
         vm.searchQuery = "test"
-        vm.activateSearchInput()
-        #expect(vm.focusZone == .search)
-        #expect(vm.searchInputActive == true)
-        vm.deactivateSearchInputAndClear()
-        #expect(vm.focusZone == .search)
-        #expect(vm.searchInputActive == false)
+        vm.focusZone = .pin
+        vm.selectedIdx = 1
+        vm.pinSidebarOpen = true
+        vm.resetForOpen()
+        #expect(vm.focusZone == .clip)
+        #expect(vm.selectedIdx == 0)
         #expect(vm.searchQuery == "")
+        #expect(vm.pinSidebarOpen == false)
     }
 
     @Test("isEmptyState — clips 0 + 검색어 빈 문자열")
@@ -538,65 +539,9 @@ struct ClipsViewModelTests {
         #expect(vm.pendingScrollToId == nil)
     }
 
-    // MARK: - TASK-016 Phase 3: deactivateSearchInput — 검색어 보존
+    // MARK: - TASK-025: 검색바 always-active 정책 정합 — 이전 검색 활성 단계 (searchInputActive) 케이스 폐기
 
-    @Test("deactivateSearchInput — searchInputActive만 false, searchQuery 보존, focusZone 보존")
-    func deactivateSearchInput_PreservesQuery() async {
-        let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "x")])
-        await vm.reload()
-        vm.searchQuery = "abc"
-        vm.activateSearchInput()
-        #expect(vm.searchInputActive == true)
-        #expect(vm.focusZone == .search)
-
-        vm.deactivateSearchInput()
-        #expect(vm.searchInputActive == false)
-        #expect(vm.searchQuery == "abc")  // 검색어 보존
-        #expect(vm.focusZone == .search)  // focusZone도 보존 (deactivateSearchInputAndClear와 차이)
-    }
-
-    @Test("setFocusZone(.clip) — searchInputActive 유지 (hover로 활성화 단계 2 풀림 X — 지크 요구)")
-    func setFocusZone_NonSearch_PreservesSearchInputActive() async {
-        let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "x")])
-        await vm.reload()
-        vm.activateSearchInput()
-        #expect(vm.searchInputActive == true)
-
-        vm.setFocusZone(.clip)
-        #expect(vm.focusZone == .clip)
-        #expect(vm.searchInputActive == true)  // hover로는 풀리면 안 됨 — click 트리거에서만 해제
-    }
-
-    @Test("hover setSelectedIdx — searchInputActive 유지 (hover로 활성화 단계 2 풀림 X)")
-    func hoverSetSelectedIdx_PreservesSearchInputActive() async {
-        let prefilled = [makeClip(body: "a"), makeClip(body: "b")]
-        let (vm, _) = await makeViewModel(prefilled: prefilled)
-        await vm.reload()
-        vm.activateSearchInput()
-        #expect(vm.searchInputActive == true)
-
-        vm.setSelectedIdx(1)
-        #expect(vm.focusZone == .clip)
-        #expect(vm.searchInputActive == true)
-    }
-
-    @Test("resetForOpen — focusZone=.clip + selectedIdx=0 + searchInputActive=false + searchQuery 비움")
-    func resetForOpenInitializesState() async {
-        let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "a"), makeClip(body: "b")])
-        await vm.reload()
-        // 사용자 활성 후 검색어 박은 상태
-        vm.searchQuery = "abc"
-        vm.activateSearchInput()
-        vm.selectedIdx = 1
-        #expect(vm.searchInputActive == true)
-
-        vm.resetForOpen()
-        #expect(vm.focusZone == .clip)
-        #expect(vm.selectedIdx == 0)
-        #expect(vm.searchInputActive == false)
-        #expect(vm.searchQuery == "")
-        #expect(vm.pendingScrollToId == nil)
-    }
+    // TASK-025 — `deactivateSearchInput_PreservesQuery` / `setFocusZone_NonSearch_PreservesSearchInputActive` / `hoverSetSelectedIdx_PreservesSearchInputActive` / `resetForOpenInitializesState` 4 케이스 삭제. `searchInputActive` state + 관련 메서드 (`activateSearchInput` / `deactivateSearchInput` / `deactivateSearchInputAndClear` / `enterSearchZone`) 폐기로 검증 대상 없음. resetForOpen 의 정합은 본 파일 위 `resetForOpenNoSearchActiveState` 케이스에서 검증.
 
     // TASK-020 — pop (⌘⇧V) 단축키·기능 폐기로 pop_NonPinned_PastesAndDeletes / pop_OutOfRange_NoOp 케이스 삭제.
 

@@ -60,105 +60,65 @@ struct PopoverHeaderView: View {
                 .foregroundStyle(searchIconColor)
                 .frame(width: 13, height: 13)
 
-            // 인풋 — NSTextField wrap. focus change → ViewModel activate/deactivate.
-            // 방식 2 — isEnabled=false로 NSTextField editable/selectable 비활성 + onFocusChange no-op.
+            // 인풋 — NSTextField wrap.
+            // TASK-025 — onFocusChange 콜백 본문 비움. 검색바 always-active 정책 — first responder 진입/이탈은 시각 분기 없음.
+            // 방식 2 (method3) — isEnabled=false로 NSTextField editable/selectable 비활성.
             PlainNSTextField(
                 text: $viewModel.searchQuery,
                 placeholder: searchPlaceholder,
                 placeholderAttributed: nil,
                 font: .systemFont(ofSize: 12.5, weight: .medium),
                 textColor: NSColor.labelColor,
-                onFocusChange: { focused in
-                    guard !isInteractionDisabled else { return }
-                    if focused {
-                        viewModel.activateSearchInput()
-                    } else {
-                        viewModel.deactivateSearchInput()
-                    }
+                onFocusChange: { _ in
+                    // TASK-025 — body 비움. always-active 정책 정합.
                 },
                 isEnabled: !isInteractionDisabled
             )
             .onChange(of: viewModel.searchQuery) { _, _ in
                 Task { await viewModel.performSearch() }
             }
-
-            // ENTER 키캡 — hover 활성 (focusZone=.search && !active && empty) 시만 visible. opacity로 layout 자리만 유지 (shift 방지).
-            KeyCapView(text: "Enter")
-                .opacity(showEnterHint ? 1 : 0)
-                .allowsHitTesting(false)
         }
         .padding(.horizontal, DesignTokens.Spacing.searchBoxPaddingHorz)
         .frame(height: DesignTokens.Spacing.searchBoxHeight)
         .background(searchBoxBackground)
         .overlay(searchBoxBorder)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous))
-        .overlay(searchFocusedRing)
         .padding(.horizontal, DesignTokens.Spacing.searchContainerPaddingHorz)
         .padding(.top, DesignTokens.Spacing.searchContainerPaddingTop)
         .padding(.bottom, DesignTokens.Spacing.searchContainerPaddingBottom)
-        .onHover { isHover in
-            guard !isInteractionDisabled else { return }
-            if isHover {
-                viewModel.setFocusZone(.search)
-            }
-        }
+        // TASK-025 — `.onHover { setFocusZone(.search) }` 블록 폐기. 검색바 hover 시각 변화 없음 (always-active).
     }
 
     private var searchPlaceholder: String {
         return String(localized: "search.placeholder")
     }
 
-    /// ENTER 키캡 visible 조건 — hover 활성 + 비활성화 단계 2 + 검색어 비어있음.
-    private var showEnterHint: Bool {
-        viewModel.focusZone == .search && !viewModel.searchInputActive && viewModel.searchQuery.isEmpty
-    }
-
+    /// TASK-025 — 검색바 icon 색상 단일화 (focusZone == .search 분기 제거).
     private var searchIconColor: SwiftUI.Color {
-        if viewModel.focusZone == .search {
-            return DesignTokens.Colors.accent
-        }
-        return DesignTokens.Colors.searchIconInactive
+        DesignTokens.Colors.searchIconInactive
     }
 
     private var deleteAllColor: SwiftUI.Color { DesignTokens.Colors.searchDeleteAllLabel }
 
+    /// TASK-025 — 단일 배경. hover 그라디언트 / searchInputActive 분기 폐기.
     @ViewBuilder
     private var searchBoxBackground: some View {
-        if viewModel.searchInputActive {
-            // 활성화 단계 2 (cursor 깜박) — 배경 = 기본색 (파란 그라디언트 X), 테두리만 파란색 (지크 요구).
-            DesignTokens.Colors.searchBoxBg
-        } else if viewModel.focusZone == .search {
-            // 활성화 단계 1 (hover) — 검색부 전체 파란 그라디언트.
-            LinearGradient(
-                colors: [DesignTokens.Colors.clipRowSelectionTop, DesignTokens.Colors.clipRowSelectionBottom],
-                startPoint: .top, endPoint: .bottom
-            )
-        } else {
-            DesignTokens.Colors.searchBoxBg
-        }
+        DesignTokens.Colors.searchBoxBg
     }
 
+    /// TASK-025 — `searchQuery.isEmpty` 분기. 빈 입력 = 기본 회색 테두리 / 1자 이상 = 파란 강조 테두리.
     @ViewBuilder
     private var searchBoxBorder: some View {
-        if viewModel.searchInputActive {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous)
-                .stroke(DesignTokens.Colors.searchBoxFocusedBorder, lineWidth: 0.5)
-        } else if viewModel.focusZone == .search {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous)
-                .stroke(DesignTokens.Colors.clipRowSelectionBorder, lineWidth: 0.5)
-        } else {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous)
-                .stroke(DesignTokens.Colors.searchBoxBorder, lineWidth: 0.5)
-        }
+        RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous)
+            .stroke(
+                viewModel.searchQuery.isEmpty
+                    ? DesignTokens.Colors.searchBoxBorder
+                    : DesignTokens.Colors.searchBoxFocusedBorder,
+                lineWidth: 0.5
+            )
     }
 
-    @ViewBuilder
-    private var searchFocusedRing: some View {
-        if viewModel.searchInputActive {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.searchBox, style: .continuous)
-                .stroke(DesignTokens.Colors.searchBoxFocusedRing, lineWidth: 2)
-        }
-    }
+    // TASK-025 — `searchFocusedRing` ViewBuilder 폐기. focus ring 시각 제거.
 }
 
 // 기존 SearchBarView 명명 호환 (HistoryPopover에서 사용)

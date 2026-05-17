@@ -3,9 +3,9 @@ import AppKit
 import SwiftUI
 import OSLog
 
-/// popover 안 단축키 정의 — 키코드 + modifier 조합의 단일 진실 소스 (TASK-017 / TASK-021).
-/// FEATURES §4 정합 + 사용자 결정: 행 조작 단축키 중 방향키(↑/↓)·Enter·ESC만 단독, 나머지는 ⌘ 부여.
-/// PopoverPanel.installKeyDownHandler가 본 enum을 순회 매칭 → dispatch 분기.
+/// popover 안 단축키 정의 — 키코드 + modifier 조합의 단일 진실 소스 (TASK-017 / TASK-021 / TASK-025).
+/// FEATURES §4 정합 + 사용자 결정: 행 조작 단축키 중 방향키(↑/↓)·ESC만 단독, 나머지는 ⌘ 부여. Enter 동작 폐기 (TASK-025).
+/// PopoverPanel.installKeyDownHandler / installPopoverKeyEventMonitor 가 본 enum을 순회 매칭 → dispatch 분기.
 enum PopoverHotkey: CaseIterable {
     case moveSelectionUp        // ↑ 단독 (TASK-021)
     case moveSelectionDown      // ↓ 단독 (TASK-021)
@@ -16,7 +16,6 @@ enum PopoverHotkey: CaseIterable {
     case deleteAllAlias         // ⌘+⇧+⌫
     case copy                   // ⌘+C (TASK-024 — 항상 .copyBack 호출, 권한 무관 활성)
     case paste                  // ⌘+V (TASK-024 — Accessibility 권한 게이트 조건부 활성)
-    case activateSearch         // Enter 단독 (예외 — macOS 표준 검색 활성화)
     case escape                 // ESC 단독 (예외 — macOS 표준 닫기/취소)
 
     /// macOS keyCode (NSEvent.keyCode raw 값).
@@ -29,7 +28,6 @@ enum PopoverHotkey: CaseIterable {
         case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
         case .copy: return 8                     // C (TASK-024)
         case .paste: return 9                    // V
-        case .activateSearch: return 36          // Enter (return)
         case .escape: return 53                  // ESC
         }
     }
@@ -44,8 +42,7 @@ enum PopoverHotkey: CaseIterable {
             return [.command, .shift]
         case .deleteAll:
             return [.command, .option]
-        case .moveSelectionUp, .moveSelectionDown,
-             .activateSearch, .escape:
+        case .moveSelectionUp, .moveSelectionDown, .escape:
             return []
         }
     }
@@ -250,23 +247,9 @@ enum PopoverPanel {
             }
             Task { @MainActor in await handleClipPaste(viewModel.activeIdx) }
             return true
-        case .activateSearch:
-            // Enter 단독 — focusZone=.search & 비활성 시만 활성화. 그 외는 NSTextField로 흐름.
-            guard viewModel.focusZone == .search, !viewModel.searchInputActive else { return false }
-            viewModel.activateSearchInput()
-            // 마우스 click과 동일하게 텍스트 커서 활성화 — NSTextField 명시적 first responder 셋업.
-            if let textField = Self.findFirstTextField(in: panel.contentView) {
-                panel.makeFirstResponder(textField)
-            }
-            return true
         case .escape:
-            // ESC 단독 — 검색 활성 시는 installSearchEscapeMonitor가 NSTextView consume 전에 가로챔.
-            // 본 분기는 검색 비활성 상태 ESC만 도달 — 안전장치로 동일 처리 유지 (monitor 미설치 fallback).
-            if viewModel.searchInputActive {
-                viewModel.deactivateSearchInputAndClear()
-                panel.makeFirstResponder(nil)
-                return true
-            }
+            // TASK-025 — 2-tier 단순화. 검색어 clear 분기 폐기 (검색 활성 단계 개념 제거).
+            // 핀 사이드바 열림 → 사이드바만 닫기 / 그 외 → popover dismiss.
             if viewModel.pinSidebarOpen {
                 viewModel.collapsePinSidebar()
                 return true
@@ -276,22 +259,47 @@ enum PopoverPanel {
         }
     }
 
-    /// ESC 키 monitor — 검색 활성 상태에서 ESC 누름 시 NSTextView field editor가 consume하기 *전에* 가로채 검색 비활성화 + first responder 해제.
-    /// addLocalMonitorForEvents([.keyDown])는 NSTextView dispatch 전에 호출 — 마우스 외부 클릭 monitor와 동일 패턴 (TASK-017 fix-3 v4).
-    /// 반환된 monitor 객체는 호출자가 보관하다 NSEvent.removeMonitor로 정리.
-    static func installSearchEscapeMonitor(panel: KeyablePanel, viewModel: ClipsViewModel) -> Any? {
+    /// TASK-025 — popover 키 라우팅 monitor. NSTextField 가 first responder 일 때 NSTextView (field editor) 가 keyDown 을 *먼저* consume 하므로 `KeyablePanel.keyDownHandler` 미발화.
+    /// 본 monitor 가 NSEvent dispatch chain 의 NSResponder chain *전 단계* 에서 발화 — NSTextView consume 전 가로채 PopoverHotkey 매칭 시 dispatch.
+    /// Tab 키 (keyCode=48) 도 consume — NSTextView `insertTab:` 가 first responder 변경 가능성 차단 (always-active 안전망).
+    /// 매칭 안 되는 키 (printable / Space / Backspace / ←→ / IME / NSTextView 표준 단축키) 는 `return event` forward.
+    /// 반환된 monitor 객체는 호출자가 보관하다 NSEvent.removeMonitor 로 정리.
+    static func installPopoverKeyEventMonitor(
+        panel: KeyablePanel,
+        viewModel: ClipsViewModel,
+        mode: PopoverInvocationMode,
+        onDismiss: @escaping @MainActor () -> Void,
+        handleClipPaste: @escaping @MainActor (Int) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int) async -> Void
+    ) -> Any? {
         return NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak panel, weak viewModel] event in
             guard let panel, let viewModel, event.window === panel else { return event }
-            // ESC keyCode 53 + 검색 활성 상태일 때만 가로챔. 그 외는 forward.
-            guard event.keyCode == 53, viewModel.searchInputActive else { return event }
-            viewModel.deactivateSearchInputAndClear()
-            panel.makeFirstResponder(nil)
-            return nil  // event consume → NSTextView로 forward 안 됨
+            // PopoverHotkey 매칭 가로채 dispatch.
+            for hotkey in PopoverHotkey.allCases where hotkey.matches(event: event) {
+                let handled = Self.dispatch(
+                    hotkey: hotkey,
+                    viewModel: viewModel,
+                    panel: panel,
+                    mode: mode,
+                    onDismiss: onDismiss,
+                    handleClipPaste: handleClipPaste,
+                    handleClipCopy: handleClipCopy
+                )
+                return handled ? nil : event
+            }
+            // Tab 키 안전망 — NSTextView `insertTab:` 매핑 차단 (first responder 잃지 않도록).
+            if event.keyCode == 48 {  // Tab
+                Logger.ui.debug("Tab consumed by popover key monitor (TASK-025)")
+                return nil
+            }
+            return event  // 미매칭 — NSTextField forward (printable / Space / Backspace / ←→ / IME / Cmd+A 등).
         }
     }
 
-    /// 트리 탐색 — view subview 재귀로 첫 NSTextField 찾기. Enter 단축키 시 검색부 텍스트 커서 활성화용 (TASK-017 fix-3).
-    private static func findFirstTextField(in view: NSView?) -> NSTextField? {
+    /// 트리 탐색 — view subview 재귀로 첫 NSTextField 찾기.
+    /// TASK-025 — popover open 시 NSTextField first responder 자동 진입에 사용 (`PopoverWindow.showInternal`).
+    /// internal 가시성 — 같은 모듈 내 `PopoverWindow` 가 호출.
+    static func findFirstTextField(in view: NSView?) -> NSTextField? {
         guard let view else { return nil }
         if let tf = view as? NSTextField { return tf }
         for sub in view.subviews {
@@ -302,10 +310,11 @@ enum PopoverPanel {
         return nil
     }
 
-    /// popover 안 mouseDown 시 검색바 외부 click이면 first responder reset (TASK-016 D-3 outside click deactivate).
-    /// click 좌표가 NSTextField/NSTextView hit이면 reset 안 함 → SwiftUI HostingView가 click 처리해 NSTextField가 first responder 다시 받음.
-    /// 반환된 monitor 객체는 호출자가 보관하다 NSEvent.removeMonitor로 정리.
-    static func installOutsideTextFieldClickMonitor(panel: NSPanel) -> Any? {
+    /// TASK-025 — popover 안 mouseDown 시 NSTextField 외부 click 이면 NSTextField *first responder 복원* (always-active 정책).
+    /// 클립 행 / 핀 행 / 환경설정 행 click 처리 후에도 검색바가 keystroke 받도록 보장.
+    /// 이전 정책 (TASK-016 D-3) — *해제* 방향 → TASK-025 — *복원* 방향으로 반대 갱신.
+    /// 반환된 monitor 객체는 호출자가 보관하다 NSEvent.removeMonitor 로 정리.
+    static func installSearchFirstResponderRestoreMonitor(panel: NSPanel) -> Any? {
         return NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak panel] event in
             guard let panel, event.window === panel else { return event }
             guard let contentView = panel.contentView else { return event }
@@ -319,9 +328,13 @@ enum PopoverPanel {
                 }
                 current = v.superview
             }
-            // 외부 click(검색바 외부) 시 first responder reset (TASK-016 D-3 outside click deactivate).
-            if !isTextFieldHit, let firstResp = panel.firstResponder, firstResp !== panel {
-                panel.makeFirstResponder(panel)
+            // NSTextField 외부 click → first responder 가 NSTextField 아니면 복원.
+            if !isTextFieldHit,
+               let textField = findFirstTextField(in: contentView),
+               panel.firstResponder !== textField,
+               panel.firstResponder !== textField.currentEditor() {
+                panel.makeFirstResponder(textField)
+                Logger.ui.debug("Search first responder restored after outside click (TASK-025)")
             }
             return event
         }
