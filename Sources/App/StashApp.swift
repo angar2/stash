@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 import Combine
 import OSLog
+import KeyboardShortcuts
 
 @main
 struct StashApp: App {
@@ -152,7 +153,22 @@ struct StashApp: App {
             }
         }
 
-        // ⑨-2 권한 변경 시 hotkeyMonitor 자동 재시작 + ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024) —
+        // ⑨-2 TASK-032 — KeyboardShortcuts SPM (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관) 진입점 등록.
+        // default ⌘⇧V — 사용자가 ShortcutsTab Recorder 로 변경하기 전 (getShortcut == nil 분기) 에만 박음 (사용자 변경 보존).
+        // HotkeyMonitor (방식 2 ⌘ double-tap, modifier-only 후킹, 권한 필수) 와 별개 진입점 — 권한 거부 사용자도 popover 진입 가능 (방식 4).
+        if KeyboardShortcuts.getShortcut(for: .popoverOpen) == nil {
+            KeyboardShortcuts.setShortcut(.init(.v, modifiers: [.command, .shift]), for: .popoverOpen)
+            Logger.hotkey.info("TASK-032 — popoverOpen default shortcut set: ⌘⇧V")
+        }
+        self.hotkeyManager.register(name: .popoverOpen) { [popover, clipsVM] in
+            Task { @MainActor in
+                Logger.hotkey.info("TASK-032 — popoverOpen shortcut triggered (방식 4)")
+                await clipsVM.reload()
+                popover.show(mode: .method2)
+            }
+        }
+
+        // ⑨-3 권한 변경 시 hotkeyMonitor 자동 재시작 + ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024) —
         // 권한 부여 *전* 상태였으면 init 1회 start()가 skip됨. 이후 사용자가 권한 부여해도 재시작 트리거 없음 → 영원히 미동작.
         // statusPublisher 구독해서 .granted 변경 시 start, .denied/.unknown 변경 시 stop. start()는 stop() 선행 호출로 멱등.
         // TASK-024 — 동일 sink 안에서 ClipsViewModel + SettingsViewModel 의 `accessibilityGranted` 동시 갱신. (1) ClipsViewModel 의 ⌘V 권한 게이트 동적 토글 + 힌트바 회색조 분기. (2) SettingsViewModel 의 *autoPaste 라디오 활성 분기* 의 호출처 누락 fix — 기존 `updateAccessibilityGranted` 정의만 되어 있고 호출처 0건이라 권한 O 사용자도 autoPaste 선택 불가했던 결함 정합.
@@ -176,7 +192,7 @@ struct StashApp: App {
                 }
             }
 
-        // ⑨-3 권한 변경 감지 트리거 (TASK-017 fix-3) — stash는 LSUIElement=true (메뉴바 상주)라 background.
+        // ⑨-4 권한 변경 감지 트리거 (TASK-017 fix-3) — stash는 LSUIElement=true (메뉴바 상주)라 background.
         // 사용자가 시스템 설정에서 Accessibility 권한 부여 후 시스템 설정을 닫고 다른 앱으로 돌아올 때 NSWorkspace.didActivateApplicationNotification 발화.
         // 그 시점에 permSvc.recheck() 호출 → status .denied → .granted 변경 감지 → publisher emit → bridge → hotkeyMon.start() 자동.
         self.permissionRefresherObserver = NSWorkspace.shared.notificationCenter.addObserver(
