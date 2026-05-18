@@ -39,10 +39,6 @@ struct ClipRowView: View {
                     timeLabel
                 }
             }
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onClick)
-            // TASK-030 — 클립 행 paste 영역에 손가락 cursor. method3 보류 모드는 클릭 비활성이라 cursor X.
-            .pointingHandCursor(enabled: mode != .method3)
 
             actionButton
         }
@@ -52,8 +48,11 @@ struct ClipRowView: View {
         .background(rowBackground)
         .overlay(rowBorder)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
-        // hover 영역 명시 — outer 전체 (padding 포함, 시각 파란색 영역과 일치) 잡도록.
+        // TASK-031 — hit-test 영역 outer 전체로 통합. hover/click/cursor 세 영역 일치 (padding 포함 시각 하이라이트 가장자리까지 클릭 가능).
+        // actionButton(핀/X) 영역은 자식 .highPriorityGesture 우선권으로 paste 오작동 차단 (단일 안전망).
         .contentShape(Rectangle())
+        .onTapGesture(perform: onClick)
+        .pointingHandCursor(enabled: mode != .method3)
         .onHover { isHover in
             hovering = isHover
             if isHover { onHover() }
@@ -259,8 +258,8 @@ struct ClipRowView: View {
         return "\(days)\(String(localized: "time.suffix.days"))"
     }
 
-    // MARK: - Action button (Pin or X) — Bug 2 fix v4
-    // hit-test 영역 분리 (body의 outer/inner HStack 구조)에 더해 X·Pin에 .highPriorityGesture로 자식 우선권 명시 (이중 안전망).
+    // MARK: - Action button (Pin or X) — Bug 2 fix v4 (TASK-031 갱신)
+    // X·Pin 자식 `.highPriorityGesture` 우선권으로 paste 오작동 차단 (outer hit-test 통합 후 단일 안전망).
     @ViewBuilder
     private var actionButton: some View {
         if clip.isPinned {
@@ -300,10 +299,12 @@ struct ClipRowView: View {
                         guard mode != .method3 else { return }
                         xHovered = isHover
                     }
-                    .onTapGesture {
-                        guard mode != .method3 else { return }
-                        onDelete()
-                    }
+                    // TASK-031 — outer onTapGesture 와 충돌 회피용 .highPriorityGesture 변환. 핀 버튼 패턴 정합.
+                    .highPriorityGesture(
+                        TapGesture().onEnded {
+                            if mode != .method3 { onDelete() }
+                        }
+                    )
                     // TASK-030 — X 삭제 버튼에 손가락 cursor. method3 비활성 분기 정합.
                     .pointingHandCursor(enabled: mode != .method3)
                     .allowsHitTesting(mode != .method3)
