@@ -247,18 +247,31 @@ final class ClipsViewModel {
     }
 
     // MARK: - Actions
-    /// TASK-019 fix 2차 — focusZone == .pin 일 때 *pinnedClips 안 항목* paste. 본체 visibleClips 는 focusZone == .clip 일 때만.
-    /// TASK-024 — 권한 X 시 effective mode 를 `.copyBack` 강제. 마우스 클릭 진입점 대비 안전망 (⌘V 단축키는 `PopoverPanel.dispatch` 단계에서 차단되어 본 메서드 호출 X).
-    func paste(at idx: Int) async {
-        let clip: Clip
-        if focusZone == .pin {
-            guard idx >= 0 && idx < pinnedClips.count else { return }
-            clip = pinnedClips[idx]
-        } else {
-            let list = visibleClips
-            guard idx >= 0 && idx < list.count else { return }
-            clip = list[idx]
+
+    /// TASK-028 — paste / copy 의 zone 분기 + idx 경계 가드 + clip 선택을 단일 helper 로 분리.
+    /// `zone == .pin` → `pinnedClips[idx]`, 그 외 → `visibleClips[idx]`. 가드 미통과 시 nil + debug 로그.
+    private func clipForZone(at idx: Int, zone: FocusZone) -> Clip? {
+        if zone == .pin {
+            guard idx >= 0 && idx < pinnedClips.count else {
+                Logger.ui.debug("Clip lookup skip — zone=.pin idx=\(idx, privacy: .public) pinnedClips.count=\(self.pinnedClips.count, privacy: .public)")
+                return nil
+            }
+            return pinnedClips[idx]
         }
+        let list = visibleClips
+        guard idx >= 0 && idx < list.count else {
+            Logger.ui.debug("Clip lookup skip — zone=.clip idx=\(idx, privacy: .public) visibleClips.count=\(list.count, privacy: .public)")
+            return nil
+        }
+        return list[idx]
+    }
+
+    /// TASK-019 fix 2차 — zone == .pin 일 때 *pinnedClips 안 항목* paste. 본체 visibleClips 는 zone == .clip 일 때만.
+    /// TASK-024 — 권한 X 시 effective mode 를 `.copyBack` 강제. 마우스 클릭 진입점 대비 안전망 (⌘V 단축키는 `PopoverPanel.dispatch` 단계에서 차단되어 본 메서드 호출 X).
+    /// TASK-028 — `zone` 명시 파라미터화. 호출 시점 zone snapshot 으로 결정하므로 `hide()` → `collapsePinSidebar()` → `focusZone = .clip` 후속 흐름이 paste 대상에 영향 X. zone 분기 + 가드는 `clipForZone(at:zone:)` 로 분리.
+    func paste(at idx: Int, zone: FocusZone) async {
+        guard let clip = clipForZone(at: idx, zone: zone) else { return }
+        Logger.ui.info("Paste invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public)")
         let effectiveMode: PasteMode = accessibilityGranted ? pasteMode : .copyBack
         do {
             try await pasteService.paste(clip: clip, mode: effectiveMode)
@@ -279,18 +292,11 @@ final class ClipsViewModel {
         }
     }
 
-    /// TASK-024 — ⌘+C 복사 단축키 액션. Settings `pasteMode` 라디오 무관 *항상* `.copyBack` 모드 호출 — 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관 항상 활성. focusZone == .pin / .clip 분기는 paste(at:) 와 동일.
-    func copy(at idx: Int) async {
-        let clip: Clip
-        if focusZone == .pin {
-            guard idx >= 0 && idx < pinnedClips.count else { return }
-            clip = pinnedClips[idx]
-        } else {
-            let list = visibleClips
-            guard idx >= 0 && idx < list.count else { return }
-            clip = list[idx]
-        }
-        Logger.ui.info("Copy invoked: clipId=\(clip.id.uuidString, privacy: .public), type=\(clip.type.rawValue, privacy: .public)")
+    /// TASK-024 — ⌘+C 복사 단축키 액션. Settings `pasteMode` 라디오 무관 *항상* `.copyBack` 모드 호출 — 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관 항상 활성. zone == .pin / .clip 분기는 paste(at:zone:) 와 동일.
+    /// TASK-028 — `zone` 명시 파라미터화. paste(at:zone:) 와 동일 사유. zone 분기 + 가드는 `clipForZone(at:zone:)` 로 분리.
+    func copy(at idx: Int, zone: FocusZone) async {
+        guard let clip = clipForZone(at: idx, zone: zone) else { return }
+        Logger.ui.info("Copy invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public) type=\(clip.type.rawValue, privacy: .public)")
         do {
             try await pasteService.paste(clip: clip, mode: .copyBack)
             triggerPasteFlash(for: clip.id)

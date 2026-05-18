@@ -6,7 +6,8 @@ struct PinSidebarView: View {
     @Bindable var viewModel: ClipsViewModel
     let mode: PopoverInvocationMode
     /// 핀 항목 *paste* 시 호출 — PopoverWindow.handleClipPaste 흐름과 동일 (dismiss → frontmost 복원 → sleep → paste).
-    let handleClipPaste: @MainActor (Int) async -> Void
+    /// TASK-028 — 핀 행 paste 호출 시 `zone: .pin` 명시 전달. hide() → collapsePinSidebar() → focusZone=.clip 흐름이 paste 대상에 영향 X.
+    let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,11 +25,12 @@ struct PinSidebarView: View {
                             mode: mode,
                             showTimeLabel: false,
                             onClick: {
-                                // 클릭 시 paste 흐름 — focusZone=.pin 보장 후 handleClipPaste 호출.
+                                // 클릭 시 paste 흐름 — focusZone=.pin / pinSelectedIdx 갱신 (사이드바 nav cursor + detail panel hook 동기화).
+                                // TASK-028 — paste 대상은 zone=.pin 명시로 결정. focusZone 후속 변경 (hide → collapsePinSidebar) 영향 X.
                                 viewModel.focusZone = .pin
                                 viewModel.pinSelectedIdx = idx
                                 Task { @MainActor in
-                                    await handleClipPaste(idx)
+                                    await handleClipPaste(idx, .pin)
                                 }
                             },
                             onHover: {
