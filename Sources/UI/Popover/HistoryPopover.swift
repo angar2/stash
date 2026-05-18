@@ -244,7 +244,7 @@ struct HistoryPopover: View {
         }
     }
 
-    // Pin Row 우측 단축키 안내 키캡 (TASK-019) — DesignTokens 의 키캡 토큰 통합.
+    // 행 우측 단축키 안내 키캡 (TASK-019 핀 행 ⌘B / TASK-029 환경설정 행 ⌘, 공용) — DesignTokens 의 키캡 토큰 통합.
     private func pinRowShortcutKeycap(_ label: String) -> some View {
         Text(label)
             .font(DesignTokens.Typography.pinRowKeycap)
@@ -272,10 +272,17 @@ struct HistoryPopover: View {
                 .font(DesignTokens.Typography.rowHeader)
                 .foregroundStyle(DesignTokens.Colors.preferencesRow)
             Spacer()
+            // TASK-029 — 환경설정 진입 단축키 ⌘, 시각 노출. 핀 행 ⌘B 키캡과 동일 스타일.
+            pinRowShortcutKeycap("⌘,")
+            // TASK-029 — 핀 행 우측 chevron 자리만큼 invisible spacer. 키캡 우측 끝 x 좌표를 핀 행 ⌘B 키캡과 정합 (수직 정렬 라인 일치).
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .semibold))
+                .hidden()
         }
         .padding(.horizontal, DesignTokens.Spacing.preferencesRowPadHorz)
-        .frame(height: DesignTokens.Spacing.preferencesRowHeight)
-        .padding(.top, DesignTokens.Spacing.preferencesRowMarginTop)
+        // TASK-029 — 핀 행 키캡과 행 높이 일치 (수직 가운데 정렬 정합) 위해 frame/padding 을 핀 행과 통일.
+        .frame(height: DesignTokens.Spacing.pinRowHeight)
+        .padding(.vertical, DesignTokens.Spacing.pinRowMarginVert)
         .background(
             Group {
                 if selected {
