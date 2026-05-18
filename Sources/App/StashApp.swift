@@ -31,6 +31,8 @@ struct StashApp: App {
     let statusItemController: StatusItemController
     /// 1·2·3 호출 방식 통합 popover Window (TASK-018) — Method1/2/3Window 폐기 후 단일 인스턴스.
     let popoverWindow: PopoverWindow
+    /// TASK-029 — SwiftUI Settings Scene 폐기 + 환경설정 윈도우 단일 controller. 마우스 클릭 / ⌘+, / ESC 모든 진입점 단일화.
+    let preferencesController: PreferencesWindowController
     let toastQueue: ToastQueue
     let toastWindowController: ToastWindowController
     let permissionToastNotifier: PermissionToastNotifier
@@ -125,9 +127,12 @@ struct StashApp: App {
 
         // ⑧ UI controllers (NSStatusItem retain) — HistoryPopover 호스팅
         // 1·2·3 호출 방식 통합 popover Window (TASK-018). StatusItemController 와 HotkeyMonitor 모두 동일 인스턴스 공유.
+        // TASK-029 — preferencesController 를 App lifetime 으로 보관 + popover onOpenSettings 콜백이 controller.show() 호출 (단일 진입점).
+        let prefsController = PreferencesWindowController(viewModel: settingsVM)
+        self.preferencesController = prefsController
         let popover = PopoverWindow(
             viewModel: clipsVM,
-            onOpenSettings: { Self.openSettings() }
+            onOpenSettings: { [prefsController] in prefsController.show() }
         )
         self.popoverWindow = popover
         self.statusItemController = StatusItemController(
@@ -243,17 +248,17 @@ struct StashApp: App {
 
     var body: some Scene {
         // NOTE: MenuBarExtra 미사용 — 좌/우 클릭 분기 한계로 NSStatusItem 직접 사용 (ARCHITECTURE §9-2)
+        // TASK-029 — SwiftUI Settings Scene 본문 비움. 자동 ⌘+, 메뉴 항목은 `.commands` `CommandGroup(replacing: .appSettings)` 가 PreferencesWindowController.show() 호출로 재등록 (마우스 클릭 / ⌘+, / ESC 단일 controller 경유).
         Settings {
-            SettingsWindow(viewModel: settingsViewModel)
+            EmptyView()
         }
-    }
-
-    @MainActor
-    private static func openSettings() {
-        // Phase 7에서 본 구현 — 현 placeholder는 NSWorkspace 알림만
-        Logger.ui.info("Open settings requested — Phase 7에서 본 구현")
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button(String(localized: "preferences.row") + "...") {
+                    preferencesController.show()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
     }
 
