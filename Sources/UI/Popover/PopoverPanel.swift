@@ -142,28 +142,32 @@ enum PopoverPanel {
 
     /// 클립 paste 흐름 (TASK-016 D-4·D-5·D-6) — popover dismiss → 이전 frontmost 앱 활성화 → 안정 대기 → viewModel.paste.
     /// Method1/2/3Window 모두 동일 흐름 — DRY로 묶음.
+    /// TASK-028 — `zone` 호출 시점 snapshot 을 viewModel.paste 에 명시 전달. hide() → collapsePinSidebar() → focusZone=.clip 흐름이 paste 대상에 영향 X.
     static func performPasteFlow(
         viewModel: ClipsViewModel,
         idx: Int,
+        zone: FocusZone,
         sourceLabel: String,
         hide: () -> Void
     ) async {
         // TASK-020 — NSApp.activate / prev.activate 호출 모두 제거. 외부 앱이 frontmost 유지 상태라 별도 activate 단계 없이 panel hide + sleep + viewModel.paste만으로 정확 paste 보장.
         hide()
         try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
-        await viewModel.paste(at: idx)
+        await viewModel.paste(at: idx, zone: zone)
     }
 
     /// 클립 copy 흐름 (TASK-024) — popover dismiss → 안정 대기 → viewModel.copy. `performPasteFlow` 와 동일 패턴 (mode 만 `.copyBack` 강제). Settings `pasteMode` 라디오 무관 항상 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관.
+    /// TASK-028 — `zone` 호출 시점 snapshot 을 viewModel.copy 에 명시 전달. performPasteFlow 와 동일 사유.
     static func performCopyFlow(
         viewModel: ClipsViewModel,
         idx: Int,
+        zone: FocusZone,
         sourceLabel: String,
         hide: () -> Void
     ) async {
         hide()
         try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
-        await viewModel.copy(at: idx)
+        await viewModel.copy(at: idx, zone: zone)
     }
 
     /// KeyablePanel.keyDownHandler 셋업 — Method1/2/3 공통 키 이벤트 처리 (TASK-017).
@@ -174,8 +178,8 @@ enum PopoverPanel {
         viewModel: ClipsViewModel,
         mode: PopoverInvocationMode,
         onDismiss: @escaping @MainActor () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void,
-        handleClipCopy: @escaping @MainActor (Int) async -> Void
+        handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int, FocusZone) async -> Void
     ) {
         panel.keyDownHandler = { [weak viewModel, weak panel] event in
             guard let viewModel, let panel else { return false }
@@ -202,8 +206,8 @@ enum PopoverPanel {
         panel: KeyablePanel,
         mode: PopoverInvocationMode,
         onDismiss: @escaping @MainActor () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void,
-        handleClipCopy: @escaping @MainActor (Int) async -> Void
+        handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int, FocusZone) async -> Void
     ) -> Bool {
         switch hotkey {
         case .moveSelectionUp:
@@ -237,7 +241,12 @@ enum PopoverPanel {
             return true
         case .copy:
             // TASK-024 — ⌘+C 권한 무관 항상 활성. Settings `pasteMode` 라디오 무관 항상 `.copyBack` 호출.
-            Task { @MainActor in await handleClipCopy(viewModel.activeIdx) }
+            // TASK-028 — dispatch 진입 시점 zone + activeIdx snapshot. hide() 흐름이 focusZone 리셋해도 copy 대상 변동 X.
+            do {
+                let zone = viewModel.focusZone
+                let idx = viewModel.activeIdx
+                Task { @MainActor in await handleClipCopy(idx, zone) }
+            }
             return true
         case .paste:
             // TASK-024 — Accessibility 권한 게이트. 권한 X 시 event consume + 무반응 (NSTextField forward 차단).
@@ -245,7 +254,12 @@ enum PopoverPanel {
                 Logger.ui.debug("⌘V blocked — accessibility denied (TASK-024 게이트)")
                 return true
             }
-            Task { @MainActor in await handleClipPaste(viewModel.activeIdx) }
+            // TASK-028 — dispatch 진입 시점 zone + activeIdx snapshot. copy 와 동일 사유.
+            do {
+                let zone = viewModel.focusZone
+                let idx = viewModel.activeIdx
+                Task { @MainActor in await handleClipPaste(idx, zone) }
+            }
             return true
         case .escape:
             // TASK-025 — 2-tier 단순화. 검색어 clear 분기 폐기 (검색 활성 단계 개념 제거).
@@ -269,8 +283,8 @@ enum PopoverPanel {
         viewModel: ClipsViewModel,
         mode: PopoverInvocationMode,
         onDismiss: @escaping @MainActor () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void,
-        handleClipCopy: @escaping @MainActor (Int) async -> Void
+        handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
+        handleClipCopy: @escaping @MainActor (Int, FocusZone) async -> Void
     ) -> Any? {
         return NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak panel, weak viewModel] event in
             guard let panel, let viewModel, event.window === panel else { return event }

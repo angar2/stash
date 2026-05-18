@@ -271,7 +271,7 @@ struct ClipsViewModelTests {
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0  // pinnedClips[0] 은 "pinned-target"
         let targetBody = vm.pinnedClips[0].body
-        await vm.paste(at: 0)
+        await vm.paste(at: 0, zone: .pin)
         // paste 후 clipboard 갱신 — MockPasteboard 안에 lastSetString 확인
         // 대체 검증: paste 동작 자체가 throw 없이 끝나면 OK + targetBody 가 "pinned-target" 임 확인
         #expect(targetBody == "pinned-target")
@@ -586,7 +586,7 @@ struct ClipsViewModelTests {
         vm.pasteMode = .autoPaste
         vm.updateAccessibilityGranted(true)  // 권한 O 라도 ⌘C 는 .copyBack 강제 검증
         let clipId = vm.visibleClips[0].id
-        await vm.copy(at: 0)
+        await vm.copy(at: 0, zone: .clip)
         // copy 호출 후 flashedClipId 가 target 으로 설정됨 → 정상 호출 흔적.
         #expect(vm.flashedClipId == clipId)
     }
@@ -599,7 +599,7 @@ struct ClipsViewModelTests {
         vm.pasteMode = .copyBack
         vm.updateAccessibilityGranted(false)  // 권한 X 도 ⌘C 는 항상 활성
         let clipId = vm.visibleClips[0].id
-        await vm.copy(at: 0)
+        await vm.copy(at: 0, zone: .clip)
         #expect(vm.flashedClipId == clipId)
     }
 
@@ -614,7 +614,7 @@ struct ClipsViewModelTests {
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
         let targetId = vm.pinnedClips[0].id
-        await vm.copy(at: 0)
+        await vm.copy(at: 0, zone: .pin)
         #expect(vm.flashedClipId == targetId)
     }
 
@@ -623,7 +623,7 @@ struct ClipsViewModelTests {
         let (vm, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
         await vm.reload()
         #expect(vm.flashedClipId == nil)
-        await vm.copy(at: 99)  // out-of-range
+        await vm.copy(at: 99, zone: .clip)  // out-of-range
         #expect(vm.flashedClipId == nil)
     }
 
@@ -648,7 +648,7 @@ struct ClipsViewModelTests {
         await vm.reload()
         vm.pasteMode = .autoPaste
         vm.updateAccessibilityGranted(false)  // 권한 X — effective mode 가 .copyBack 강제
-        await vm.paste(at: 0)
+        await vm.paste(at: 0, zone: .clip)
         // 권한 X → effective mode .copyBack → synthesizer 호출 0회.
         #expect(synthesizer.callCount == 0)
     }
@@ -672,7 +672,7 @@ struct ClipsViewModelTests {
         await vm.reload()
         vm.pasteMode = .autoPaste
         vm.updateAccessibilityGranted(true)
-        await vm.paste(at: 0)
+        await vm.paste(at: 0, zone: .clip)
         // 권한 O + autoPaste → synthesizer 1회 호출.
         #expect(synthesizer.callCount == 1)
     }
@@ -696,7 +696,7 @@ struct ClipsViewModelTests {
         await vm.reload()
         vm.pasteMode = .copyBack
         vm.updateAccessibilityGranted(true)
-        await vm.paste(at: 0)
+        await vm.paste(at: 0, zone: .clip)
         #expect(synthesizer.callCount == 0)
     }
 }

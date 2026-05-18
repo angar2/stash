@@ -9,8 +9,9 @@ struct HistoryPopover: View {
     let onOpenSettings: () -> Void
     let onDismiss: () -> Void
     /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
-    /// HistoryPopover는 idx만 전달하면 Window 측이 hide → restore → sleep → viewModel.paste 순서 보장.
-    let handleClipPaste: @MainActor (Int) async -> Void
+    /// HistoryPopover는 idx + zone 전달 → Window 측이 hide → restore → sleep → viewModel.paste(at:zone:) 순서 보장.
+    /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
+    let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
 
     private var hasPinned: Bool { !viewModel.pinnedClips.isEmpty }
@@ -25,7 +26,7 @@ struct HistoryPopover: View {
         mode: PopoverInvocationMode,
         onOpenSettings: @escaping () -> Void,
         onDismiss: @escaping () -> Void,
-        handleClipPaste: @escaping @MainActor (Int) async -> Void,
+        handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
         anchorOffsetX: CGFloat? = nil
     ) {
         self.viewModel = viewModel
@@ -109,7 +110,7 @@ struct HistoryPopover: View {
                             isFocused: viewModel.focusZone == .clip,
                             isFlashing: clip.id == viewModel.flashedClipId,
                             mode: mode,
-                            onClick: { Task { @MainActor in await handleClipPaste(idx) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화
+                            onClick: { Task { @MainActor in await handleClipPaste(idx, .clip) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화. TASK-028 — 본체 행이라 zone=.clip 고정.
                             onHover: { viewModel.setSelectedIdx(idx) },
                             onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
                             onDelete: { Task { await viewModel.delete(at: idx) } }

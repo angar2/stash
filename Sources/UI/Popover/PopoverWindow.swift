@@ -165,8 +165,8 @@ final class PopoverWindow {
             PinSidebarView(
                 viewModel: viewModel,
                 mode: mode,
-                handleClipPaste: { [weak self] idx in
-                    await self?.handleClipPaste(at: idx)
+                handleClipPaste: { [weak self] idx, zone in
+                    await self?.handleClipPaste(at: idx, zone: zone)
                 }
             ),
             in: pinSidebarVisualEffect
@@ -398,11 +398,11 @@ final class PopoverWindow {
             viewModel: viewModel,
             mode: mode,
             onDismiss: { [weak self] in self?.hide() },
-            handleClipPaste: { [weak self] idx in
-                await self?.handleClipPaste(at: idx)
+            handleClipPaste: { [weak self] idx, zone in
+                await self?.handleClipPaste(at: idx, zone: zone)
             },
-            handleClipCopy: { [weak self] idx in
-                await self?.handleClipCopy(at: idx)
+            handleClipCopy: { [weak self] idx, zone in
+                await self?.handleClipCopy(at: idx, zone: zone)
             }
         )
     }
@@ -428,11 +428,11 @@ final class PopoverWindow {
             viewModel: viewModel,
             mode: mode,
             onDismiss: { [weak self] in self?.hide() },
-            handleClipPaste: { [weak self] idx in
-                await self?.handleClipPaste(at: idx)
+            handleClipPaste: { [weak self] idx, zone in
+                await self?.handleClipPaste(at: idx, zone: zone)
             },
-            handleClipCopy: { [weak self] idx in
-                await self?.handleClipCopy(at: idx)
+            handleClipCopy: { [weak self] idx, zone in
+                await self?.handleClipCopy(at: idx, zone: zone)
             }
         )
     }
@@ -445,22 +445,26 @@ final class PopoverWindow {
     }
 
     /// 클립 paste 흐름 — PopoverPanel.performPasteFlow 헬퍼로 위임.
-    private func handleClipPaste(at idx: Int) async {
+    /// TASK-028 — `zone` 명시 파라미터화. 호출 site (HistoryPopover 본체 행 / PinSidebarView 핀 행 / dispatch ⌘V) 가 zone snapshot 박아 전달.
+    private func handleClipPaste(at idx: Int, zone: FocusZone) async {
         let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
         await PopoverPanel.performPasteFlow(
             viewModel: viewModel,
             idx: idx,
+            zone: zone,
             sourceLabel: label,
             hide: { [weak self] in self?.hide() }
         )
     }
 
     /// TASK-024 — 클립 copy 흐름 (⌘+C 단축키). PopoverPanel.performCopyFlow 헬퍼로 위임. performPasteFlow 와 동일 패턴 (mode 만 `.copyBack` 강제).
-    private func handleClipCopy(at idx: Int) async {
+    /// TASK-028 — `zone` 명시 파라미터화.
+    private func handleClipCopy(at idx: Int, zone: FocusZone) async {
         let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
         await PopoverPanel.performCopyFlow(
             viewModel: viewModel,
             idx: idx,
+            zone: zone,
             sourceLabel: label,
             hide: { [weak self] in self?.hide() }
         )
@@ -472,8 +476,8 @@ final class PopoverWindow {
             mode: mode,
             onOpenSettings: onOpenSettings,
             onDismiss: { [weak self] in self?.hide() },
-            handleClipPaste: { [weak self] idx in
-                await self?.handleClipPaste(at: idx)
+            handleClipPaste: { [weak self] idx, zone in
+                await self?.handleClipPaste(at: idx, zone: zone)
             },
             anchorOffsetX: mode == .method1 ? currentAnchorOffsetX : nil
         )
