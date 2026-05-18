@@ -56,6 +56,8 @@ final class ClipsViewModel {
     // MARK: - Clip Detail sub-window state (TASK-027)
     /// `PopoverWindow` 가 등록 — detail panel show/hide 분기. nil = 닫음, non-nil = 표시 요청.
     var onShowClipDetailChange: (@MainActor (ClipDetailRequest?) -> Void)?
+    /// TASK-030 — 클립 상세 sub-panel 표시 상태. `PopoverWindow` 가 `showClipDetailPanel` / `hideClipDetailPanel` 에서 갱신. `pinSidebarHoverExit` 안 가드에 사용 — 자식 sub-panel 떠 있는 동안 사이드바 자동 닫힘 차단.
+    var isDetailPanelOpen: Bool = false
     /// 활성 행 frame (popover 좌표계, SwiftUI top-down). `HistoryPopover` / `PinSidebarView` 의 `GeometryReader` + `PreferenceKey` 가 게시.
     /// PopoverWindow 가 detail panel anchor + 꼭지 Y 계산에 사용.
     var activeRowFrameInPopover: CGRect = .zero {
@@ -404,6 +406,10 @@ final class ClipsViewModel {
 
     /// Pin 사이드 hover 이탈 — 200ms 지연 닫힘
     func pinSidebarHoverExit() {
+        // TASK-030 — 클립 상세 sub-panel 떠 있는 동안 사이드바 닫힘 차단. 사용자가 사이드바 → 상세 sub-panel 마우스 이동 시 사이드바가 자동 닫히는 버그 회피.
+        if isDetailPanelOpen {
+            return
+        }
         pinHoverActive = false
         scheduleSidebarCloseIfNeeded()
     }

@@ -41,6 +41,8 @@ struct ClipRowView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: onClick)
+            // TASK-030 — 클립 행 paste 영역에 손가락 cursor. method3 보류 모드는 클릭 비활성이라 cursor X.
+            .pointingHandCursor(enabled: mode != .method3)
 
             actionButton
         }
@@ -281,6 +283,8 @@ struct ClipRowView: View {
                         if mode != .method3 { onTogglePin() }
                     }
                 )
+                // TASK-030 — 핀 해제 버튼 (pin.fill) 에 손가락 cursor. method3 비활성 분기 정합.
+                .pointingHandCursor(enabled: mode != .method3)
                 .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: pinHovered)
         } else {
             // 비핀: 선택된 행에서만 X 버튼 노출. 방식 2도 시각 노출하되 클릭 차단 (TASK-018 결정 1-A).
@@ -300,6 +304,8 @@ struct ClipRowView: View {
                         guard mode != .method3 else { return }
                         onDelete()
                     }
+                    // TASK-030 — X 삭제 버튼에 손가락 cursor. method3 비활성 분기 정합.
+                    .pointingHandCursor(enabled: mode != .method3)
                     .allowsHitTesting(mode != .method3)
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: xHovered)
             } else {

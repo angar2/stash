@@ -41,6 +41,8 @@ struct PopoverHeaderView: View {
                         guard !isInteractionDisabled else { return }
                         Task { await viewModel.deleteAllExceptPinned() }
                     }
+                    // TASK-030 — "전체 삭제" 텍스트 버튼에 손가락 cursor. method3 비활성 분기 정합.
+                    .pointingHandCursor(enabled: !isInteractionDisabled)
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: deleteAllHovered)
                     .allowsHitTesting(!isInteractionDisabled)
             }

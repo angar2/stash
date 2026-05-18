@@ -286,6 +286,8 @@ final class PopoverWindow {
         detailVisualEffect.maskImage = makeBubbleMaskImage(detailH: detailH, arrowOffsetY: arrowOffsetY)
         detailPanel.orderFrontRegardless()
         lastShownDetailRequest = request
+        // TASK-030 — ViewModel isDetailPanelOpen 갱신. pinSidebarHoverExit 가드에서 사용 — 자식 sub-panel 떠 있는 동안 사이드바 자동 닫힘 차단.
+        viewModel.isDetailPanelOpen = true
         Logger.ui.info("ClipDetailPanel shown — clipId=\(request.clip.id.uuidString, privacy: .public) zone=\(String(describing: request.zone), privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) totalW=\(totalW, privacy: .public) h=\(detailH, privacy: .public) arrowY=\(arrowOffsetY, privacy: .public)")
     }
 
@@ -330,6 +332,8 @@ final class PopoverWindow {
             detailPanel.orderOut(nil)
             Logger.ui.info("ClipDetailPanel hidden")
         }
+        // TASK-030 — ViewModel isDetailPanelOpen 갱신 (사이드바 hover-exit 가드 해제).
+        viewModel.isDetailPanelOpen = false
     }
 
     /// 파일 행 클릭 → Finder reveal + popover dismiss. detailPanel 도 동반 hide (PopoverWindow.hide 안에서 처리).
