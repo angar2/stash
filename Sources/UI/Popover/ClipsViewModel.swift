@@ -10,8 +10,18 @@ final class ClipsViewModel {
     // MARK: - State
     var clips: [Clip] = []
     var searchQuery: String = ""
-    var focusZone: FocusZone = .clip
-    var selectedIdx: Int = 0
+    var focusZone: FocusZone = .clip {
+        didSet {
+            // TASK-027 — focusZone (.clip ↔ .pin) 전환 시 detail panel 재평가.
+            if oldValue != focusZone { scheduleClipDetailUpdate() }
+        }
+    }
+    var selectedIdx: Int = 0 {
+        didSet {
+            // TASK-027 — selectedIdx 변경 시 detail panel 재평가.
+            if oldValue != selectedIdx { scheduleClipDetailUpdate() }
+        }
+    }
     // TASK-025 — `searchInputActive` 폐기. 검색바 always-active 정책으로 활성 단계 개념 제거.
     var flashedClipId: UUID?              // paste 직후 플래시 대상
     var pasteMode: PasteMode = .autoPaste
@@ -30,13 +40,35 @@ final class ClipsViewModel {
     /// `pinnedClips` count 변화 시 호출 — Pin 사이드바 panel size 재조정 (사이드바 열려있는 경우).
     var onPinnedClipsChange: (@MainActor () -> Void)?
     var pinHoverActive: Bool = false      // Pin 행 hover 상태
-    var pinSelectedIdx: Int = 0           // Pin 사이드바 안 선택 idx
+    var pinSelectedIdx: Int = 0 {         // Pin 사이드바 안 선택 idx
+        didSet {
+            // TASK-027 — Pin 사이드바 안 선택 변경 시 detail panel 재평가.
+            if oldValue != pinSelectedIdx { scheduleClipDetailUpdate() }
+        }
+    }
     /// 키보드 nav 시 set — ScrollView가 `proxy.scrollTo(id)` (anchor:nil) 로 *id 가 가시 안이면 무동작, 밖이면 가장 가까운 위치로 자동 스크롤* (TASK-019 fix 6차).
     var pendingScrollToId: UUID? = nil
     private var pinExpandTask: Task<Void, Never>?
     private var pinCloseTask: Task<Void, Never>?
     /// popover 열림 직후 짧은 시간 동안 hover (setFocusZone) 무시 — 마우스가 검색바/클립 위에 이미 있어도 자동 활성 차단.
     private var ignoreHoverUntil: Date = .distantPast
+
+    // MARK: - Clip Detail sub-window state (TASK-027)
+    /// `PopoverWindow` 가 등록 — detail panel show/hide 분기. nil = 닫음, non-nil = 표시 요청.
+    var onShowClipDetailChange: (@MainActor (ClipDetailRequest?) -> Void)?
+    /// 활성 행 frame (popover 좌표계, SwiftUI top-down). `HistoryPopover` / `PinSidebarView` 의 `GeometryReader` + `PreferenceKey` 가 게시.
+    /// PopoverWindow 가 detail panel anchor + 꼭지 Y 계산에 사용.
+    var activeRowFrameInPopover: CGRect = .zero {
+        didSet {
+            // frame 미세 변화는 무시 (`clipDetailFrameDeltaThreshold` 미만 변동은 Geometry update 폭주 차단).
+            let threshold = DesignTokens.Spacing.clipDetailFrameDeltaThreshold
+            if abs(oldValue.midY - activeRowFrameInPopover.midY) > threshold
+                || abs(oldValue.minX - activeRowFrameInPopover.minX) > threshold {
+                scheduleClipDetailUpdate()
+            }
+        }
+    }
+    private var clipDetailTask: Task<Void, Never>?
 
     // MARK: - Dependencies
     private let repository: any ClipRepository
@@ -106,6 +138,8 @@ final class ClipsViewModel {
             let fetched = try await repository.fetchAll()
             clips = fetched
             clampSelection()
+            // TASK-027 — same idx 자리 다른 clip 진입 케이스 (didSet 미발화). 명시 호출.
+            scheduleClipDetailUpdate()
         } catch {
             Logger.ui.error("ClipsViewModel.reload error: \(error.localizedDescription, privacy: .public)")
         }
@@ -116,6 +150,8 @@ final class ClipsViewModel {
             let result = try await repository.search(query: searchQuery)
             clips = result
             selectedIdx = 0
+            // TASK-027 — selectedIdx 가 이미 0 인 상태에서 = 0 박으면 didSet 미발화. 명시 호출.
+            scheduleClipDetailUpdate()
         } catch {
             Logger.ui.error("ClipsViewModel.performSearch error: \(error.localizedDescription, privacy: .public)")
         }
@@ -205,6 +241,9 @@ final class ClipsViewModel {
         pinHoverActive = false
         pendingScrollToId = nil
         ignoreHoverUntil = Date().addingTimeInterval(DesignTokens.Animation.popoverOpenHoverIgnoreDelay)
+        // TASK-027 — popover 새 호출 시 detail panel 강제 닫음. frame .zero 초기화도 함께.
+        activeRowFrameInPopover = .zero
+        scheduleClipDetailUpdate()
     }
 
     // MARK: - Actions
@@ -416,6 +455,58 @@ final class ClipsViewModel {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(DesignTokens.Animation.pasteFlashDuration * 1_000_000_000))
             if flashedClipId == id { flashedClipId = nil }
+        }
+    }
+
+    // MARK: - Clip Detail sub-window (TASK-027)
+
+    /// 4축 (focusZone / selectedIdx / pinSelectedIdx / activeRowFrameInPopover) 중 어느 하나 변경 시 호출.
+    /// 즉시 현재 detail 닫고 (콜백 nil) 활성 행이 다중파일이면 200ms 후 detail 재오픈 (콜백 ClipDetailRequest).
+    /// `reload` / `performSearch` 후 *같은 idx 자리 다른 clip* 진입 케이스도 명시 호출로 잡음 (didSet 미발화 케이스 대비).
+    func scheduleClipDetailUpdate() {
+        clipDetailTask?.cancel()
+        clipDetailTask = nil
+
+        // 즉시 현재 detail 닫음 — 사용자가 행 이동 / focus 전환 직후 panel 깜빡임 방지.
+        onShowClipDetailChange?(nil)
+
+        guard let active = activeClipForDetail() else { return }
+        guard ClipDetailRegistry.provider(for: active.clip) != nil else { return }
+        // frame이 미게시 상태 (.zero) — GeometryReader hook 도착 전이면 잠시 후 frame didSet 으로 다시 호출됨.
+        guard activeRowFrameInPopover != .zero else { return }
+
+        let snapshotClipId = active.clip.id
+        let snapshotZone = active.zone
+        clipDetailTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(DesignTokens.Animation.clipDetailDebounceDelay * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+
+            // 200ms 사이 활성 변경 가능 — 재검증.
+            guard let current = self.activeClipForDetail(),
+                  current.clip.id == snapshotClipId,
+                  current.zone == snapshotZone else { return }
+            guard self.activeRowFrameInPopover != .zero else { return }
+
+            let req = ClipDetailRequest(
+                clip: current.clip,
+                zone: current.zone,
+                rowFrameInPopover: self.activeRowFrameInPopover
+            )
+            Logger.ui.debug("ClipDetail: emit request — clipId=\(snapshotClipId.uuidString, privacy: .public) zone=\(String(describing: snapshotZone), privacy: .public)")
+            self.onShowClipDetailChange?(req)
+        }
+    }
+
+    /// 현재 활성 클립 (focusZone 분기). 경계 검사 — 잘못된 idx 또는 빈 리스트 시 nil.
+    private func activeClipForDetail() -> (clip: Clip, zone: FocusZone)? {
+        if focusZone == .pin {
+            let pins = pinnedClips
+            guard pinSelectedIdx >= 0, pinSelectedIdx < pins.count else { return nil }
+            return (pins[pinSelectedIdx], .pin)
+        } else {
+            let list = visibleClips
+            guard selectedIdx >= 0, selectedIdx < list.count else { return nil }
+            return (list[selectedIdx], .clip)
         }
     }
 }

@@ -61,6 +61,8 @@ struct PinSidebarView: View {
         .padding(DesignTokens.Spacing.pinSidebarPadding)
         .frame(width: DesignTokens.WindowSize.pinSidebarWidth)
         .background(Color.clear)
+        // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 PinSidebarView root 에 박음 (ScrollView 박으면 헤더 offset 어긋남).
+        .popoverClipDetailHook(viewModel: viewModel, activeZone: .pin)
         .onHover { isHover in
             if isHover {
                 viewModel.pinSidebarHoverEnter()

@@ -482,6 +482,19 @@ enum DesignTokens {
         static let toastBadgeSize:         CGFloat = 18
         static let toastStackGap:          CGFloat = 8
         static let toastWindowPadding:     CGFloat = 8
+
+        // Clip Detail sub-window (TASK-027) — 다중파일 상세 sub-window 외피·꼭지·행 spacing
+        static let clipDetailGap:          CGFloat = 20  // popover/PinSidebar 좌측 간격 — NSPanel hasShadow 외곽 halo + Liquid Glass blur 시각 겹침 회피 (TASK-027 fix 4차 — 사용자 시각 검수 합의)
+        static let clipDetailArrowWidth:   CGFloat = 8   // 꼭지(말풍선 화살표) 가로 — 우측 가장자리에서 튀어나옴
+        static let clipDetailArrowHeight:  CGFloat = 14  // 꼭지 세로
+        static let clipDetailRowHeight:    CGFloat = 28  // 파일 목록 단일 행 height
+        static let clipDetailRowInnerGap:  CGFloat = 6   // 파일 행 안 아이콘 ↔ 라벨 사이 간격
+        static let clipDetailRowPadH:      CGFloat = 8   // 파일 행 내부 좌우 padding
+        static let clipDetailRowIconSize:  CGFloat = 11  // 파일 행 doc 아이콘 size
+        static let clipDetailPadding:      CGFloat = 8   // panel 내부 outer padding
+        static let clipDetailEdgeSafety:   CGFloat = 8   // 화면 좌/상/하단 경계 safe margin
+        /// 활성 행 frame 변동 *유의미한 변화* 임계값 (TASK-027). 1pt 미만 미세 변동은 무시 — Geometry update 폭주 차단.
+        static let clipDetailFrameDeltaThreshold: CGFloat = 1
     }
 
     // MARK: - Radius
@@ -540,6 +553,10 @@ enum DesignTokens {
 
         // Pin Sidebar
         static let pinSidebarWidth:     CGFloat = 220
+
+        // Clip Detail sub-window (TASK-027) — 다중파일 상세 sub-window panel 크기
+        static let clipDetailWidth:     CGFloat = 240
+        static let clipDetailMaxHeight: CGFloat = 440  // popoverHeight(520) - 80 safety
 
         // Settings
         static let settingsWidth:       CGFloat = 620
@@ -605,6 +622,9 @@ enum DesignTokens {
         static let pinSidebarHoverOpenDelay: TimeInterval = 0.20  // 200ms (HANDOFF §4-4 정합 — 코드 150ms 와 다름, plan 채택)
         static let pinSidebarHoverCloseDelay: TimeInterval = 0.20  // 200ms
         static let pinSidebarSlideDuration: TimeInterval = 0.18    // 180ms cubic-bezier(0.2, 0.7, 0.3, 1)
+
+        // Clip Detail sub-window (TASK-027) — 다중파일 상세 sub-window debounce
+        static let clipDetailDebounceDelay: TimeInterval = 0.20  // 200ms (pinSidebar hover 정합)
 
         // paste 직후 초록 플래시 — store.jsx L201-204
         static let pasteFlashDuration: TimeInterval = 0.7  // 700ms
