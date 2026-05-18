@@ -54,6 +54,9 @@ struct HistoryPopover: View {
         }
         .frame(width: DesignTokens.WindowSize.popoverWidth)
         .padding(DesignTokens.Spacing.popoverPadding)
+        // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 popoverBody root 에 박음 (ScrollView 박으면 검색바/Pin/환경설정/힌트 offset 어긋남).
+        // ClipRowView 의 GeometryReader 가 게시하는 frame 이 NSPanel contentView top 기준 (top-down) 이 되어 NSPanel.frame.height 와 정합.
+        .popoverClipDetailHook(viewModel: viewModel, activeZone: .clip)
         // NSVisualEffectView가 panel.contentView 레벨에서 base blur + vibrancy 100% 담당. SwiftUI body는 완전 투명.
         .background(Color.clear)
         // Bug 3-2 fix v2 — popover 빈 영역 클릭으로 deactivateSearchInput 박았던 .background { Color.clear.onTapGesture }
@@ -126,6 +129,7 @@ struct HistoryPopover: View {
                 }
                 viewModel.consumePendingScroll()
             }
+            // TASK-027 — coordinateSpace + onPreferenceChange 는 popoverBody root 로 이동 (Y 좌표계 정합 fix).
         }
     }
 

@@ -50,6 +50,8 @@
 		5752F24D713EAD2073B400B0 /* PasteServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */; };
 		57E5D2A635DFB7430F46BB7A /* SystemPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FB7C47C462D260CBAC144F0 /* SystemPasteboard.swift */; };
 		62F7992F5C66EE8C42F91320 /* ClipsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */; };
+		62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */; };
+		62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */; };
 		6DBA7441BFAC6D8322F2D04D /* PermissionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADE6BF4854D63A0C86C70AF /* PermissionStep.swift */; };
 		71AF0770C533518335EBAABA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0B8182EC92FA88FE38E3C0 /* Constants.swift */; };
 		72463C79D705CFBD0713D08C /* NotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */; };
@@ -86,6 +88,8 @@
 		B2E1ECFF4B7315DA2E05F011 /* GeneralTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF3D4FD25B50CFB057A8B27 /* GeneralTab.swift */; };
 		B40725A415049D5FD523C8BF /* ShortcutsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CB621779FF8D98D7FAD107 /* ShortcutsTab.swift */; };
 		B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */; };
+		C027C037DA34A8B9C1F7E801 /* ClipDetailProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */; };
+		C027C037DA34A8B9C1F7E802 /* ClipDetailPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */; };
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
 		BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */; };
 		BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */; };
@@ -138,6 +142,8 @@
 		0C91522719500FA76B373310 /* PasteMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteMode.swift; sourceTree = "<group>"; };
 		0DEF29692BE671148BC8B207 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelTests.swift; sourceTree = "<group>"; };
+		10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProviderTests.swift; sourceTree = "<group>"; };
+		10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelClipDetailTests.swift; sourceTree = "<group>"; };
 		1165FDD9A41E4E0DA4BAF6CF /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		15E134AE9193E2DD1F682B55 /* HotkeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitor.swift; sourceTree = "<group>"; };
 		19923362833B37310A4C6F15 /* MockNotificationCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotificationCenter.swift; sourceTree = "<group>"; };
@@ -200,6 +206,8 @@
 		9F4544552328E6B3EF5155EA /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredFile.swift; sourceTree = "<group>"; };
 		A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarView.swift; sourceTree = "<group>"; };
+		B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProvider.swift; sourceTree = "<group>"; };
+		B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailPanelView.swift; sourceTree = "<group>"; };
 		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
 		A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A8DD0387836461CD98892A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -344,6 +352,8 @@
 				F02EA779802CE2D68EA428CE /* KeyboardHintsView.swift */,
 				EA7B51D823654D6A9CA98697 /* PopoverWindow.swift */,
 				A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */,
+				B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */,
+				B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */,
 				65F80FE7237142D5889644C8 /* PlainNSTextField.swift */,
 				68F53E3FEBB345388DD7C99C /* KeyCapView.swift */,
 				B5A52843E961156954C45322 /* PopoverPanel.swift */,
@@ -501,6 +511,8 @@
 			isa = PBXGroup;
 			children = (
 				10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */,
+				10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */,
+				10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */,
 			);
 			path = Popover;
 			sourceTree = "<group>";
@@ -749,6 +761,8 @@
 				6DBA7441BFAC6D8322F2D04D /* PermissionStep.swift in Sources */,
 				D2D9EC2BD4302203DC9FC6A8 /* PermissionToastNotifier.swift in Sources */,
 				B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */,
+				C027C037DA34A8B9C1F7E801 /* ClipDetailProvider.swift in Sources */,
+				C027C037DA34A8B9C1F7E802 /* ClipDetailPanelView.swift in Sources */,
 				3857B7103C74EC8CA7397168 /* PopoverPanel.swift in Sources */,
 				4AB55E7FE9D73BCA49388FAB /* PrivacyTab.swift in Sources */,
 				835F6FE3B1AA9EA3A1C6DA5B /* SMLoginItemRegistrar.swift in Sources */,
@@ -792,6 +806,8 @@
 				AA2F09B80048018F8756B4F1 /* ClipFixture.swift in Sources */,
 				E18894660142EA2F52041433 /* ClipboardWatcherTests.swift in Sources */,
 				62F7992F5C66EE8C42F91320 /* ClipsViewModelTests.swift in Sources */,
+				62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */,
+				62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */,
 				A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */,
 				D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */,
 				8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */,

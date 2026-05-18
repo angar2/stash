@@ -28,6 +28,17 @@ final class PopoverWindow {
     private let pinSidebarPanel: KeyablePanel
     private let pinSidebarVisualEffect: NSVisualEffectView
 
+    /// 클립 상세 sub-window 별도 floating panel — popover 또는 PinSidebar 좌측에 다중파일 클립 detail 표시 (TASK-027). 단일 인스턴스 재사용.
+    private let detailPanel: KeyablePanel
+    private let detailVisualEffect: NSVisualEffectView
+    /// 마지막 표시 detail 요청 — PinSidebar 사이즈 변경 시 anchor 재계산용 (TASK-027 Phase 5).
+    private var lastShownDetailRequest: ClipDetailRequest?
+
+    /// detail panel 총 width — 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). NSPanel make / setFrame / originX 계산 모두 본 값 사용 (TASK-027 refactor — 3 곳 중복 계산 통합).
+    static var clipDetailTotalWidth: CGFloat {
+        DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
+    }
+
     init(
         viewModel: ClipsViewModel,
         onOpenSettings: @MainActor @escaping () -> Void
@@ -48,6 +59,15 @@ final class PopoverWindow {
         self.pinSidebarPanel = sp
         self.pinSidebarVisualEffect = sve
 
+        // TASK-027 — 클립 상세 sub-window 별도 NSPanel. popover (또는 PinSidebar) 좌측 floating. height 는 Provider.preferredHeight 동적 계산.
+        // width = clipDetailWidth (본문) + clipDetailArrowWidth (꼭지 외부 튀어나옴 영역). NSVisualEffectView.maskImage 가 panel 자체를 말풍선 모양으로 잘라냄 (TASK-027 fix).
+        let (dp, dve) = PopoverPanel.make(
+            width: Self.clipDetailTotalWidth,
+            height: DesignTokens.WindowSize.clipDetailMaxHeight
+        )
+        self.detailPanel = dp
+        self.detailVisualEffect = dve
+
         // ClipsViewModel.pinSidebarOpen 변경 콜백 등록 — true → show / false → hide.
         viewModel.onPinSidebarOpenChange = { [weak self] isOpen in
             guard let self else { return }
@@ -62,9 +82,19 @@ final class PopoverWindow {
             guard let self, self.viewModel.pinSidebarOpen else { return }
             self.resizePinSidebarPanel()
         }
+        // TASK-027 — ClipsViewModel.onShowClipDetailChange 콜백 등록. non-nil → showClipDetailPanel / nil → hide.
+        viewModel.onShowClipDetailChange = { [weak self] request in
+            guard let self else { return }
+            if let request {
+                self.showClipDetailPanel(request)
+            } else {
+                self.hideClipDetailPanel()
+            }
+        }
     }
 
     /// TASK-019 fix 2차 — pinnedClips count 변화 시 panel size 재조정 (bottom-aligned 유지).
+    /// TASK-027 — Pin 사이드바 사이즈 변동 후 detail panel 활성이면 anchor 재계산 (200ms debounce 없이 즉시).
     private func resizePinSidebarPanel() {
         guard pinSidebarPanel.isVisible else { return }
         let popoverFrame = panel.frame
@@ -78,6 +108,10 @@ final class PopoverWindow {
             display: true,
             animate: false
         )
+        // TASK-027 — detail panel 활성이고 zone == .pin 이면 PinSidebar 새 anchor 로 setFrame 재계산.
+        if let last = lastShownDetailRequest, last.zone == .pin, detailPanel.isVisible {
+            showClipDetailPanel(last)
+        }
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -105,6 +139,8 @@ final class PopoverWindow {
             removeLocalClickMonitor()
             removePopoverKeyMonitor()
         }
+        // TASK-027 — Detail sub-window 동반 닫음.
+        hideClipDetailPanel()
         // Pin 사이드바도 동반 닫음 (popover 닫히면 사이드바 단독 노출 의미 없음).
         if viewModel.pinSidebarOpen {
             viewModel.collapsePinSidebar()  // didSet → hidePinSidebar()
@@ -170,6 +206,137 @@ final class PopoverWindow {
             pinSidebarPanel.orderOut(nil)
             Logger.ui.info("Pin sidebar panel hidden")
         }
+    }
+
+    // MARK: - 클립 상세 sub-window (TASK-027)
+
+    /// `ClipsViewModel.onShowClipDetailChange` 콜백 진입점 (non-nil 케이스). zone 분기 anchor + 화면 좌표 변환 + 클램프 + 꼭지 Y 보정.
+    /// FEATURES §3-8 *위치 + 좌표 변환* 정합.
+    private func showClipDetailPanel(_ request: ClipDetailRequest) {
+        // method3 (⌘ hold) 보류 가드 — detail sub-window 진입 X.
+        guard let mode = currentMode, mode != .method3 else {
+            hideClipDetailPanel()
+            return
+        }
+        guard panel.isVisible else {
+            hideClipDetailPanel()
+            return
+        }
+        // anchor 결정 — zone == .pin && pinSidebar 가시 시 pinSidebar 좌측, 그 외 popover 좌측.
+        let anchorFrame: NSRect
+        if request.zone == .pin && pinSidebarPanel.isVisible {
+            anchorFrame = pinSidebarPanel.frame
+        } else {
+            anchorFrame = panel.frame
+        }
+        // detail panel height — Provider.preferredHeight 우선, fallback clipDetailMaxHeight.
+        let provider = ClipDetailRegistry.provider(for: request.clip)
+        let detailH = provider?.preferredHeight(for: request.clip) ?? DesignTokens.WindowSize.clipDetailMaxHeight
+        // TASK-027 fix — panel 총 width = 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). maskImage 로 panel 자체를 말풍선 모양으로 잘라냄.
+        let totalW = Self.clipDetailTotalWidth
+        let gap = DesignTokens.Spacing.clipDetailGap
+        let safe = DesignTokens.Spacing.clipDetailEdgeSafety
+
+        // originX 계산 + 화면 좌측 클램프 — totalW (본문+꼭지) 사용.
+        var originX = anchorFrame.origin.x - gap - totalW
+        let screenVisible = panel.screen?.visibleFrame ?? .zero
+        originX = max(screenVisible.minX + safe, originX)
+
+        // SwiftUI top-down ↔ NSPanel bottom-up 좌표 변환:
+        // 행 center Y (SwiftUI, popoverBody 안 좌표계, top-down) = rowFrameInPopover.midY
+        // 행 center Y (screen, bottom-up) = anchorFrame.origin.y + (anchorFrame.height - rowCenterY_SwiftUI)
+        let rowCenterY_SwiftUI = request.rowFrameInPopover.midY
+        let rowCenterY_screen = anchorFrame.origin.y + (anchorFrame.height - rowCenterY_SwiftUI)
+
+        // detail panel originY (screen, bottom-up) — 꼭지가 행 center 가리키도록 기본은 panel 중앙에 꼭지.
+        // detail panel 내부 arrowOffsetY (SwiftUI, top-down) 기본값 = detailH / 2 → detail.originY = rowCenterY_screen - detailH/2.
+        var arrowOffsetY = detailH / 2
+        var originY = rowCenterY_screen - (detailH - arrowOffsetY)
+
+        // 화면 상/하단 클램프 — 클램프 발생 시 arrowOffsetY 보정으로 꼭지가 행 center 유지.
+        let minY = screenVisible.minY + safe
+        let maxY = screenVisible.maxY - detailH - safe
+        if originY < minY {
+            originY = minY
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        } else if originY > maxY {
+            originY = maxY
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        }
+        // arrowOffsetY 범위 [arrowH/2, detailH - arrowH/2] 가드.
+        let arrowH = DesignTokens.Spacing.clipDetailArrowHeight
+        arrowOffsetY = max(arrowH / 2, min(detailH - arrowH / 2, arrowOffsetY))
+
+        // hosting rebuild — 매 show 마다 fresh SwiftUI tree (clip 변화 반영).
+        _ = PopoverPanel.mount(
+            ClipDetailPanelView(
+                clip: request.clip,
+                onFileTap: { [weak self] url in
+                    self?.handleFileTap(url)
+                }
+            ),
+            in: detailVisualEffect
+        )
+        detailPanel.setFrame(
+            NSRect(x: originX, y: originY, width: totalW, height: detailH),
+            display: true,
+            animate: false
+        )
+        // TASK-027 fix — NSVisualEffectView.maskImage 박아 panel 자체를 말풍선 모양으로 잘라냄 (좌측 본문 직사각형 + 우측 꼭지 삼각형).
+        detailVisualEffect.maskImage = makeBubbleMaskImage(detailH: detailH, arrowOffsetY: arrowOffsetY)
+        detailPanel.orderFrontRegardless()
+        lastShownDetailRequest = request
+        Logger.ui.info("ClipDetailPanel shown — clipId=\(request.clip.id.uuidString, privacy: .public) zone=\(String(describing: request.zone), privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) totalW=\(totalW, privacy: .public) h=\(detailH, privacy: .public) arrowY=\(arrowOffsetY, privacy: .public)")
+    }
+
+    /// TASK-027 fix — 말풍선 mask 이미지. 좌측 본문 직사각형 (rounded) + 우측 꼭지 삼각형. NSVisualEffectView.maskImage 로 박아 panel 자체가 말풍선 모양으로 잘림.
+    /// `arrowOffsetY` 는 SwiftUI top-down 좌표 (panel top 기준 Y). NSImage flipped:false 는 bottom-up 좌표라 변환.
+    private func makeBubbleMaskImage(detailH: CGFloat, arrowOffsetY: CGFloat) -> NSImage {
+        let contentW = DesignTokens.WindowSize.clipDetailWidth
+        let arrowW = DesignTokens.Spacing.clipDetailArrowWidth
+        let arrowH = DesignTokens.Spacing.clipDetailArrowHeight
+        let totalW = Self.clipDetailTotalWidth
+        let cornerR = DesignTokens.Radius.popoverOuter
+        let size = NSSize(width: totalW, height: detailH)
+
+        let image = NSImage(size: size, flipped: false) { _ in
+            let path = NSBezierPath()
+            // 좌측 본문 직사각형 (rounded corner).
+            let bodyRect = NSRect(x: 0, y: 0, width: contentW, height: detailH)
+            path.append(NSBezierPath(roundedRect: bodyRect, xRadius: cornerR, yRadius: cornerR))
+
+            // 꼭지 삼각형 — arrowOffsetY 는 SwiftUI top-down. NSImage bottom-up 으로 변환.
+            let arrowY_bottomUp = detailH - arrowOffsetY
+            let arrow = NSBezierPath()
+            arrow.move(to: NSPoint(x: contentW, y: arrowY_bottomUp - arrowH / 2))
+            arrow.line(to: NSPoint(x: contentW + arrowW, y: arrowY_bottomUp))
+            arrow.line(to: NSPoint(x: contentW, y: arrowY_bottomUp + arrowH / 2))
+            arrow.close()
+            path.append(arrow)
+
+            NSColor.black.setFill()
+            path.fill()
+            return true
+        }
+        // maskImage 는 capInsets 가 stretching 영역 결정. 기본값 (.zero) 은 stretch X — panel size 변동 시 mask redraw 필요.
+        image.capInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        image.resizingMode = .stretch
+        return image
+    }
+
+    private func hideClipDetailPanel() {
+        lastShownDetailRequest = nil
+        if detailPanel.isVisible {
+            detailPanel.orderOut(nil)
+            Logger.ui.info("ClipDetailPanel hidden")
+        }
+    }
+
+    /// 파일 행 클릭 → Finder reveal + popover dismiss. detailPanel 도 동반 hide (PopoverWindow.hide 안에서 처리).
+    private func handleFileTap(_ url: URL) {
+        Logger.ui.info("ClipDetailPanel handleFileTap → \(url.path, privacy: .public)")
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+        hide()
     }
 
     // MARK: - 내부 표시 흐름

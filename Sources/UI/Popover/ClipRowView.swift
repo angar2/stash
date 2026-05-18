@@ -58,6 +58,15 @@ struct ClipRowView: View {
         }
         .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: visuallySelected)
         .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: isFlashing)
+        // TASK-027 — 활성 행 frame 을 popover coordinateSpace 에 게시. 비활성 행은 .zero (PreferenceKey reduce 가 ignore).
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: ActiveRowFramePreferenceKey.self,
+                    value: visuallySelected ? proxy.frame(in: .named(popoverCoordinateSpaceName)) : .zero
+                )
+            }
+        )
     }
 
     // MARK: - Type icon
