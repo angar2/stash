@@ -35,6 +35,7 @@
 		3EDB733AD807B660D4717334 /* FocusZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA66964C40C39F55E4018818 /* FocusZone.swift */; };
 		42E07A1BC12252DE8CCD0A78 /* LoginItemServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */; };
 		479681CD58A8E3309D90035B /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB29F8BE38E85CEB0DC4E3F /* SettingsWindow.swift */; };
+		9F3B82AE6C5D44170D62E8A3 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2C4D0A89BF45170D62E81B /* PreferencesWindowController.swift */; };
 		48265BA2ABCE8380BC068446 /* AXPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F6CD60DBB5BBA7DE877DB0 /* AXPermissionChecker.swift */; };
 		4856CC89A1A5DF5F61C84CB3 /* MockPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2038279C8A1DDE0111627B /* MockPermissionChecker.swift */; };
 		48D7FE31707F59FB754E4233 /* V1_InitialSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BBEC2A73E7B7B2B35517303 /* V1_InitialSchema.swift */; };
@@ -178,6 +179,7 @@
 		56C3EFAF7A26E7D738B789E8 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		583712D469E1F3ED4752F149 /* MockPasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPasteboard.swift; sourceTree = "<group>"; };
 		5AB29F8BE38E85CEB0DC4E3F /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
+		7E2C4D0A89BF45170D62E81B /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		5B6618B1B107005F500E32AB /* DirectFileClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectFileClipService.swift; sourceTree = "<group>"; };
 		5B78F79CEE361413E4605CB4 /* PasteServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteServiceTests.swift; sourceTree = "<group>"; };
 		5C0B76F95F4B4B5EF23A085D /* stash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = stash.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -410,6 +412,7 @@
 			children = (
 				AE472B0FB7855E82A42A7F44 /* AboutTab.swift */,
 				3EF3D4FD25B50CFB057A8B27 /* GeneralTab.swift */,
+				7E2C4D0A89BF45170D62E81B /* PreferencesWindowController.swift */,
 				30D3DAF16879D2F4C4019842 /* PrivacyTab.swift */,
 				55F4D26A9D94C3359AEE95AF /* SettingsViewModel.swift */,
 				5AB29F8BE38E85CEB0DC4E3F /* SettingsWindow.swift */,
@@ -773,6 +776,7 @@
 				C6ADC4B02B46472586A2D144 /* PlainNSTextField.swift in Sources */,
 				C46AA21EDECA43639DA26864 /* KeyCapView.swift in Sources */,
 				EBE9555266A27592751DC6CB /* SettingsViewModel.swift in Sources */,
+				9F3B82AE6C5D44170D62E8A3 /* PreferencesWindowController.swift in Sources */,
 				479681CD58A8E3309D90035B /* SettingsWindow.swift in Sources */,
 				B40725A415049D5FD523C8BF /* ShortcutsTab.swift in Sources */,
 				0C3710CC88A74859DFA25B04 /* StashApp.swift in Sources */,
