@@ -148,5 +148,7 @@ private struct MultiFileDetailContentView: View {
             Logger.ui.info("ClipDetailPanel: file row tap → \(displayName, privacy: .public)")
             onFileTap(url)
         }
+        // TASK-030 — 다중파일 sub-panel 안 파일 행에 손가락 cursor. method3 분기 없음 (sub-panel 자체가 본체 popover 와 별도 윈도우).
+        .pointingHandCursor()
     }
 }
