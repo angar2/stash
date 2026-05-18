@@ -11,6 +11,8 @@ extension KeyboardShortcuts.Name {
     static let deleteAllAlias = Self("stash.deleteAllAlias")
     static let cursorUpNum = Self("stash.cursorUpNum")
     static let cursorDownNum = Self("stash.cursorDownNum")
+    // TASK-032 — popover 진입용 글로벌 단축키 (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관). default ⌘⇧V.
+    static let popoverOpen = Self("stash.popoverOpen")
 }
 
 struct ShortcutsTab: View {
@@ -23,6 +25,8 @@ struct ShortcutsTab: View {
     }
 
     private let rows: [ShortcutRow] = [
+        // TASK-032 — popover 진입용 글로벌 단축키 (최상단 노출).
+        .init(id: "popoverOpen", name: .popoverOpen, labelKey: "shortcuts.popoverOpen"),
         .init(id: "cursorUpNum", name: .cursorUpNum, labelKey: "shortcuts.cursor.upNum"),
         .init(id: "cursorDownNum", name: .cursorDownNum, labelKey: "shortcuts.cursor.downNum"),
         .init(id: "paste", name: .paste, labelKey: "shortcuts.paste"),

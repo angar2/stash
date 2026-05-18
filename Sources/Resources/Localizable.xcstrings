@@ -75,6 +75,7 @@
     "shortcuts.note" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "키 조합을 클릭한 뒤 새 조합을 누르세요. macOS 표준 단축키는 변경할 수 없습니다." } } } },
     "shortcuts.paste" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Paste 확정" } } } },
     "shortcuts.pinToggle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Pin 토글" } } } },
+    "shortcuts.popoverOpen" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "popover 열기" } } } },
     "shortcuts.resetAll" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본값 복원" } } } },
     "time.now" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "방금" } } } },
     "time.suffix.days" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "일 전" } } } },
