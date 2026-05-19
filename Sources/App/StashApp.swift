@@ -123,7 +123,7 @@ struct StashApp: App {
         self.pasteService = pasteSvc
 
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
-        let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, toastQueue: toastQ)
+        let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, fileClipService: fcs, toastQueue: toastQ)
         self.clipsViewModel = clipsVM
         let settingsVM = SettingsViewModel(loginItemService: self.loginItemService)
         self.settingsViewModel = settingsVM
@@ -236,6 +236,25 @@ struct StashApp: App {
                 await notifSvc.notify(.dbCorruptionRecovered)
                 Logger.database.warning("DB 손상 복구 — 시스템 알림 발송")
             }
+        }
+
+        // ⑩-2 TASK-034 — 앱 시작 시 orphan sweep. DB referencedPaths set ↔ clips/ 폴더 diff → 미참조 파일 삭제.
+        // 디스크 삭제 실패 (권한 / 파일 잠김) fallback + 기존 누적 고아 자동 회수. DB 손상 복구 직후 (빈 DB) 도 동일 흐름으로 카피본 전체 정리.
+        // 백그라운드 Task — popover 첫 진입 지연 0 보장.
+        Task { [grdbRepo, fcs] in
+            let clips = (try? await grdbRepo.fetchAll()) ?? []
+            var referenced: Set<String> = []
+            for clip in clips {
+                if clip.isMultiFile, let entries = clip.fileEntries {
+                    for entry in entries where !entry.isFileExternal {
+                        referenced.insert(entry.filePath)
+                    }
+                } else if !clip.isFileExternal, let path = clip.filePath {
+                    referenced.insert(path)
+                }
+            }
+            await fcs.sweepOrphans(referencedPaths: referenced)
+            Logger.database.info("Startup orphan sweep done — referenced=\(referenced.count)")
         }
 
         // ⑪ Onboarding — 첫 실행 시 표시
