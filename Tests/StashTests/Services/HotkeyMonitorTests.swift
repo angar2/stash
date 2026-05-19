@@ -116,6 +116,30 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.moveSelectionDown.modifiers == [])
     }
 
+    @Test("⌘+↑ pageUp keyCode=126 modifiers=[.command] (TASK-036 페이지 점프)")
+    func pageUp_matchesCommandUp() {
+        #expect(PopoverHotkey.pageUp.keyCode == 126)
+        #expect(PopoverHotkey.pageUp.modifiers == [.command])
+    }
+
+    @Test("⌘+↓ pageDown keyCode=125 modifiers=[.command] (TASK-036 페이지 점프)")
+    func pageDown_matchesCommandDown() {
+        #expect(PopoverHotkey.pageDown.keyCode == 125)
+        #expect(PopoverHotkey.pageDown.modifiers == [.command])
+    }
+
+    @Test("⌘+⇧+↑ moveSelectionToFirst keyCode=126 modifiers=[.command,.shift] (TASK-036 Home)")
+    func moveSelectionToFirst_matchesCommandShiftUp() {
+        #expect(PopoverHotkey.moveSelectionToFirst.keyCode == 126)
+        #expect(PopoverHotkey.moveSelectionToFirst.modifiers == [.command, .shift])
+    }
+
+    @Test("⌘+⇧+↓ moveSelectionToLast keyCode=125 modifiers=[.command,.shift] (TASK-036 End)")
+    func moveSelectionToLast_matchesCommandShiftDown() {
+        #expect(PopoverHotkey.moveSelectionToLast.keyCode == 125)
+        #expect(PopoverHotkey.moveSelectionToLast.modifiers == [.command, .shift])
+    }
+
     // TASK-020 — pop (⌘⇧V) 단축키 폐기로 pop_matchesCommandShiftV 케이스 삭제.
     // TASK-021 — moveSelectionUpAlias / moveSelectionDownAlias (⌘+1 / ⌘+2) enum 폐기로 alias 검증 케이스 삭제.
 
@@ -152,11 +176,12 @@ struct PopoverHotkeyTests {
     // 사유: 변경 가능 단축키 6종 (copy / paste / pinToggle / pinSidebarToggle / deleteOne / deleteAll) 은 KeyboardShortcuts SPM 등록값 동적 조회로 변경. hardcoded keyCode + modifiers 기반 검증 의미 잃음 (모두 keyCode=0, modifiers=[]). deleteAllAlias 케이스 자체 폐기 (TASK-021 단축키 ⌘⇧⌫ 폐기 잔존 정리).
     // 변경 가능 단축키 검증은 KeyboardShortcuts SPM 동적 등록값 기반 신규 테스트로 분리 가능 (별도 후속 작업).
 
-    /// allCases — 변경 불가 단축키 (방향키/ESC) keyCode+modifiers hardcoded 중복 없음.
+    /// allCases — 변경 불가 단축키 (방향키/ESC/⌘+방향키/⌘+⇧+방향키) keyCode+modifiers hardcoded 중복 없음.
     @Test("allCases — 변경 불가 단축키만 keyCode+modifiers 중복 없음")
     func allCases_noDuplicateMapping() {
         // 변경 불가 케이스만 — 변경 가능 6종 (SPM 동적 조회) 은 모두 keyCode=0 통일이라 중복 검사 의미 X.
-        let fixedCases: [PopoverHotkey] = [.moveSelectionUp, .moveSelectionDown, .escape]
+        // TASK-036 — pageUp/Down (⌘) + moveSelectionToFirst/Last (⌘⇧) 는 moveSelectionUp/Down (단독) 과 동일 keyCode (126/125) 이되 modifiers 로 3-way 분기 (단독 / [.command] / [.command,.shift]), 중복 없음 검증.
+        let fixedCases: [PopoverHotkey] = [.moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .escape]
         let pairs = fixedCases.map { ($0.keyCode, $0.modifiers.rawValue) }
         let seen = Set(pairs.map { "\($0.0)-\($0.1)" })
         #expect(seen.count == pairs.count, "변경 불가 PopoverHotkey 중 keyCode+modifiers 중복 정의 발견")
