@@ -201,6 +201,54 @@ final class ClipsViewModel {
         pendingScrollToId = list[selectedIdx].id
     }
 
+    /// TASK-036 — ⌘+⇧+↑ 맨 위 (Home).
+    func moveSelectionToFirst() {
+        setSelection { _, _ in 0 }
+    }
+
+    /// TASK-036 — ⌘+⇧+↓ 맨 아래 (End).
+    func moveSelectionToLast() {
+        setSelection { _, count in count - 1 }
+    }
+
+    /// TASK-036 — ⌘+↑ 페이지 위 (토큰 추정 행 수만큼, 경계 clamp, wrap X).
+    func pageUp() {
+        let pageSize = effectivePageSize()
+        setSelection { current, _ in max(0, current - pageSize) }
+    }
+
+    /// TASK-036 — ⌘+↓ 페이지 아래 (토큰 추정 행 수만큼, 경계 clamp, wrap X).
+    func pageDown() {
+        let pageSize = effectivePageSize()
+        setSelection { current, count in min(count - 1, current + pageSize) }
+    }
+
+    /// TASK-036 — Edge / Page 점프 공통 처리. focusZone 분기 + 빈 리스트 가드 + idx 계산 + `pendingScrollToId` 세팅.
+    /// `compute` 클로저 = `(currentIdx, count) -> newIdx`. moveSelectionUp/Down (TASK-021) 는 기존 코드 그대로 — 본 헬퍼 미사용.
+    private func setSelection(compute: (_ currentIdx: Int, _ count: Int) -> Int) {
+        if focusZone == .pin {
+            let count = pinnedClips.count
+            guard count > 0 else { return }
+            pinSelectedIdx = compute(pinSelectedIdx, count)
+            return
+        }
+        let list = visibleClips
+        guard !list.isEmpty else { return }
+        focusZone = .clip
+        let newIdx = compute(selectedIdx, list.count)
+        selectedIdx = newIdx
+        pendingScrollToId = list[newIdx].id
+    }
+
+    /// TASK-036 — 페이지 점프 사이즈. `clipListMaxHeight ÷ rowMinHeight` 토큰 기반 정수 (현 276/44 → 6 행). 결정적 — LazyVStack lazy render 비대칭 영향 X.
+    /// 멀티라인 행 섞이면 실제 가시 < 추정값 가능하나 anchor:nil 스크롤 모델 이 cursor 를 가시 영역으로 끌어옴 (FEATURES §3-6).
+    /// TASK-037 후속 — Settings *한 페이지 클립 수 N* 도입 시 본 함수 본문을 `UserDefaults.standard.integer(forKey: ...)` 로 교체 (단일 변경점).
+    private func effectivePageSize() -> Int {
+        let listHeight = DesignTokens.WindowSize.clipListMaxHeight
+        let rowHeight = DesignTokens.Spacing.rowMinHeight
+        return max(1, Int(listHeight / rowHeight))
+    }
+
     /// Pin 사이드바 안 hover — pinSelectedIdx 갱신 (TASK-019 fix 2차).
     func setPinSelectedIdx(_ idx: Int) {
         if isHoverIgnored { return }
