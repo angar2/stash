@@ -81,6 +81,140 @@ struct ClipsViewModelTests {
         #expect(vm.selectedIdx == 2)  // wrap reverse
     }
 
+    // MARK: - TASK-036 페이지 점프 / 양 끝 점프
+
+    @Test("moveSelectionToFirst — focusZone == .clip 일 때 selectedIdx=0 + pendingScrollToId 첫 항목 (TASK-036 Home)")
+    func moveSelectionToFirst_clipZone() async {
+        let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c"), makeClip(body: "d")]
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 3  // 끝으로 이동
+        vm.pendingScrollToId = nil
+        vm.moveSelectionToFirst()
+        #expect(vm.selectedIdx == 0)
+        #expect(vm.focusZone == .clip)
+        #expect(vm.pendingScrollToId == vm.visibleClips[0].id)
+    }
+
+    @Test("moveSelectionToLast — focusZone == .clip 일 때 selectedIdx=last + pendingScrollToId 마지막 항목 (TASK-036 End)")
+    func moveSelectionToLast_clipZone() async {
+        let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c"), makeClip(body: "d")]
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 0
+        vm.pendingScrollToId = nil
+        vm.moveSelectionToLast()
+        let last = vm.visibleClips.count - 1
+        #expect(vm.selectedIdx == last)
+        #expect(vm.focusZone == .clip)
+        #expect(vm.pendingScrollToId == vm.visibleClips[last].id)
+    }
+
+    @Test("moveSelectionToFirst — focusZone == .pin 일 때 pinSelectedIdx=0, selectedIdx 영향 X (TASK-036)")
+    func moveSelectionToFirst_pinZone() async {
+        let prefilled = [
+            makeClip(body: "p1", pinned: true),
+            makeClip(body: "p2", pinned: true),
+            makeClip(body: "p3", pinned: true)
+        ]
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.focusZone = .pin
+        vm.pinSelectedIdx = 2
+        vm.selectedIdx = 1  // 본체 idx — 변동 없음 확인용
+        vm.moveSelectionToFirst()
+        #expect(vm.pinSelectedIdx == 0)
+        #expect(vm.selectedIdx == 1)  // 본체 영향 X
+    }
+
+    @Test("moveSelectionToLast — focusZone == .pin 일 때 pinSelectedIdx=last (TASK-036)")
+    func moveSelectionToLast_pinZone() async {
+        let prefilled = [
+            makeClip(body: "p1", pinned: true),
+            makeClip(body: "p2", pinned: true),
+            makeClip(body: "p3", pinned: true)
+        ]
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.focusZone = .pin
+        vm.pinSelectedIdx = 0
+        vm.moveSelectionToLast()
+        #expect(vm.pinSelectedIdx == vm.pinnedClips.count - 1)
+    }
+
+    @Test("moveSelectionToFirst / Last — 빈 리스트 no-op 가드 (TASK-036)")
+    func moveSelectionToEdge_emptyList_noOp() async {
+        let (vm, _, _) = await makeViewModel(prefilled: [])
+        await vm.reload()
+        vm.selectedIdx = 0
+        vm.pendingScrollToId = nil
+        vm.moveSelectionToFirst()
+        #expect(vm.selectedIdx == 0)
+        #expect(vm.pendingScrollToId == nil)  // 가드 통과 X
+        vm.moveSelectionToLast()
+        #expect(vm.selectedIdx == 0)
+        #expect(vm.pendingScrollToId == nil)
+    }
+
+    /// TASK-036 — `effectivePageSize` = `clipListMaxHeight / rowMinHeight` 토큰 기반 정수 추정.
+    /// 현재 토큰값 (276 / 44 = 6.27 → 6). 토큰 변경 시 본 검증 PASS 깨질 수 있음 (의도된 의존).
+    private static let expectedPageSize: Int = 6
+
+    @Test("pageUp / pageDown — focusZone == .clip 일 때 토큰 기반 pageSize 만큼 idx 점프 (TASK-036)")
+    func pageUpDown_clipZone_jumpsByTokenPageSize() async {
+        let n = Self.expectedPageSize
+        let prefilled = (0..<(n * 3)).map { makeClip(body: "c\($0)") }  // 충분히 큰 리스트 (clamp 회피)
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 0
+        vm.pendingScrollToId = nil
+        vm.pageDown()
+        #expect(vm.selectedIdx == n)  // 0 + n
+        #expect(vm.pendingScrollToId == vm.visibleClips[n].id)
+        vm.pageDown()
+        #expect(vm.selectedIdx == n * 2)  // n + n
+        vm.pageUp()
+        #expect(vm.selectedIdx == n)  // 2n - n
+        vm.pageUp()
+        #expect(vm.selectedIdx == 0)  // n - n
+    }
+
+    @Test("pageUp — 경계 (top) clamp (TASK-036)")
+    func pageUp_clamp_atTopBoundary() async {
+        let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 2  // 토큰 pageSize=6 보다 작음 → 0 으로 clamp
+        vm.pageUp()
+        #expect(vm.selectedIdx == 0)
+        #expect(vm.pendingScrollToId == vm.visibleClips[0].id)
+    }
+
+    @Test("pageDown — 경계 (bottom) clamp (TASK-036)")
+    func pageDown_clamp_atBottomBoundary() async {
+        let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.selectedIdx = 8  // 8 + 6 = 14, count - 1 = 9 → 9 로 clamp
+        vm.pageDown()
+        #expect(vm.selectedIdx == 9)
+        #expect(vm.pendingScrollToId == vm.visibleClips[9].id)
+    }
+
+    @Test("pageDown — focusZone == .pin 일 때 사이드바 안 토큰 pageSize 점프 + clamp (TASK-036)")
+    func pageDown_pinZone_jumpsInPinSidebar() async {
+        let n = Self.expectedPageSize
+        let prefilled = (0..<(n * 2)).map { makeClip(body: "p\($0)", pinned: true) }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        vm.focusZone = .pin
+        vm.pinSelectedIdx = 0
+        vm.pageDown()
+        #expect(vm.pinSelectedIdx == n)  // 0 + n
+        vm.pageDown()
+        #expect(vm.pinSelectedIdx == n * 2 - 1)  // n + n = 2n → clamp count-1 = 2n - 1
+    }
+
     @Test("TASK-025 — resetForOpen 후 검색 활성 단계 폐기 정합")
     func resetForOpenNoSearchActiveState() async {
         let (vm, _, _) = await makeViewModel(prefilled: [makeClip(body: "hello")])
