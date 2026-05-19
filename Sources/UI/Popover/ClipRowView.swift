@@ -11,6 +11,8 @@ struct ClipRowView: View {
     let mode: PopoverInvocationMode
     /// 시간 라벨 표시 여부 — Pin 사이드바(220 너비) 안에서는 false 박아 본문 truncate 완화 (TASK-019 fix 3차 B8).
     var showTimeLabel: Bool = true
+    /// TASK-035 — 검색바 입력 검색어. 비어있지 않으면 본문 매칭 구간을 accent 전경 + semibold 로 강조. Pin 사이드바는 항상 "" 전달 (UX-UI §7-3 적용 범위 제외).
+    var searchQuery: String = ""
     let onClick: () -> Void
     let onHover: () -> Void
     let onTogglePin: () -> Void
@@ -170,14 +172,50 @@ struct ClipRowView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(displayLines.indices, id: \.self) { idx in
-                Text(displayLines[idx])
-                    .font(clip.type == .text && isMonoBody ? DesignTokens.Typography.clipBodyMono : DesignTokens.Typography.clipBody)
-                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                Text(highlightedLine(idx))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+    }
+
+    /// TASK-035 — 현재 행 idx 의 displayLine 을 검색어 매칭 강조된 AttributedString 으로 반환.
+    /// baseFont 분기 (mono vs regular) 는 행 type / body 패턴 따라 결정 (기존 content 분기 정합).
+    private func highlightedLine(_ idx: Int) -> AttributedString {
+        let baseFont = (clip.type == .text && isMonoBody)
+            ? DesignTokens.Typography.clipBodyMono
+            : DesignTokens.Typography.clipBody
+        return Self.highlightedAttributedString(
+            displayLines[idx],
+            query: searchQuery,
+            baseFont: baseFont
+        )
+    }
+
+    /// TASK-035 — 순수 함수. source 텍스트에서 query 매칭 구간을 accent 전경 + semibold weight 로 강조한 AttributedString 반환.
+    /// 매칭 정책: 대소문자 무시 / 다중 매칭 / 빈 query 면 강조 미적용 (베이스만).
+    /// 단위 테스트 대상 — 외부 호출 가능하도록 internal static.
+    static func highlightedAttributedString(
+        _ source: String,
+        query: String,
+        baseFont: Font
+    ) -> AttributedString {
+        var result = AttributedString(source)
+        result.font = baseFont
+        result.foregroundColor = DesignTokens.Colors.labelPrimary
+
+        guard !query.isEmpty else { return result }
+
+        var cursor = result.startIndex
+        while cursor < result.endIndex,
+              let range = result[cursor..<result.endIndex].range(of: query, options: .caseInsensitive) {
+            result[range].foregroundColor = DesignTokens.Colors.searchMatchForeground
+            result[range].font = baseFont.weight(.semibold)
+            cursor = range.upperBound
+        }
+
+        return result
     }
 
     /// 이미지 클립 행 라벨 — 4단계 fallback (TASK-023):

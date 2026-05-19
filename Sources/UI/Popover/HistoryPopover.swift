@@ -110,6 +110,7 @@ struct HistoryPopover: View {
                             isFocused: viewModel.focusZone == .clip,
                             isFlashing: clip.id == viewModel.flashedClipId,
                             mode: mode,
+                            searchQuery: viewModel.searchQuery,  // TASK-035 — 일반 히스토리 영역 매칭 강조 prop 전달.
                             onClick: { Task { @MainActor in await handleClipPaste(idx, .clip) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화. TASK-028 — 본체 행이라 zone=.clip 고정.
                             onHover: { viewModel.setSelectedIdx(idx) },
                             onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
