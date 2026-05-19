@@ -3,13 +3,17 @@ import AppKit
 import SwiftUI
 import OSLog
 
-/// popover 안 단축키 정의 — 단일 진실 소스 (TASK-017 / TASK-021 / TASK-025 / TASK-033 fix-2).
+/// popover 안 단축키 정의 — 단일 진실 소스 (TASK-017 / TASK-021 / TASK-025 / TASK-033 fix-2 / TASK-036).
 /// 변경 가능 6종 (togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste) 은 PopoverShortcutStore (자체 UserDefaults storage) 동적 조회 — SPM `setShortcut` 의 Carbon 글로벌 hotkey 등록 회피 (⌘V/⌘C 같은 시스템 표준 키 매핑 시 시스템 paste/copy 무력화 방지).
-/// 변경 불가 (방향키/ESC) 는 hardcoded keyCode + modifiers.
+/// 변경 불가 (방향키/ESC/⌘+방향키/⌘+⇧+방향키) 는 hardcoded keyCode + modifiers.
 /// PopoverPanel.installKeyDownHandler / installPopoverKeyEventMonitor 가 본 enum을 순회 매칭 → dispatch 분기.
 enum PopoverHotkey: CaseIterable {
     case moveSelectionUp        // ↑ 단독 (TASK-021, 변경 불가)
     case moveSelectionDown      // ↓ 단독 (TASK-021, 변경 불가)
+    case pageUp                 // ⌘+↑ (TASK-036, 변경 불가 — 페이지 점프, 가시 행 수만큼)
+    case pageDown               // ⌘+↓ (TASK-036, 변경 불가 — 페이지 점프)
+    case moveSelectionToFirst   // ⌘+⇧+↑ (TASK-036, 변경 불가 — 양 끝 점프 Home)
+    case moveSelectionToLast    // ⌘+⇧+↓ (TASK-036, 변경 불가 — 양 끝 점프 End)
     case togglePin              // ⌘+P default (TASK-033 fix-2 — PopoverShortcutID.pinToggle 동적 조회)
     case togglePinSidebar       // ⌘+B default (TASK-033 fix-2 — PopoverShortcutID.pinSidebarToggle)
     case deleteOne              // ⌘+⌫ default (TASK-033 fix-2 — .deleteOne)
@@ -18,7 +22,7 @@ enum PopoverHotkey: CaseIterable {
     case paste                  // ⌘+V default (TASK-033 fix-2 — .paste. Accessibility 권한 게이트 조건부 활성)
     case escape                 // ESC 단독 (변경 불가 — macOS 표준 닫기/취소)
 
-    /// TASK-033 fix-2 — 변경 가능 단축키의 PopoverShortcutStore ID 매핑. 변경 불가 (방향키/ESC) 는 nil 반환 (hardcoded keyCode/modifiers 사용).
+    /// TASK-033 fix-2 — 변경 가능 단축키의 PopoverShortcutStore ID 매핑. 변경 불가 (방향키/ESC/⌘+방향키/⌘+⇧+방향키) 는 nil 반환 (hardcoded keyCode/modifiers 사용).
     var popoverShortcutID: PopoverShortcutID? {
         switch self {
         case .copy: return .copy
@@ -27,16 +31,16 @@ enum PopoverHotkey: CaseIterable {
         case .togglePinSidebar: return .pinSidebarToggle
         case .deleteOne: return .deleteOne
         case .deleteAll: return .deleteAll
-        case .moveSelectionUp, .moveSelectionDown, .escape: return nil
+        case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .escape: return nil
         }
     }
 
     /// 변경 불가 단축키만 사용하는 hardcoded keyCode (NSEvent.keyCode raw 값).
     var keyCode: UInt16 {
         switch self {
-        case .moveSelectionUp: return 126        // ↑
-        case .moveSelectionDown: return 125      // ↓
-        case .escape: return 53                  // ESC
+        case .moveSelectionUp, .pageUp, .moveSelectionToFirst: return 126        // ↑ (단독 / ⌘+↑ / ⌘+⇧+↑)
+        case .moveSelectionDown, .pageDown, .moveSelectionToLast: return 125     // ↓ (단독 / ⌘+↓ / ⌘+⇧+↓)
+        case .escape: return 53                                                  // ESC
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0  // PopoverShortcutStore 동적 조회
         }
     }
@@ -45,6 +49,8 @@ enum PopoverHotkey: CaseIterable {
     var modifiers: NSEvent.ModifierFlags {
         switch self {
         case .moveSelectionUp, .moveSelectionDown, .escape: return []
+        case .pageUp, .pageDown: return [.command]                              // TASK-036 — ⌘+↑/⌘+↓ 페이지 점프
+        case .moveSelectionToFirst, .moveSelectionToLast: return [.command, .shift]  // TASK-036 — ⌘+⇧+↑/⌘+⇧+↓ 양 끝 점프
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return []  // PopoverShortcutStore 동적 조회
         }
     }
@@ -222,6 +228,22 @@ enum PopoverPanel {
             return true
         case .moveSelectionDown:
             viewModel.moveSelectionDown()
+            return true
+        case .pageUp:
+            // TASK-036 — ⌘+↑ 페이지 위 (가시 행 수만큼). focusZone 분기 + clamp 는 ClipsViewModel 내부.
+            viewModel.pageUp()
+            return true
+        case .pageDown:
+            // TASK-036 — ⌘+↓ 페이지 아래 (가시 행 수만큼).
+            viewModel.pageDown()
+            return true
+        case .moveSelectionToFirst:
+            // TASK-036 — ⌘+⇧+↑ 맨 위 (Home). focusZone 분기는 ClipsViewModel 내부.
+            viewModel.moveSelectionToFirst()
+            return true
+        case .moveSelectionToLast:
+            // TASK-036 — ⌘+⇧+↓ 맨 아래 (End).
+            viewModel.moveSelectionToLast()
             return true
         case .togglePin:
             // TASK-019 — focusZone == .pin 이면 *pinnedClips 안 항목 unpin*. .clip 이면 본체 toggle.
