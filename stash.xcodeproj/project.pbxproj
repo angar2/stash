@@ -54,6 +54,7 @@
 		62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */; };
 		62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */; };
 		62F7992F5C66EE8C42F91329 /* ClipsViewModelPinPasteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */; };
+		62F7992F5C66EE8C42F9132A /* ClipRowViewHighlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */; };
 		6DBA7441BFAC6D8322F2D04D /* PermissionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADE6BF4854D63A0C86C70AF /* PermissionStep.swift */; };
 		71AF0770C533518335EBAABA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0B8182EC92FA88FE38E3C0 /* Constants.swift */; };
 		72463C79D705CFBD0713D08C /* NotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */; };
@@ -148,6 +149,7 @@
 		10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProviderTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelClipDetailTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelPinPasteTests.swift; sourceTree = "<group>"; };
+		10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipRowViewHighlightTests.swift; sourceTree = "<group>"; };
 		1165FDD9A41E4E0DA4BAF6CF /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		15E134AE9193E2DD1F682B55 /* HotkeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitor.swift; sourceTree = "<group>"; };
 		19923362833B37310A4C6F15 /* MockNotificationCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotificationCenter.swift; sourceTree = "<group>"; };
@@ -521,6 +523,7 @@
 				10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */,
 				10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */,
 				10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */,
+				10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */,
 			);
 			path = Popover;
 			sourceTree = "<group>";
@@ -820,6 +823,7 @@
 				62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */,
 				62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */,
 				62F7992F5C66EE8C42F91329 /* ClipsViewModelPinPasteTests.swift in Sources */,
+				62F7992F5C66EE8C42F9132A /* ClipRowViewHighlightTests.swift in Sources */,
 				A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */,
 				D2DD536A6E5FCE5F73FE0404 /* GRDBClipRepositoryTests.swift in Sources */,
 				8E3A1D3E9FE4CFA879601A2B /* HotkeyManagerTests.swift in Sources */,
