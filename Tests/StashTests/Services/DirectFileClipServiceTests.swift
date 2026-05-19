@@ -265,4 +265,68 @@ struct DirectFileClipServiceTests {
         try await svc.delete(clip)
         #expect(true)
     }
+
+    // MARK: - TASK-034 — sweepOrphans (4 케이스)
+
+    /// 빈 폴더 — throw X / 변동 X.
+    @Test func sweepOrphansEmptyFolder() async throws {
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(clipsFolder) }
+        try FileManager.default.createDirectory(at: clipsFolder, withIntermediateDirectories: true)
+        let svc = makeService(tempFolder: clipsFolder)
+
+        await svc.sweepOrphans(referencedPaths: [])
+
+        let contents = (try? FileManager.default.contentsOfDirectory(atPath: clipsFolder.path)) ?? []
+        #expect(contents.isEmpty)
+    }
+
+    /// referenced 0건 + 디스크 3 파일 → 3 파일 모두 삭제.
+    @Test func sweepOrphansRemovesAllWhenNoReferences() async throws {
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(clipsFolder) }
+        let a = try makeTempFile(in: clipsFolder, name: "a.png")
+        let b = try makeTempFile(in: clipsFolder, name: "b.bin")
+        let c = try makeTempFile(in: clipsFolder, name: "c.png")
+        let svc = makeService(tempFolder: clipsFolder)
+
+        await svc.sweepOrphans(referencedPaths: [])
+
+        #expect(!FileManager.default.fileExists(atPath: a.path))
+        #expect(!FileManager.default.fileExists(atPath: b.path))
+        #expect(!FileManager.default.fileExists(atPath: c.path))
+    }
+
+    /// referenced 2건 + 디스크 5 파일 → referenced 2 보존 + 3 삭제.
+    @Test func sweepOrphansPreservesReferencedRemovesUnreferenced() async throws {
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(clipsFolder) }
+        let a = try makeTempFile(in: clipsFolder, name: "a.png")
+        let b = try makeTempFile(in: clipsFolder, name: "b.bin")
+        let c = try makeTempFile(in: clipsFolder, name: "c.png")
+        let d = try makeTempFile(in: clipsFolder, name: "d.bin")
+        let e = try makeTempFile(in: clipsFolder, name: "e.png")
+        let svc = makeService(tempFolder: clipsFolder)
+
+        await svc.sweepOrphans(referencedPaths: [a.path, c.path])
+
+        #expect(FileManager.default.fileExists(atPath: a.path))
+        #expect(FileManager.default.fileExists(atPath: c.path))
+        #expect(!FileManager.default.fileExists(atPath: b.path))
+        #expect(!FileManager.default.fileExists(atPath: d.path))
+        #expect(!FileManager.default.fileExists(atPath: e.path))
+    }
+
+    /// referencedPaths 안 디스크 미존재 path (external 시뮬레이션) 포함 → silent skip.
+    @Test func sweepOrphansSkipsMissingReferencedPaths() async throws {
+        let clipsFolder = makeTempFolder()
+        defer { cleanup(clipsFolder) }
+        let a = try makeTempFile(in: clipsFolder, name: "a.png")
+        let externalPath = "/tmp/__missing_external_\(UUID().uuidString).txt"
+        let svc = makeService(tempFolder: clipsFolder)
+
+        await svc.sweepOrphans(referencedPaths: [a.path, externalPath])
+
+        #expect(FileManager.default.fileExists(atPath: a.path))
+    }
 }

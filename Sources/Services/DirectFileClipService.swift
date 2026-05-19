@@ -80,4 +80,36 @@ actor DirectFileClipService: FileClipService {
             try? FileManager.default.removeItem(at: url)
         }
     }
+
+    /// TASK-034 — clips/ 폴더 enumerate → referencedPaths 미포함 파일 삭제.
+    /// 폴더 미존재 / removeItem 실패 silent + 로깅 (orphan sweep 자체 실패가 main 흐름 차단 X).
+    /// symlink 정규화 (`resolvingSymlinksInPath`) 필수 — macOS 의 `/var → /private/var` 차이로 인한 false-orphan 분류 회피.
+    func sweepOrphans(referencedPaths: Set<String>) async {
+        let contents: [URL]
+        do {
+            contents = try FileManager.default.contentsOfDirectory(
+                at: clipsFolder,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )
+        } catch {
+            Logger.database.debug("sweepOrphans: clipsFolder enumerate skip — \(error.localizedDescription)")
+            return
+        }
+        let normalizedReferenced = Set(referencedPaths.map {
+            URL(fileURLWithPath: $0).resolvingSymlinksInPath().path
+        })
+        var removed = 0
+        for url in contents {
+            let normalizedPath = url.resolvingSymlinksInPath().path
+            if normalizedReferenced.contains(normalizedPath) { continue }
+            do {
+                try FileManager.default.removeItem(at: url)
+                removed += 1
+            } catch {
+                Logger.database.error("sweepOrphans: removeItem failed — \(url.lastPathComponent) error=\(error.localizedDescription)")
+            }
+        }
+        Logger.database.info("sweepOrphans: removed \(removed) orphan file(s) (referenced=\(referencedPaths.count), scanned=\(contents.count))")
+    }
 }

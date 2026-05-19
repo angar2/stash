@@ -12,4 +12,7 @@ protocol FileClipService: Sendable {
     /// 디스크 파일 삭제 (DB row 삭제 후 호출). `isFileExternal = true` 클립은 삭제 X.
     /// TASK-026 — `clip.isMultiFile` 인 경우 entries 순회 cleanup (entry별 `isFileExternal=false` 만 삭제).
     func delete(_ clip: Clip) async throws
+    /// TASK-034 — clips/ 폴더 안 파일 중 `referencedPaths` (절대경로 set) 에 미포함된 고아 파일 삭제.
+    /// 앱 시작 시 자동 회수 + 전체 삭제 시 일괄 정리 두 호출처가 공유. silent + OSLog (DATA-MODEL §6 정합).
+    func sweepOrphans(referencedPaths: Set<String>) async
 }

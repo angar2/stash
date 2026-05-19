@@ -10,6 +10,8 @@ final class MockFileClipService: FileClipService, @unchecked Sendable {
     var throwAtIndex: Int? = nil
     /// TASK-026 — saveFiles 입력 기록.
     var savedFilesBatch: [[URL]] = []
+    /// TASK-034 — sweepOrphans 호출 시 referencedPaths 인자 기록.
+    var sweepCalls: [Set<String>] = []
 
     func saveData(_ data: Data, type: ClipType) async throws -> StoredFile {
         if shouldThrow { throw ClipboardError.pasteboardUnavailable }
@@ -41,5 +43,10 @@ final class MockFileClipService: FileClipService, @unchecked Sendable {
     func delete(_ clip: Clip) async throws {
         if shouldThrow { throw ClipboardError.pasteboardUnavailable }
         deletedClips.append(clip)
+    }
+
+    /// TASK-034 — sweepOrphans 호출 시 인자 기록 (실제 파일 삭제 X — 테스트는 호출 인자만 검증).
+    func sweepOrphans(referencedPaths: Set<String>) async {
+        sweepCalls.append(referencedPaths)
     }
 }
