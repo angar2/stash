@@ -29,10 +29,13 @@ struct KeyboardHintsView: View {
     }
 
     private var hints: [Hint] {
-        // TASK-033 fix-2 — 변경 가능 5종 (copy / paste / deleteOne / deleteAll / pinToggle) 은 PopoverShortcutStore 동적 조회. 사용자가 환경설정 단축키 변경 시 popover 재오픈 또는 view rebuild 시 즉시 반영. ↑/↓ 는 hardcoded (변경 불가).
+        // TASK-033 fix-2 — 변경 가능 5종 (copy / paste / deleteOne / deleteAll / pinToggle) 은 PopoverShortcutStore 동적 조회. 사용자가 환경설정 단축키 변경 시 popover 재오픈 또는 view rebuild 시 즉시 반영. ↑/↓ · ⌘↑/⌘↓ · ⌘⇧↑/⌘⇧↓ 는 hardcoded (변경 불가).
         // TASK-024 — ⌘V 행만 `enabled = accessibilityGranted` 분기. 권한 X 시 회색조.
+        // TASK-036 — `page` (⌘↑/⌘↓ 페이지 점프) + `jumpEdge` (⌘⇧↑/⌘⇧↓ 양 끝 점프) hint 분리. 학습 흐름: 단독 → 페이지 → 양끝.
         return [
             Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
+            Hint(id: "page", parts: [.keys(["⌘↑", "⌘↓"])], label: String(localized: "hint.page"), enabled: true),
+            Hint(id: "jumpEdge", parts: [.keys(["⌘⇧↑", "⌘⇧↓"])], label: String(localized: "hint.jumpToEdge"), enabled: true),
             Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: String(localized: "hint.copy"), enabled: true),
             Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
             Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: String(localized: "hint.delete"), enabled: true),
