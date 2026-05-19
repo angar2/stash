@@ -1,7 +1,36 @@
-// 클립보드 변경을 500ms 폴링으로 감지하는 actor
+// 클립보드 변경을 500ms 폴링으로 감지하는 actor + frontmost 앱 추적 (TASK-033 *저장하지 않을 앱* 백엔드)
 import Foundation
 import AppKit
 import OSLog
+
+/// TASK-033 — 현재 frontmost (가장 위에 있는) 앱 번들 ID 추적. NSWorkspace.didActivateApplicationNotification 구독.
+/// *저장하지 않을 앱* 백엔드 (TASK-022 에서 제거된 클래스 복원). stash 자신 활성화 시 갱신 skip — *마지막 사용자 활성 앱* 유지.
+@MainActor
+final class FrontmostAppTracker {
+    private(set) var currentBundleId: String?
+    private var observer: NSObjectProtocol?
+
+    init() {
+        self.currentBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            let bundleId = app.bundleIdentifier
+            if bundleId != Bundle.main.bundleIdentifier {
+                Task { @MainActor [weak self] in
+                    self?.currentBundleId = bundleId
+                    Logger.clipboard.debug("FrontmostAppTracker: \(bundleId ?? "nil", privacy: .public)")
+                }
+            }
+        }
+        Logger.clipboard.info("FrontmostAppTracker initialized — current=\(self.currentBundleId ?? "nil", privacy: .public)")
+    }
+
+    // 메뉴바 앱 (LSUIElement) — process termination 시 NotificationCenter 자동 정리. 별도 deinit 불필요 (Swift 6 strict concurrency `non-Sendable property in nonisolated deinit` 회피).
+}
 
 actor ClipboardWatcher {
     private let pasteboard: Pasteboard
@@ -10,6 +39,8 @@ actor ClipboardWatcher {
     /// TASK-026 — 다중 파일 임계 초과 / 부분 실패 시 사용자 인지용 메시지 dispatch.
     /// Composition Root가 `{ msg in await MainActor.run { toastQueue.enqueue(.warn, msg) } }` 박음.
     private let onUserMessage: (@Sendable (String) async -> Void)?
+    /// TASK-033 — *저장하지 않을 앱* 백엔드. frontmost 앱 추적 + 매칭 시 클립 저장 skip. nil 가능 (테스트 환경 등).
+    private let frontmostTracker: FrontmostAppTracker?
 
     private var lastChangeCount: Int = -1
     private var pollingTask: Task<Void, Never>?
@@ -21,12 +52,14 @@ actor ClipboardWatcher {
         pasteboard: Pasteboard = SystemPasteboard.shared,
         fileClipService: FileClipService,
         repository: ClipRepository,
-        onUserMessage: (@Sendable (String) async -> Void)? = nil
+        onUserMessage: (@Sendable (String) async -> Void)? = nil,
+        frontmostTracker: FrontmostAppTracker? = nil
     ) {
         self.pasteboard = pasteboard
         self.fileClipService = fileClipService
         self.repository = repository
         self.onUserMessage = onUserMessage
+        self.frontmostTracker = frontmostTracker
     }
 
     func start() {
@@ -79,9 +112,26 @@ actor ClipboardWatcher {
     }
 
     private func buildClip(from pasteboard: Pasteboard) async throws -> Clip? {
-        // TransientType 감지 — 비밀번호 관리자 등이 exclude 마킹한 클립
+        // TASK-033 — *저장하지 않을 앱* 매칭. frontmost 앱 번들 ID 가 사용자 설정 차단 목록에 있으면 클립 저장 skip.
+        if let frontmostTracker {
+            let frontmostBundle = await frontmostTracker.currentBundleId
+            if let frontmostBundle {
+                let blockedIds = UserDefaults.standard.stringArray(forKey: "blockedAppBundleIds") ?? []
+                if blockedIds.contains(frontmostBundle) {
+                    Logger.clipboard.info("buildClip: blocked app — frontmost=\(frontmostBundle, privacy: .public) skip")
+                    return nil
+                }
+            }
+        }
+
+        // TransientType / ConcealedType 감지 — 비밀번호 관리자 등이 exclude 마킹한 클립 (nspasteboard.org 컨벤션 정합).
+        // TASK-033 — ConcealedType 신규 추가 (일부 비밀번호 매니저가 ConcealedType 만 박는 케이스 대응).
         let transientType = NSPasteboard.PasteboardType("org.nspasteboard.TransientType")
-        guard pasteboard.availableType(from: [transientType]) == nil else { return nil }
+        let concealedType = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+        guard pasteboard.availableType(from: [transientType, concealedType]) == nil else {
+            Logger.clipboard.debug("buildClip: transient/concealed type detected — skip")
+            return nil
+        }
 
         let now = Date()
         let id = UUID()

@@ -51,6 +51,10 @@ struct SettingsWindow: View {
                 DesignTokens.Colors.settingsBackground
             }
         )
+        // TASK-033 — 환경설정 윈도우 내부 토스트 시스템 (popover 토스트와 별개). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
+        .overlay(alignment: .top) {
+            SettingsToastBar(queue: viewModel.settingsToast)
+        }
     }
 
     private var tabBar: some View {
@@ -70,6 +74,25 @@ struct SettingsWindow: View {
                 DesignTokens.Colors.settingsTabbar
             }
         )
+    }
+
+    // MARK: - Settings toast (TASK-033)
+    private struct SettingsToastBar: View {
+        @Bindable var queue: ToastQueue
+
+        var body: some View {
+            VStack(alignment: .center, spacing: DesignTokens.Spacing.sm) {
+                ForEach(queue.stack) { item in
+                    ToastView(item: item, onDismiss: { queue.dismiss(id: item.id) })
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .padding(.top, DesignTokens.Spacing.sm)
+            .frame(maxWidth: .infinity)
+            .allowsHitTesting(!queue.stack.isEmpty)
+            .animation(.easeInOut(duration: 0.2), value: queue.stack.count)
+        }
     }
 
     private func tabButton(tab: SettingsTab) -> some View {
@@ -94,6 +117,8 @@ struct SettingsWindow: View {
                     }
                 }
             )
+            // TASK-033 — 시각 활성화 영역 (frame + padding + RoundedRectangle background) 전체를 클릭 hit testing 영역으로. 기본 Button hit testing 은 VStack 컨텐츠 (아이콘+텍스트) 만 잡아 padding 영역 클릭 무반응이던 결함 fix.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -583,7 +583,7 @@ struct ClipsViewModelTests {
         let prefilled = [makeClip(body: "copy-target")]
         let (vm, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
-        vm.pasteMode = .autoPaste
+        UserDefaults.standard.set(true, forKey: "autoPasteEnabled")  // TASK-033 — .autoPaste 대응 (UserDefaults 단일 진실 소스)
         vm.updateAccessibilityGranted(true)  // 권한 O 라도 ⌘C 는 .copyBack 강제 검증
         let clipId = vm.visibleClips[0].id
         await vm.copy(at: 0, zone: .clip)
@@ -596,7 +596,7 @@ struct ClipsViewModelTests {
         let prefilled = [makeClip(body: "copy-target")]
         let (vm, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
-        vm.pasteMode = .copyBack
+        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")  // TASK-033 — .copyBack 대응
         vm.updateAccessibilityGranted(false)  // 권한 X 도 ⌘C 는 항상 활성
         let clipId = vm.visibleClips[0].id
         await vm.copy(at: 0, zone: .clip)
@@ -646,7 +646,7 @@ struct ClipsViewModelTests {
         )
         let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
         await vm.reload()
-        vm.pasteMode = .autoPaste
+        UserDefaults.standard.set(true, forKey: "autoPasteEnabled")  // TASK-033 — .autoPaste 대응 (UserDefaults 단일 진실 소스)
         vm.updateAccessibilityGranted(false)  // 권한 X — effective mode 가 .copyBack 강제
         await vm.paste(at: 0, zone: .clip)
         // 권한 X → effective mode .copyBack → synthesizer 호출 0회.
@@ -670,7 +670,7 @@ struct ClipsViewModelTests {
         )
         let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
         await vm.reload()
-        vm.pasteMode = .autoPaste
+        UserDefaults.standard.set(true, forKey: "autoPasteEnabled")  // TASK-033 — .autoPaste 대응 (UserDefaults 단일 진실 소스)
         vm.updateAccessibilityGranted(true)
         await vm.paste(at: 0, zone: .clip)
         // 권한 O + autoPaste → synthesizer 1회 호출.
@@ -694,7 +694,7 @@ struct ClipsViewModelTests {
         )
         let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
         await vm.reload()
-        vm.pasteMode = .copyBack
+        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")  // TASK-033 — .copyBack 대응
         vm.updateAccessibilityGranted(true)
         await vm.paste(at: 0, zone: .clip)
         #expect(synthesizer.callCount == 0)

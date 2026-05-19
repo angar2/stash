@@ -1,4 +1,4 @@
-// 단축키 힌트바 — popover.jsx L165-207 100% 정합 (방식별 modifier 분기 + 키캡 group + or + label)
+// 단축키 힌트바 — popover.jsx L165-207 100% 정합 (TASK-033 fix-2 — PopoverShortcutStore 동적 조회로 사용자 변경 단축키 즉시 반영)
 import SwiftUI
 
 enum PopoverInvocationMode: Sendable {
@@ -29,27 +29,21 @@ struct KeyboardHintsView: View {
     }
 
     private var hints: [Hint] {
-        // TASK-024 — ⌘C 복사 hint 신규 (⌘V 왼쪽 위치). ⌘V 행만 `enabled = accessibilityGranted` 분기 — 권한 X 시 회색조.
-        switch mode {
-        case .method1, .method2:
-            return [
-                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
-                Hint(id: "copy", parts: [.keys(["⌘C"])], label: String(localized: "hint.copy"), enabled: true),
-                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
-                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete"), enabled: true),
-                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll"), enabled: true),
-                Hint(id: "pin", parts: [.keys(["P"])], label: String(localized: "hint.pin"), enabled: true)
-            ]
-        case .method3:
-            return [
-                Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
-                Hint(id: "copy", parts: [.keys(["⌘C"])], label: String(localized: "hint.copy"), enabled: true),
-                Hint(id: "paste", parts: [.keys(["⌘V"])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
-                Hint(id: "del", parts: [.keys(["⌘⌫"])], label: String(localized: "hint.delete"), enabled: true),
-                Hint(id: "delAll", parts: [.keys(["⌥⌘⌫"])], label: String(localized: "hint.deleteAll"), enabled: true),
-                Hint(id: "pin", parts: [.keys(["⌘P"])], label: String(localized: "hint.pin"), enabled: true)
-            ]
-        }
+        // TASK-033 fix-2 — 변경 가능 5종 (copy / paste / deleteOne / deleteAll / pinToggle) 은 PopoverShortcutStore 동적 조회. 사용자가 환경설정 단축키 변경 시 popover 재오픈 또는 view rebuild 시 즉시 반영. ↑/↓ 는 hardcoded (변경 불가).
+        // TASK-024 — ⌘V 행만 `enabled = accessibilityGranted` 분기. 권한 X 시 회색조.
+        return [
+            Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
+            Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: String(localized: "hint.copy"), enabled: true),
+            Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
+            Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: String(localized: "hint.delete"), enabled: true),
+            Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: String(localized: "hint.deleteAll"), enabled: true),
+            Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: String(localized: "hint.pin"), enabled: true)
+        ]
+    }
+
+    /// TASK-033 fix-2 — PopoverShortcutStore 동적 조회 헬퍼. 미등록 시 fallback (default 단축키 시각 표현) 반환.
+    private func keyDisplay(for id: PopoverShortcutID, fallback: String) -> String {
+        PopoverShortcutStore.get(id)?.displayText ?? fallback
     }
 
     private func hintCell(hint: Hint) -> some View {

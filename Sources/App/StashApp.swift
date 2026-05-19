@@ -19,6 +19,8 @@ struct StashApp: App {
     let notificationService: NotificationService
     let loginItemService: LoginItemService
     let clipboardWatcher: ClipboardWatcher
+    /// TASK-033 — *저장하지 않을 앱* 백엔드 — frontmost 앱 번들 ID 추적. ClipboardWatcher.buildClip 분기에서 사용.
+    let frontmostAppTracker: FrontmostAppTracker
     let hotkeyManager: HotkeyManager
     let hotkeyMonitor: HotkeyMonitor
     let pasteService: PasteService
@@ -43,6 +45,11 @@ struct StashApp: App {
     let permissionRefresherObserver: NSObjectProtocol
 
     init() {
+        // TASK-033 — UserDefaults default values 등록. 사용자 설정 없을 때 기본값. autoPasteEnabled default true (자동 paste 기본 ON).
+        UserDefaults.standard.register(defaults: [
+            "autoPasteEnabled": true
+        ])
+
         // ① Persistence — 가장 안쪽부터 (ARCHITECTURE §9-4 step 2-3)
         let dataFolder = AppDataPath.dataFolder()
         let dbPath = AppDataPath.databaseFile()
@@ -78,6 +85,9 @@ struct StashApp: App {
         self.toastWindowController = ToastWindowController(queue: toastQ)
 
         // ⑤ 도메인 Service — 생성자 주입 (ARCHITECTURE §9-4 step 5)
+        // TASK-033 — FrontmostAppTracker 신규. ClipboardWatcher 에 주입해 *저장하지 않을 앱* 매칭 시 클립 저장 skip.
+        let frontmostTracker = FrontmostAppTracker()
+        self.frontmostAppTracker = frontmostTracker
         let watcher = ClipboardWatcher(
             pasteboard: pb,
             fileClipService: fcs,
@@ -87,7 +97,8 @@ struct StashApp: App {
                 await MainActor.run {
                     toastQ.enqueue(.warn, msg)
                 }
-            }
+            },
+            frontmostTracker: frontmostTracker
         )
         self.clipboardWatcher = watcher
         self.hotkeyManager = HotkeyManager(
@@ -167,6 +178,10 @@ struct StashApp: App {
                 popover.show(mode: .method2)
             }
         }
+
+        // ⑨-2-2 TASK-033 fix-2 — popover 안 변경 가능 단축키 6종 default 등록 → 자체 `PopoverShortcutStore` 사용.
+        // 사유: SPM `setShortcut` 이 Carbon RegisterEventHotKey 글로벌 hotkey 등록을 자동 트리거 → ⌘V/⌘C 같은 시스템 표준 단축키 매핑 시 시스템 paste/copy 자체 무력화 + popover localMonitor 도달 X. → SPM 사용 X, 자체 UserDefaults JSON storage 활용.
+        PopoverShortcutStore.registerDefaultsIfNeeded()
 
         // ⑨-3 권한 변경 시 hotkeyMonitor 자동 재시작 + ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024) —
         // 권한 부여 *전* 상태였으면 init 1회 start()가 skip됨. 이후 사용자가 권한 부여해도 재시작 트리거 없음 → 영원히 미동작.

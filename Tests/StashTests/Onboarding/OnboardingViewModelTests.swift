@@ -29,13 +29,15 @@ struct OnboardingViewModelTests {
         #expect(vm.phase == .permission)
     }
 
-    @Test("skipPermissionWithCopyBack — pasteMode copyBack 저장 + tutorial 진행")
+    @Test("skipPermissionWithCopyBack — autoPasteEnabled false 저장 + tutorial 진행 (TASK-033)")
     func skipPermissionFlow() {
         let vm = makeViewModel()
+        // TASK-033 — UserDefaults register default = true. 테스트 격리 위해 직접 false 박기 전 키 정리.
+        UserDefaults.standard.removeObject(forKey: "autoPasteEnabled")
         vm.advanceToPermission()
         vm.skipPermissionWithCopyBack()
         #expect(vm.phase == .tutorial)
-        #expect(UserDefaults.standard.string(forKey: "pasteMode") == PasteMode.copyBack.rawValue)
+        #expect(UserDefaults.standard.bool(forKey: "autoPasteEnabled") == false)
     }
 
     @Test("complete — hasCompletedOnboarding true 저장")

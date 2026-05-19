@@ -119,11 +119,7 @@ struct PopoverHotkeyTests {
     // TASK-020 — pop (⌘⇧V) 단축키 폐기로 pop_matchesCommandShiftV 케이스 삭제.
     // TASK-021 — moveSelectionUpAlias / moveSelectionDownAlias (⌘+1 / ⌘+2) enum 폐기로 alias 검증 케이스 삭제.
 
-    @Test("⌥+⌘+⌫ keyCode=51 modifiers=[.command,.option] (deleteAll)")
-    func deleteAll_matchesOptionCommandDelete() {
-        #expect(PopoverHotkey.deleteAll.keyCode == 51)
-        #expect(PopoverHotkey.deleteAll.modifiers == [.command, .option])
-    }
+    // TASK-033 — deleteAll keyCode/modifiers hardcoded 검증 폐기 (변경 가능 단축키 → SPM 동적 조회로 변경. hardcoded 모두 keyCode=0, modifiers=[]). 변경 가능 단축키 검증은 SPM 등록값 기반 신규 테스트로 분리.
 
     // TASK-025 — `.activateSearch` enum case 폐기. Enter 동작 자체 제거 (검색바 always-active 정책). `activateSearch_matchesPlainReturn` 케이스 삭제. 회귀 가드는 `PopoverHotkeyTests` 의 `enterKeyMatchesNoHotkey` (Enter 단독 매칭 0건 검증) 에서 담당.
 
@@ -152,35 +148,17 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.moveSelectionUp.matches(event: event) == true)
     }
 
-    /// modifier 정확 일치 검증 — ⌘+⌫는 deleteOne 매칭 / ⌘+⇧+⌫는 deleteAllAlias 매칭.
-    @Test("matches — ⌘+⌫는 deleteOne, ⌘+⇧+⌫는 deleteAllAlias 정확 매칭")
-    func matches_distinguishesModifierCombinations() {
-        let cmdDelete = NSEvent.keyEvent(
-            with: .keyDown, location: .zero,
-            modifierFlags: [.command],
-            timestamp: 0, windowNumber: 0, context: nil,
-            characters: "", charactersIgnoringModifiers: "",
-            isARepeat: false, keyCode: 51
-        )!
-        #expect(PopoverHotkey.deleteOne.matches(event: cmdDelete) == true)
-        #expect(PopoverHotkey.deleteAllAlias.matches(event: cmdDelete) == false)
+    // TASK-033 — *modifier 정확 일치 검증* / *allCases 중복 keyCode+modifiers 없음* 테스트 폐기.
+    // 사유: 변경 가능 단축키 6종 (copy / paste / pinToggle / pinSidebarToggle / deleteOne / deleteAll) 은 KeyboardShortcuts SPM 등록값 동적 조회로 변경. hardcoded keyCode + modifiers 기반 검증 의미 잃음 (모두 keyCode=0, modifiers=[]). deleteAllAlias 케이스 자체 폐기 (TASK-021 단축키 ⌘⇧⌫ 폐기 잔존 정리).
+    // 변경 가능 단축키 검증은 KeyboardShortcuts SPM 동적 등록값 기반 신규 테스트로 분리 가능 (별도 후속 작업).
 
-        let cmdShiftDelete = NSEvent.keyEvent(
-            with: .keyDown, location: .zero,
-            modifierFlags: [.command, .shift],
-            timestamp: 0, windowNumber: 0, context: nil,
-            characters: "", charactersIgnoringModifiers: "",
-            isARepeat: false, keyCode: 51
-        )!
-        #expect(PopoverHotkey.deleteOne.matches(event: cmdShiftDelete) == false)
-        #expect(PopoverHotkey.deleteAllAlias.matches(event: cmdShiftDelete) == true)
-    }
-
-    /// allCases 중복 keyCode+modifiers 없음 (정의 충돌 방지).
-    @Test("allCases — keyCode+modifiers 조합 중복 없음")
+    /// allCases — 변경 불가 단축키 (방향키/ESC) keyCode+modifiers hardcoded 중복 없음.
+    @Test("allCases — 변경 불가 단축키만 keyCode+modifiers 중복 없음")
     func allCases_noDuplicateMapping() {
-        let pairs = PopoverHotkey.allCases.map { ($0.keyCode, $0.modifiers.rawValue) }
+        // 변경 불가 케이스만 — 변경 가능 6종 (SPM 동적 조회) 은 모두 keyCode=0 통일이라 중복 검사 의미 X.
+        let fixedCases: [PopoverHotkey] = [.moveSelectionUp, .moveSelectionDown, .escape]
+        let pairs = fixedCases.map { ($0.keyCode, $0.modifiers.rawValue) }
         let seen = Set(pairs.map { "\($0.0)-\($0.1)" })
-        #expect(seen.count == pairs.count, "PopoverHotkey 중 keyCode+modifiers 중복 정의 발견")
+        #expect(seen.count == pairs.count, "변경 불가 PopoverHotkey 중 keyCode+modifiers 중복 정의 발견")
     }
 }
