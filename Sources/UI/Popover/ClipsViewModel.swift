@@ -74,11 +74,19 @@ final class ClipsViewModel {
     // MARK: - Dependencies
     private let repository: any ClipRepository
     private let pasteService: PasteService
+    /// TASK-034 — 클립 삭제 시 디스크 카피본 cleanup. DB row 삭제 직후 호출 (delete / deleteAllExceptPinned).
+    private let fileClipService: any FileClipService
     private weak var toastQueue: ToastQueue?
 
-    init(repository: any ClipRepository, pasteService: PasteService, toastQueue: ToastQueue? = nil) {
+    init(
+        repository: any ClipRepository,
+        pasteService: PasteService,
+        fileClipService: any FileClipService,
+        toastQueue: ToastQueue? = nil
+    ) {
         self.repository = repository
         self.pasteService = pasteService
+        self.fileClipService = fileClipService
         self.toastQueue = toastQueue
     }
 
@@ -355,6 +363,7 @@ final class ClipsViewModel {
     }
 
     /// TASK-019 fix 2차 — focusZone == .pin 일 때 ⌘⌫ 는 *클립 row 삭제가 아니라 unpin* 으로 동작 (DB row 유지).
+    /// TASK-034 — DB row 삭제 후 디스크 카피본 cleanup. 텍스트 클립은 `DirectFileClipService.delete` 내부 guard (`filePath == nil`) 로 no-op.
     func delete(at idx: Int) async {
         if focusZone == .pin {
             guard idx >= 0 && idx < pinnedClips.count else { return }
@@ -366,15 +375,38 @@ final class ClipsViewModel {
         guard idx >= 0 && idx < list.count else { return }
         let clip = list[idx]
         _ = try? await repository.delete(id: clip.id)
+        try? await fileClipService.delete(clip)
         await reload()
         clampSelection()
     }
 
+    /// TASK-034 — DB 삭제 + entry 별 디스크 cleanup + 핀 참조 외 clips/ 폴더 sweep (누적 고아 + 디스크 삭제 실패 fallback 회수).
     func deleteAllExceptPinned() async {
-        _ = try? await repository.deleteAllExceptPinned()
+        let deleted = (try? await repository.deleteAllExceptPinned()) ?? []
+        for clip in deleted {
+            try? await fileClipService.delete(clip)
+        }
+        let pinnedPaths = collectReferencedPaths(from: pinnedClips)
+        await fileClipService.sweepOrphans(referencedPaths: pinnedPaths)
         await reload()
         selectedIdx = 0
         toastQueue?.enqueue(.info, String(localized: "toast.deleteAll.done"), ttl: DesignTokens.Animation.toastTTLLong)
+    }
+
+    /// TASK-034 — 클립 배열 → clips/ 폴더 안 참조 절대경로 set. `isFileExternal=false` 만 (외부 원본은 stash 카피본 X — sweep 대상 X).
+    /// 단일 파일 (`filePath`) + 다중 파일 묶음 (`fileEntries[].filePath`) 모두 수집.
+    private func collectReferencedPaths(from clips: [Clip]) -> Set<String> {
+        var paths: Set<String> = []
+        for clip in clips {
+            if clip.isMultiFile, let entries = clip.fileEntries {
+                for entry in entries where !entry.isFileExternal {
+                    paths.insert(entry.filePath)
+                }
+            } else if !clip.isFileExternal, let path = clip.filePath {
+                paths.insert(path)
+            }
+        }
+        return paths
     }
 
     // MARK: - Pin sidebar

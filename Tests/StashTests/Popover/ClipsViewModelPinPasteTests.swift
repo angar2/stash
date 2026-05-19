@@ -21,7 +21,7 @@ struct ClipsViewModelPinPasteTests {
             repository: repo,
             permissionService: permSvc
         )
-        let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc)
+        let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc, fileClipService: MockFileClipService())
         return vm
     }
 
