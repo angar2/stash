@@ -1,30 +1,61 @@
-// Settings 4탭 ViewModel — Login Item 토글 / Paste 모드 / 차단 앱 / 데이터 폴더 액션 (UX-UI §4 정합)
+// Settings 4탭 ViewModel — Login Item 토글 / 바로 붙여넣기 토글 / 저장하지 않을 앱 / 데이터 폴더 액션 + 환경설정 윈도우 내부 토스트 시스템 + 단축키 검증·되돌리기 (TASK-033 정합)
 import Foundation
 import Observation
 import AppKit
 import OSLog
+import KeyboardShortcuts
 
 @MainActor
 @Observable
 final class SettingsViewModel {
     // MARK: - State
     var loginItemEnabled: Bool = false
-    var pasteMode: PasteMode = .autoPaste
+    /// TASK-033 — 기존 `pasteMode: PasteMode` 라디오 폐기 → 단일 boolean 토글로 단순화. true = auto-paste / false = copy back. 권한 X 시 토글 disabled.
+    var autoPasteEnabled: Bool = true
     var blockedAppBundleIds: [String] = []
     var shortcutConflictMessage: String?
-    var accessibilityGranted: Bool = false  // PermissionService.statusPublisher 구독으로 갱신 (후속 task)
+    /// PermissionService.statusPublisher 구독으로 Composition Root 가 갱신.
+    var accessibilityGranted: Bool = false
+
+    /// TASK-033 — 환경설정 윈도우 내부 토스트 큐 (popover 토스트와 별개 시스템). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
+    let settingsToast: ToastQueue = ToastQueue()
 
     private let loginItemService: LoginItemService
+    /// TASK-033 fix-2 — 7항목 (popoverOpen + 6종) 변경 revert 용 마지막 valid 단축키 추적.
+    private var lastValidPopoverShortcuts: [PopoverShortcutID: PopoverShortcut] = [:]
+    /// TASK-033 — revert 호출 재진입 가드.
+    private var isRevertingShortcut: Bool = false
 
     init(loginItemService: LoginItemService) {
         self.loginItemService = loginItemService
         self.loginItemEnabled = (try? loginItemService.isEnabled) ?? false
-        loadPasteMode()
+        loadAutoPasteEnabled()
         loadBlockedApps()
+        // TASK-033 fix-2 — 초기 lastValid 채우기.
+        for id in PopoverShortcutID.allCases {
+            if let shortcut = PopoverShortcutStore.get(id) {
+                lastValidPopoverShortcuts[id] = shortcut
+            }
+        }
     }
 
+    /// TASK-033 — 권한 변동 감지 (Composition Root가 `PermissionService.statusPublisher` 구독해 호출).
+    /// O→X 회수 시: 자동 paste 토글 강제 OFF + 토스트 발행. X→O 부여 시: 토스트 1회 발행 (UX-UI §6-1 *"stash가 활성화되었어요"* 정합).
     func updateAccessibilityGranted(_ granted: Bool) {
+        let prev = self.accessibilityGranted
         self.accessibilityGranted = granted
+        guard prev != granted else { return }
+        Logger.ui.info("SettingsViewModel.accessibilityGranted → \(granted, privacy: .public)")
+        if !prev && granted {
+            settingsToast.enqueue(.success, String(localized: "toast.permission.granted"), ttl: 2.5)
+        } else if prev && !granted {
+            if autoPasteEnabled {
+                autoPasteEnabled = false
+                UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+                Logger.ui.info("Permission revoked — autoPasteEnabled forced OFF")
+            }
+            settingsToast.enqueue(.warn, String(localized: "toast.permission.revoked"), ttl: 2.5)
+        }
     }
 
     // MARK: - Login Item
@@ -32,22 +63,115 @@ final class SettingsViewModel {
         do {
             try loginItemService.setEnabled(enabled)
             loginItemEnabled = enabled
+            Logger.ui.info("LoginItem toggled: \(enabled, privacy: .public)")
         } catch {
             Logger.ui.error("LoginItem toggle failed: \(error.localizedDescription, privacy: .public)")
+            // TASK-033 — 실패 토스트 + OFF 원복 (스위치 자동 OFF)
+            loginItemEnabled = false
+            settingsToast.enqueue(.error, String(localized: "toast.loginItem.failed"), ttl: 3.0)
         }
     }
 
-    // MARK: - Paste mode
-    func setPasteMode(_ mode: PasteMode) {
-        pasteMode = mode
-        UserDefaults.standard.set(mode.rawValue, forKey: "pasteMode")
+    // MARK: - Auto-paste (TASK-033)
+    func setAutoPasteEnabled(_ enabled: Bool) {
+        // 권한 X 시 ON 시도 차단 (UI에서 disabled 처리하지만 안전망)
+        if enabled && !accessibilityGranted {
+            Logger.ui.warning("setAutoPasteEnabled(true) blocked — accessibility not granted")
+            return
+        }
+        autoPasteEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "autoPasteEnabled")
+        Logger.ui.info("autoPasteEnabled set: \(enabled, privacy: .public)")
     }
 
-    private func loadPasteMode() {
-        if let raw = UserDefaults.standard.string(forKey: "pasteMode"),
-           let mode = PasteMode(rawValue: raw) {
-            pasteMode = mode
+    private func loadAutoPasteEnabled() {
+        // TASK-033 — 마이그레이션. 기존 "pasteMode" 키 잔존값 (PasteMode.rawValue) → boolean 변환 + 기존 키 제거.
+        if let raw = UserDefaults.standard.string(forKey: "pasteMode") {
+            let migrated = (raw == "autoPaste")
+            UserDefaults.standard.set(migrated, forKey: "autoPasteEnabled")
+            UserDefaults.standard.removeObject(forKey: "pasteMode")
+            autoPasteEnabled = migrated
+            Logger.ui.info("Migrated pasteMode -> autoPasteEnabled: \(migrated, privacy: .public)")
+            return
         }
+        // default = true (자동 paste 기본 ON — 권한 부여 후 자연 활성)
+        if UserDefaults.standard.object(forKey: "autoPasteEnabled") != nil {
+            autoPasteEnabled = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+        }
+    }
+
+    /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.
+    func openSystemSettingsForAccessibility() {
+        let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        if let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// TASK-033 — 일반 탭 히스토리 한도 정보 라인 동적 바인딩.
+    var maxUnpinnedClips: Int { Constants.maxUnpinnedClips }
+
+    // MARK: - Shortcut validation (TASK-033 fix-2)
+
+    /// 단축키 7항목 통합 핸들러. modifier 검증 + 충돌 검사 + nil (X 또는 modifier 누락) 처리.
+    func handlePopoverShortcutChange(id: PopoverShortcutID, newShortcut: PopoverShortcut?, allIds: [PopoverShortcutID]) {
+        guard !isRevertingShortcut else { return }
+
+        guard let newShortcut else {
+            resetPopoverShortcut(id: id)
+            return
+        }
+
+        // modifier 검증 — Recorder 에서 modifier 없는 입력 시 rawValue 0 placeholder 박혀서 호출됨.
+        if newShortcut.modifiersRawValue == 0 {
+            revertPopoverShortcut(id: id)
+            settingsToast.enqueue(.warn, String(localized: "toast.shortcut.modifierRequired"), ttl: 3.0)
+            return
+        }
+
+        // 충돌 검사 — 다른 6항목과 비교
+        for otherId in allIds where otherId != id {
+            guard let other = PopoverShortcutStore.get(otherId) else { continue }
+            if other == newShortcut {
+                revertPopoverShortcut(id: id)
+                let otherLabel = String(localized: String.LocalizationValue(otherId.labelKey))
+                let format = String(localized: "toast.shortcut.conflict")
+                settingsToast.enqueue(.warn, String(format: format, otherLabel), ttl: 3.0)
+                return
+            }
+        }
+
+        PopoverShortcutStore.set(newShortcut, for: id)
+        lastValidPopoverShortcuts[id] = newShortcut
+    }
+
+    func resetPopoverShortcut(id: PopoverShortcutID) {
+        guard let def = PopoverShortcutStore.defaults[id] else { return }
+        isRevertingShortcut = true
+        PopoverShortcutStore.set(def, for: id)
+        lastValidPopoverShortcuts[id] = def
+        isRevertingShortcut = false
+    }
+
+    private func revertPopoverShortcut(id: PopoverShortcutID) {
+        isRevertingShortcut = true
+        let target = lastValidPopoverShortcuts[id] ?? PopoverShortcutStore.defaults[id]!
+        PopoverShortcutStore.set(target, for: id)
+        lastValidPopoverShortcuts[id] = target
+        isRevertingShortcut = false
+    }
+
+    /// *전체 되돌리기* 버튼 액션. 7항목 모두 default 로 복원.
+    func resetAllShortcuts() {
+        isRevertingShortcut = true
+        for id in PopoverShortcutID.allCases {
+            if let def = PopoverShortcutStore.defaults[id] {
+                PopoverShortcutStore.set(def, for: id)
+                lastValidPopoverShortcuts[id] = def
+            }
+        }
+        isRevertingShortcut = false
+        Logger.ui.info("All shortcuts reset to defaults")
     }
 
     // MARK: - Blocked apps
@@ -93,6 +217,13 @@ final class SettingsViewModel {
     // MARK: - GitHub / Releases
     func openGitHubRepo() {
         if let url = URL(string: "https://github.com/angar2/stash") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// TASK-033 — 정보 탭 *릴리즈 노트* 버튼 액션. GitHub releases 페이지 열기.
+    func openReleaseNotes() {
+        if let url = URL(string: "https://github.com/angar2/stash/releases") {
             NSWorkspace.shared.open(url)
         }
     }

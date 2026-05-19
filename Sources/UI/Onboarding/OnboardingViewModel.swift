@@ -62,8 +62,9 @@ final class OnboardingViewModel {
     }
 
     func skipPermissionWithCopyBack() {
-        UserDefaults.standard.set(PasteMode.copyBack.rawValue, forKey: "pasteMode")
-        Logger.ui.info("Onboarding: Accessibility 권한 건너뛰기 — copy-back 모드 활성화")
+        // TASK-033 — UserDefaults 키 갱신. PasteMode enum → autoPasteEnabled boolean. 권한 건너뛰기 = autoPasteEnabled false (copy-back 모드 자연 활성).
+        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+        Logger.ui.info("Onboarding: Accessibility 권한 건너뛰기 — autoPasteEnabled = false")
         advanceToTutorial()
     }
 

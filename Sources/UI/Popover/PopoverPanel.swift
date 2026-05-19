@@ -3,55 +3,62 @@ import AppKit
 import SwiftUI
 import OSLog
 
-/// popover 안 단축키 정의 — 키코드 + modifier 조합의 단일 진실 소스 (TASK-017 / TASK-021 / TASK-025).
-/// FEATURES §4 정합 + 사용자 결정: 행 조작 단축키 중 방향키(↑/↓)·ESC만 단독, 나머지는 ⌘ 부여. Enter 동작 폐기 (TASK-025).
+/// popover 안 단축키 정의 — 단일 진실 소스 (TASK-017 / TASK-021 / TASK-025 / TASK-033 fix-2).
+/// 변경 가능 6종 (togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste) 은 PopoverShortcutStore (자체 UserDefaults storage) 동적 조회 — SPM `setShortcut` 의 Carbon 글로벌 hotkey 등록 회피 (⌘V/⌘C 같은 시스템 표준 키 매핑 시 시스템 paste/copy 무력화 방지).
+/// 변경 불가 (방향키/ESC) 는 hardcoded keyCode + modifiers.
 /// PopoverPanel.installKeyDownHandler / installPopoverKeyEventMonitor 가 본 enum을 순회 매칭 → dispatch 분기.
 enum PopoverHotkey: CaseIterable {
-    case moveSelectionUp        // ↑ 단독 (TASK-021)
-    case moveSelectionDown      // ↓ 단독 (TASK-021)
-    case togglePin              // ⌘+P
-    case togglePinSidebar       // ⌘+B (TASK-019 — 이전 ⌘+→/⌘+← 분리 단축키 → 단일 토글 단축키로 통합. FEATURES §3-7 / §4 9항)
-    case deleteOne              // ⌘+⌫
-    case deleteAll              // ⌥+⌘+⌫
-    case deleteAllAlias         // ⌘+⇧+⌫
-    case copy                   // ⌘+C (TASK-024 — 항상 .copyBack 호출, 권한 무관 활성)
-    case paste                  // ⌘+V (TASK-024 — Accessibility 권한 게이트 조건부 활성)
-    case escape                 // ESC 단독 (예외 — macOS 표준 닫기/취소)
+    case moveSelectionUp        // ↑ 단독 (TASK-021, 변경 불가)
+    case moveSelectionDown      // ↓ 단독 (TASK-021, 변경 불가)
+    case togglePin              // ⌘+P default (TASK-033 fix-2 — PopoverShortcutID.pinToggle 동적 조회)
+    case togglePinSidebar       // ⌘+B default (TASK-033 fix-2 — PopoverShortcutID.pinSidebarToggle)
+    case deleteOne              // ⌘+⌫ default (TASK-033 fix-2 — .deleteOne)
+    case deleteAll              // ⌥+⌘+⌫ default (TASK-033 fix-2 — .deleteAll)
+    case copy                   // ⌘+C default (TASK-033 fix-2 — .copy. 항상 .copyBack 호출, 권한 무관 활성)
+    case paste                  // ⌘+V default (TASK-033 fix-2 — .paste. Accessibility 권한 게이트 조건부 활성)
+    case escape                 // ESC 단독 (변경 불가 — macOS 표준 닫기/취소)
 
-    /// macOS keyCode (NSEvent.keyCode raw 값).
+    /// TASK-033 fix-2 — 변경 가능 단축키의 PopoverShortcutStore ID 매핑. 변경 불가 (방향키/ESC) 는 nil 반환 (hardcoded keyCode/modifiers 사용).
+    var popoverShortcutID: PopoverShortcutID? {
+        switch self {
+        case .copy: return .copy
+        case .paste: return .paste
+        case .togglePin: return .pinToggle
+        case .togglePinSidebar: return .pinSidebarToggle
+        case .deleteOne: return .deleteOne
+        case .deleteAll: return .deleteAll
+        case .moveSelectionUp, .moveSelectionDown, .escape: return nil
+        }
+    }
+
+    /// 변경 불가 단축키만 사용하는 hardcoded keyCode (NSEvent.keyCode raw 값).
     var keyCode: UInt16 {
         switch self {
         case .moveSelectionUp: return 126        // ↑
         case .moveSelectionDown: return 125      // ↓
-        case .togglePin: return 35               // P
-        case .togglePinSidebar: return 11        // B
-        case .deleteOne, .deleteAll, .deleteAllAlias: return 51  // Backspace (.delete)
-        case .copy: return 8                     // C (TASK-024)
-        case .paste: return 9                    // V
         case .escape: return 53                  // ESC
+        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0  // PopoverShortcutStore 동적 조회
         }
     }
 
-    /// meaningful modifier 조합 (.command/.shift/.option/.control 4개만). .numericPad/.function 제외.
+    /// 변경 불가 단축키만 사용하는 hardcoded modifiers.
     var modifiers: NSEvent.ModifierFlags {
         switch self {
-        case .togglePin, .togglePinSidebar,
-             .deleteOne, .copy, .paste:
-            return [.command]
-        case .deleteAllAlias:
-            return [.command, .shift]
-        case .deleteAll:
-            return [.command, .option]
-        case .moveSelectionUp, .moveSelectionDown, .escape:
-            return []
+        case .moveSelectionUp, .moveSelectionDown, .escape: return []
+        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return []  // PopoverShortcutStore 동적 조회
         }
     }
 
-    /// event 매칭 — keyCode + meaningful modifiers 일치 시 true.
-    /// .numericPad/.function modifier는 무시 (방향키가 자동으로 박음 — 매칭 false 회피).
+    /// event 매칭. 변경 가능 단축키 → PopoverShortcutStore 동적 조회. 변경 불가 → hardcoded.
     func matches(event: NSEvent) -> Bool {
-        guard event.keyCode == keyCode else { return false }
+        if let id = popoverShortcutID {
+            // PopoverShortcutStore 조회 → 사용자 변경값 또는 default 반환. nil 이면 매칭 X.
+            guard let shortcut = PopoverShortcutStore.get(id) else { return false }
+            return shortcut.matches(event: event)
+        }
+        // 변경 불가 (방향키/ESC) — hardcoded
         let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
+        guard event.keyCode == keyCode else { return false }
         return event.modifierFlags.intersection(meaningful) == modifiers
     }
 }
@@ -236,7 +243,7 @@ enum PopoverPanel {
         case .deleteOne:
             Task { await viewModel.delete(at: viewModel.activeIdx) }
             return true
-        case .deleteAll, .deleteAllAlias:
+        case .deleteAll:
             Task { await viewModel.deleteAllExceptPinned() }
             return true
         case .copy:

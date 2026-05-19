@@ -292,7 +292,7 @@ enum DesignTokens {
         )
 
         // Toggle / Radio
-        static let toggleOnBg = Color(red: 48/255, green: 209/255, blue: 88/255)  // #30D158
+        static let toggleOnBg = accent  // TASK-033 — #0D6FFF accent 통일 (사용자 결정: 다른 파란 요소들과 같은 색상)
         static let toggleOffBg = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.15),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.15)

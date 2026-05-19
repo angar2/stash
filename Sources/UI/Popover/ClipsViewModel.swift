@@ -24,7 +24,6 @@ final class ClipsViewModel {
     }
     // TASK-025 — `searchInputActive` 폐기. 검색바 always-active 정책으로 활성 단계 개념 제거.
     var flashedClipId: UUID?              // paste 직후 플래시 대상
-    var pasteMode: PasteMode = .autoPaste
     /// TASK-024 — Accessibility 권한 게이트 state. `PermissionService.statusPublisher` 구독으로 Composition Root 가 갱신. 권한 X 시 ⌘V 비활성 (PopoverPanel.dispatch 게이트) + 힌트바 회색조 (KeyboardHintsView 분기).
     var accessibilityGranted: Bool = false
     var pinSidebarOpen: Bool = false {    // Pin 사이드 펼침 여부
@@ -274,7 +273,9 @@ final class ClipsViewModel {
     func paste(at idx: Int, zone: FocusZone) async {
         guard let clip = clipForZone(at: idx, zone: zone) else { return }
         Logger.ui.info("Paste invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public)")
-        let effectiveMode: PasteMode = accessibilityGranted ? pasteMode : .copyBack
+        // TASK-033 — autoPasteEnabled (UserDefaults 단일 진실 소스) × accessibilityGranted 매트릭스. 둘 다 true 시에만 auto-paste, 외는 copy back fallback. UserDefaults default true 는 Composition Root 가 register defaults 로 박음.
+        let autoPasteEnabled = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+        let effectiveMode: PasteMode = (accessibilityGranted && autoPasteEnabled) ? .autoPaste : .copyBack
         do {
             try await pasteService.paste(clip: clip, mode: effectiveMode)
             triggerPasteFlash(for: clip.id)
@@ -290,7 +291,8 @@ final class ClipsViewModel {
         if mode == .autoPaste {
             toastQueue.enqueue(.success, String(localized: "toast.paste.done") + ": \(snippet)", ttl: DesignTokens.Animation.toastTTLShort)
         } else {
-            toastQueue.enqueue(.info, String(localized: "toast.copyBack.done"), ttl: DesignTokens.Animation.toastTTLDefault)
+            // TASK-033 — *바로 붙여넣기* OFF 또는 권한 X 상태 popover 클립 선택 시 단축키 안내 없는 단순 토스트 (UX-UI §6-1 *⌘+C 복사 확정 / 자동 paste OFF popover 선택* 통합 행 정합).
+            toastQueue.enqueue(.success, String(localized: "toast.copy.done"), ttl: DesignTokens.Animation.toastTTLShort)
         }
     }
 

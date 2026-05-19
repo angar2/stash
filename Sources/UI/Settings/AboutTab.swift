@@ -33,12 +33,13 @@ struct AboutTab: View {
             }
             .padding(.top, 18)
 
-            Text("stash")
+            Text("Stash")
                 .font(.system(size: 22, weight: .bold))
                 .tracking(-0.4)
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
 
-            Text(String(localized: "about.version") + " \(appVersion) (build \(appBuild))")
+            // TASK-033 — *"버전"* 단어 제거. *"X.X.X (build Y)"* 형식만.
+            Text("\(appVersion) (build \(appBuild))")
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
 
@@ -53,7 +54,7 @@ struct AboutTab: View {
             VStack(spacing: 8) {
                 aboutButton(label: String(localized: "about.github"), icon: "link", action: viewModel.openGitHubRepo)
                 aboutButton(label: String(localized: "about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
-                aboutButton(label: String(localized: "about.releaseNotes"), icon: "doc.text", action: {})
+                aboutButton(label: String(localized: "about.releaseNotes"), icon: "doc.text", action: viewModel.openReleaseNotes)
             }
             .padding(.top, 4)
             .frame(maxWidth: 320)
