@@ -24,6 +24,7 @@ struct PinSidebarView: View {
                             isFlashing: viewModel.flashedClipId == clip.id,
                             mode: mode,
                             showTimeLabel: false,
+                            searchQuery: "",  // TASK-035 — Pin 사이드바는 검색 결과 영역 아님. UX-UI §7-3 적용 범위 제외.
                             onClick: {
                                 // 클릭 시 paste 흐름 — focusZone=.pin / pinSelectedIdx 갱신 (사이드바 nav cursor + detail panel hook 동기화).
                                 // TASK-028 — paste 대상은 zone=.pin 명시로 결정. focusZone 후속 변경 (hide → collapsePinSidebar) 영향 X.

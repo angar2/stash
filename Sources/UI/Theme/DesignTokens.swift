@@ -11,6 +11,8 @@ enum DesignTokens {
         // ─── 시스템 accent ─────────────────────────────────────────────
         static let accent = Color(red: 13/255, green: 111/255, blue: 255/255)  // #0D6FFF (popover.jsx L11)
         static let accentForeground = Color.white
+        // TASK-035 — 검색 매칭 텍스트 전경 (UX-UI §7-3). accent 별칭으로 의미 분리 — 향후 매칭 색상만 별도 조정 가능.
+        static let searchMatchForeground = accent
         // 앱 아이콘 그라데이션 보조 (적층 카드 보라 톤)
         static let appIconAccent = Color(red: 100/255, green: 50/255, blue: 200/255)
         static let primaryButtonStart = Color(red: 45/255, green: 134/255, blue: 245/255)  // 그라데이션 상단
