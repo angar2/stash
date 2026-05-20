@@ -1,36 +1,7 @@
-// 클립보드 변경을 500ms 폴링으로 감지하는 actor + frontmost 앱 추적 (TASK-033 *저장하지 않을 앱* 백엔드)
+// 클립보드 변경을 500ms 폴링으로 감지하는 actor (TASK-033 *저장하지 않을 앱* 매칭 + TASK-040 클립 출처 박음)
 import Foundation
 import AppKit
 import OSLog
-
-/// TASK-033 — 현재 frontmost (가장 위에 있는) 앱 번들 ID 추적. NSWorkspace.didActivateApplicationNotification 구독.
-/// *저장하지 않을 앱* 백엔드 (TASK-022 에서 제거된 클래스 복원). stash 자신 활성화 시 갱신 skip — *마지막 사용자 활성 앱* 유지.
-@MainActor
-final class FrontmostAppTracker {
-    private(set) var currentBundleId: String?
-    private var observer: NSObjectProtocol?
-
-    init() {
-        self.currentBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        observer = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
-            let bundleId = app.bundleIdentifier
-            if bundleId != Bundle.main.bundleIdentifier {
-                Task { @MainActor [weak self] in
-                    self?.currentBundleId = bundleId
-                    Logger.clipboard.debug("FrontmostAppTracker: \(bundleId ?? "nil", privacy: .public)")
-                }
-            }
-        }
-        Logger.clipboard.info("FrontmostAppTracker initialized — current=\(self.currentBundleId ?? "nil", privacy: .public)")
-    }
-
-    // 메뉴바 앱 (LSUIElement) — process termination 시 NotificationCenter 자동 정리. 별도 deinit 불필요 (Swift 6 strict concurrency `non-Sendable property in nonisolated deinit` 회피).
-}
 
 actor ClipboardWatcher {
     private let pasteboard: Pasteboard
@@ -39,8 +10,8 @@ actor ClipboardWatcher {
     /// TASK-026 — 다중 파일 임계 초과 / 부분 실패 시 사용자 인지용 메시지 dispatch.
     /// Composition Root가 `{ msg in await MainActor.run { toastQueue.enqueue(.warn, msg) } }` 박음.
     private let onUserMessage: (@Sendable (String) async -> Void)?
-    /// TASK-033 — *저장하지 않을 앱* 백엔드. frontmost 앱 추적 + 매칭 시 클립 저장 skip. nil 가능 (테스트 환경 등).
-    private let frontmostTracker: FrontmostAppTracker?
+    /// TASK-033 — *저장하지 않을 앱* 매칭 + TASK-040 클립 출처 박음 백엔드. frontmost 앱 번들 ID 노출. nil 가능 (테스트 환경 등).
+    private let frontmostTracker: FrontmostAppTracking?
 
     private var lastChangeCount: Int = -1
     private var pollingTask: Task<Void, Never>?
@@ -53,7 +24,7 @@ actor ClipboardWatcher {
         fileClipService: FileClipService,
         repository: ClipRepository,
         onUserMessage: (@Sendable (String) async -> Void)? = nil,
-        frontmostTracker: FrontmostAppTracker? = nil
+        frontmostTracker: FrontmostAppTracking? = nil
     ) {
         self.pasteboard = pasteboard
         self.fileClipService = fileClipService
@@ -112,15 +83,13 @@ actor ClipboardWatcher {
     }
 
     private func buildClip(from pasteboard: Pasteboard) async throws -> Clip? {
-        // TASK-033 — *저장하지 않을 앱* 매칭. frontmost 앱 번들 ID 가 사용자 설정 차단 목록에 있으면 클립 저장 skip.
-        if let frontmostTracker {
-            let frontmostBundle = await frontmostTracker.currentBundleId
-            if let frontmostBundle {
-                let blockedIds = UserDefaults.standard.stringArray(forKey: "blockedAppBundleIds") ?? []
-                if blockedIds.contains(frontmostBundle) {
-                    Logger.clipboard.info("buildClip: blocked app — frontmost=\(frontmostBundle, privacy: .public) skip")
-                    return nil
-                }
+        // TASK-033 — *저장하지 않을 앱* 매칭 + TASK-040 클립 출처 박음. frontmost 앱 번들 ID 한 번 추출.
+        let frontmostBundle = await frontmostTracker?.currentBundleId
+        if let frontmostBundle {
+            let blockedIds = UserDefaults.standard.stringArray(forKey: "blockedAppBundleIds") ?? []
+            if blockedIds.contains(frontmostBundle) {
+                Logger.clipboard.info("buildClip: blocked app — frontmost=\(frontmostBundle, privacy: .public) skip")
+                return nil
             }
         }
 
@@ -157,12 +126,12 @@ actor ClipboardWatcher {
                     id: id, type: clipType, body: nil,
                     filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
                     fileOriginalPath: url.path, fileBookmark: nil,
-                    sourceAppBundleId: nil, isPinned: false,
+                    sourceAppBundleId: frontmostBundle, isPinned: false,
                     createdAt: now, lastUsedAt: now
                 )
             }
             // N>1 → 다중 파일 묶음 분기 (case F). 별도 helper 위임 (buildClip SRP).
-            return try await buildMultiFileClip(from: urls, now: now, id: id)
+            return try await buildMultiFileClip(from: urls, now: now, id: id, sourceAppBundleId: frontmostBundle)
         }
 
         // ⓑ 메모리 비트맵 — file URL 없이 .tiff/.png 데이터만 있는 케이스 (스크린샷 / 브라우저 이미지 우클릭 복사).
@@ -181,7 +150,7 @@ actor ClipboardWatcher {
                 id: id, type: .image, body: sourceURL,
                 filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
                 fileOriginalPath: nil, fileBookmark: nil,
-                sourceAppBundleId: nil, isPinned: false,
+                sourceAppBundleId: frontmostBundle, isPinned: false,
                 createdAt: now, lastUsedAt: now
             )
         }
@@ -192,7 +161,7 @@ actor ClipboardWatcher {
                 id: id, type: .text, body: text,
                 filePath: nil, isFileExternal: false,
                 fileOriginalPath: nil, fileBookmark: nil,
-                sourceAppBundleId: nil, isPinned: false,
+                sourceAppBundleId: frontmostBundle, isPinned: false,
                 createdAt: now, lastUsedAt: now
             )
         }
@@ -201,7 +170,7 @@ actor ClipboardWatcher {
     }
 
     /// TASK-026 — 다중 파일 묶음 (N>1) 캡쳐 분기. 옵션 A — 어느 하나라도 실패 시 전체 SKIP + 토스트 + 카피본 cleanup (saveFiles 내부 처리).
-    private func buildMultiFileClip(from urls: [URL], now: Date, id: UUID) async throws -> Clip? {
+    private func buildMultiFileClip(from urls: [URL], now: Date, id: UUID, sourceAppBundleId: String?) async throws -> Clip? {
         Logger.clipboard.info("buildClip: multi-file detected — count=\(urls.count)")
         do {
             let stored = try await fileClipService.saveFiles(at: urls)
@@ -217,7 +186,7 @@ actor ClipboardWatcher {
                 id: id, type: .file, body: nil,
                 filePath: nil, isFileExternal: false,
                 fileOriginalPath: nil, fileBookmark: nil,
-                sourceAppBundleId: nil, isPinned: false,
+                sourceAppBundleId: sourceAppBundleId, isPinned: false,
                 createdAt: now, lastUsedAt: now,
                 pinnedAt: nil, filePathsJson: json
             )

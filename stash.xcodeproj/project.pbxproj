@@ -126,6 +126,8 @@
 		F79BE03457BFB366C85677B6 /* LoginItemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C792B578930BE0A58B6662EB /* LoginItemService.swift */; };
 		F97D973E9F52CFBF2DA63F3D /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4544552328E6B3EF5155EA /* OnboardingViewModel.swift */; };
 		FFF2F830A12B4074EC47843E /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 303C11ECF3EB956EC63B27AC /* OnboardingWindow.swift */; };
+		F9F86D78DDBFB5B4A86DA0E8 /* FrontmostAppTracking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA686F8052D5893D5B6F04C /* FrontmostAppTracking.swift */; };
+		666D1341692CDC527E3B0E96 /* FrontmostAppTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBE2E002EF384AD68169457 /* FrontmostAppTracker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -266,6 +268,8 @@
 		F550679D6CEAF5533B2620A8 /* PasteSynthesizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteSynthesizer.swift; sourceTree = "<group>"; };
 		F58C73620DCDDFF2A079F78D /* MockPasteSynthesizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPasteSynthesizer.swift; sourceTree = "<group>"; };
 		F86D34F41FF0A275A2D4EE9D /* OnboardingPrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPrimaryButton.swift; sourceTree = "<group>"; };
+		8EA686F8052D5893D5B6F04C /* FrontmostAppTracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontmostAppTracking.swift; sourceTree = "<group>"; };
+		8BBE2E002EF384AD68169457 /* FrontmostAppTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontmostAppTracker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -415,6 +419,7 @@
 			children = (
 				897339333BC7339153B401FF /* AccessibilityPermissionChecker.swift */,
 				41D48CC145A382F6D5F7FAD1 /* FileClipService.swift */,
+				8EA686F8052D5893D5B6F04C /* FrontmostAppTracking.swift */,
 				D45A2C65902CBAC074B1FB4E /* HotkeyRegistrar.swift */,
 				82F37D44E2C3029E2174CAEE /* LoginItemRegistrar.swift */,
 				379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */,
@@ -468,6 +473,7 @@
 				DC71F8B2299A5468DA25ED97 /* CGEventPasteSynthesizer.swift */,
 				9172C06297E8D0BA39D0A945 /* ClipboardWatcher.swift */,
 				5B6618B1B107005F500E32AB /* DirectFileClipService.swift */,
+				8BBE2E002EF384AD68169457 /* FrontmostAppTracker.swift */,
 				56C3EFAF7A26E7D738B789E8 /* HotkeyManager.swift */,
 				15E134AE9193E2DD1F682B55 /* HotkeyMonitor.swift */,
 				1E908DDD10A21E78579E39EF /* KeyboardShortcutsRegistrar.swift */,
@@ -763,6 +769,8 @@
 				9D50F84A474877E53EE26A1D /* FileClipService.swift in Sources */,
 				A8B8E70620D97DD4397381FD /* FlowLayout.swift in Sources */,
 				3EDB733AD807B660D4717334 /* FocusZone.swift in Sources */,
+				666D1341692CDC527E3B0E96 /* FrontmostAppTracker.swift in Sources */,
+				F9F86D78DDBFB5B4A86DA0E8 /* FrontmostAppTracking.swift in Sources */,
 				89822F67D27754E1FC32D193 /* GRDBClipRepository.swift in Sources */,
 				B2E1ECFF4B7315DA2E05F011 /* GeneralTab.swift in Sources */,
 				D7A4B7E8F2C3D4E5A6B7C801 /* DisplayTab.swift in Sources */,
