@@ -4,7 +4,7 @@ import Foundation
 @testable import stash
 
 @MainActor
-@Suite("ClipsViewModel")
+@Suite("ClipsViewModel", .serialized)
 struct ClipsViewModelTests {
     private func makeViewModel(prefilled: [Clip] = []) async -> (ClipsViewModel, InMemoryClipRepository, MockFileClipService) {
         let repo = InMemoryClipRepository()
@@ -21,6 +21,9 @@ struct ClipsViewModelTests {
             permissionService: permSvc
         )
         let fcs = MockFileClipService()
+        // TASK-037 — effectivePageSize() 가 UserDefaults `clipsPerPage` 조회. 테스트 격리 위해 기본값 6 명시 박음.
+        UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
+        UserDefaults.standard.set(false, forKey: "autoFitClipListHeight")
         let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc, fileClipService: fcs)
         return (vm, repo, fcs)
     }
@@ -156,8 +159,8 @@ struct ClipsViewModelTests {
         #expect(vm.pendingScrollToId == nil)
     }
 
-    /// TASK-036 — `effectivePageSize` = `clipListMaxHeight / rowMinHeight` 토큰 기반 정수 추정.
-    /// 현재 토큰값 (276 / 44 = 6.27 → 6). 토큰 변경 시 본 검증 PASS 깨질 수 있음 (의도된 의존).
+    /// TASK-036 → TASK-037 — `effectivePageSize` = UserDefaults `clipsPerPage` 동적 조회.
+    /// `makeViewModel` 가 기본값 6 박음 (Constants.clipsPerPageDefault). 사용자 환경설정 변경 시 본 값과 다를 수 있음.
     private static let expectedPageSize: Int = 6
 
     @Test("pageUp / pageDown — focusZone == .clip 일 때 토큰 기반 pageSize 만큼 idx 점프 (TASK-036)")
@@ -213,6 +216,51 @@ struct ClipsViewModelTests {
         #expect(vm.pinSelectedIdx == n)  // 0 + n
         vm.pageDown()
         #expect(vm.pinSelectedIdx == n * 2 - 1)  // n + n = 2n → clamp count-1 = 2n - 1
+    }
+
+    // MARK: - TASK-037 — effectivePageSize UserDefaults 동기화
+
+    @Test("pageDown — UserDefaults clipsPerPage=8 박은 후 8행 점프 (TASK-037)")
+    func pageDown_jumpsByUserDefaultsClipsPerPage() async {
+        let prefilled = (0..<30).map { makeClip(body: "c\($0)") }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        UserDefaults.standard.set(8, forKey: "clipsPerPage")
+        await vm.reload()
+        vm.selectedIdx = 0
+        vm.pageDown()
+        #expect(vm.selectedIdx == 8)  // 0 + 8 (UserDefaults 동적 조회)
+        vm.pageDown()
+        #expect(vm.selectedIdx == 16)  // 8 + 8
+        // 정리 — default 복원
+        UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
+    }
+
+    @Test("pageUp — UserDefaults clipsPerPage=5 박은 후 5행 점프 + clamp (TASK-037)")
+    func pageUp_jumpsByUserDefaultsClipsPerPage_andClamps() async {
+        let prefilled = (0..<20).map { makeClip(body: "c\($0)") }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        UserDefaults.standard.set(5, forKey: "clipsPerPage")
+        await vm.reload()
+        vm.selectedIdx = 3
+        vm.pageUp()
+        #expect(vm.selectedIdx == 0)  // max(0, 3-5) = 0 (clamp)
+        vm.selectedIdx = 10
+        vm.pageUp()
+        #expect(vm.selectedIdx == 5)  // 10 - 5 = 5
+        // 정리 — default 복원
+        UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
+    }
+
+    @Test("pageDown — UserDefaults clipsPerPage 1 미만 박혀도 1로 clamp (TASK-037)")
+    func pageDown_clampToMinOne() async {
+        let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        UserDefaults.standard.set(0, forKey: "clipsPerPage")  // 잘못된 값 (안전망 검증)
+        await vm.reload()
+        vm.selectedIdx = 0
+        vm.pageDown()
+        #expect(vm.selectedIdx == 1)  // clamp 1 → 0 + 1
+        UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
     }
 
     @Test("TASK-025 — resetForOpen 후 검색 활성 단계 폐기 정합")
