@@ -341,6 +341,12 @@ enum DesignTokens {
 
         // Pin Sidebar 헤더 (UPPERCASE tracking 0.08em)
         static let pinSidebarHeader = Font.system(size: 10, weight: .heavy)
+
+        // Clip Detail 메타 footer + 복사 위치 라인 (TASK-039)
+        static let clipMetaApp           = Font.system(size: 11.5, weight: .medium)
+        static let clipMetaTime          = Font.system(size: 10.5, weight: .regular).monospacedDigit()
+        static let clipMetaLocationLabel = Font.system(size: 10, weight: .regular)
+        static let clipMetaLocationPath  = Font.system(size: 11, weight: .regular, design: .monospaced)
         // Pin Sidebar 항목 카운트 뱃지
         static let pinSidebarBadge = Font.system(size: 10, weight: .bold)
 
@@ -481,17 +487,25 @@ enum DesignTokens {
         static let toastWindowPadding:     CGFloat = 8
 
         // Clip Detail sub-window (TASK-027) — 다중파일 상세 sub-window 외피·꼭지·행 spacing
-        static let clipDetailGap:          CGFloat = 20  // popover/PinSidebar 좌측 간격 — NSPanel hasShadow 외곽 halo + Liquid Glass blur 시각 겹침 회피 (TASK-027 fix 4차 — 사용자 시각 검수 합의)
+        static let clipDetailGap:          CGFloat = 2   // popover/PinSidebar 좌측 간격 — 꼭지 끝과 본체 윈도우 사이 거리 (TASK-039 fix: 20 → 2, 사용자 시각 검수 — 본체와 더 가깝게 붙도록)
         static let clipDetailArrowWidth:   CGFloat = 8   // 꼭지(말풍선 화살표) 가로 — 우측 가장자리에서 튀어나옴
         static let clipDetailArrowHeight:  CGFloat = 14  // 꼭지 세로
         static let clipDetailRowHeight:    CGFloat = 28  // 파일 목록 단일 행 height
         static let clipDetailRowInnerGap:  CGFloat = 6   // 파일 행 안 아이콘 ↔ 라벨 사이 간격
         static let clipDetailRowPadH:      CGFloat = 8   // 파일 행 내부 좌우 padding
         static let clipDetailRowIconSize:  CGFloat = 11  // 파일 행 doc 아이콘 size
-        static let clipDetailPadding:      CGFloat = 8   // panel 내부 outer padding
+        static let clipDetailPadding:      CGFloat = 16  // panel 내부 outer padding (본문 ScrollView 외곽 — TASK-039 fix: 8 → 12 → 16)
         static let clipDetailEdgeSafety:   CGFloat = 8   // 화면 좌/상/하단 경계 safe margin
         /// 활성 행 frame 변동 *유의미한 변화* 임계값 (TASK-027). 1pt 미만 미세 변동은 무시 — Geometry update 폭주 차단.
         static let clipDetailFrameDeltaThreshold: CGFloat = 1
+
+        // Clip Detail sub-window 메타 footer + 복사 위치 라인 (TASK-039) — 4 종 ClipType 공통 하단 영역
+        static let clipMetaFooterHeight:        CGFloat = 36  // 출처 앱 + 시간 표시 1줄 footer height (TASK-039 fix4: 28 → 36)
+        static let clipMetaIconSize:            CGFloat = 14  // 출처 앱 아이콘 size — 텍스트 글자 높이 정합
+        static let clipMetaHGap:                CGFloat = 6   // 메타 footer 안 horizontal 간격
+        static let clipMetaPadH:                CGFloat = 16  // 메타 footer / 복사 위치 라인 좌우 padding (clipDetailPadding 정합 — TASK-039 fix3: 12 → 16)
+        static let clipMetaPadV:                CGFloat = 10  // 메타 footer 상하 padding (TASK-039 fix4: 6 → 10)
+        static let clipMetaLocationBlockHeight: CGFloat = 44  // 복사 위치 라인 (라벨 + 경로) 블록 height (TASK-039 fix4: 36 → 44)
     }
 
     // MARK: - Radius
