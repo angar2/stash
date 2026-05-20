@@ -71,30 +71,12 @@ struct ClipDetailProviderTests {
         #expect(provider == nil)
     }
 
-    @Test("텍스트 클립 — Provider 미매칭")
-    func textClipReturnsNilProvider() {
-        let clip = makeClip(type: .text, filePath: nil, filePathsJson: nil)
-        let provider = ClipDetailRegistry.provider(for: clip)
-        #expect(provider == nil)
-    }
-
-    @Test("이미지 클립 — Provider 미매칭")
-    func imageClipReturnsNilProvider() {
-        let clip = makeClip(type: .image, filePath: "/tmp/screenshot.png", filePathsJson: nil)
-        let provider = ClipDetailRegistry.provider(for: clip)
-        #expect(provider == nil)
-    }
-
-    @Test("단일 파일 클립 (filePathsJson nil) — Provider 미매칭")
-    func singleFileClipReturnsNilProvider() {
-        let clip = makeClip(type: .file, filePath: "/tmp/document.pdf", filePathsJson: nil)
-        let provider = ClipDetailRegistry.provider(for: clip)
-        #expect(provider == nil)
-    }
+    // (TASK-039) 텍스트 / 이미지 / 단일파일 매칭 검증은 `ClipDetailProvidersTests` 로 이동.
+    // 본 파일의 기존 *nil 반환* 케이스 3 종은 본 task 의 Provider 매칭 확장으로 더 이상 유효 X — 케이스 폐기.
 
     // MARK: - preferredHeight
 
-    @Test("preferredHeight — entries 수에 따라 단조 증가 후 clipDetailMaxHeight 상한 클램프")
+    @Test("preferredHeight — entries 수에 따라 단조 증가 (TASK-039 — 클램프 제거, raw 추정만)")
     func preferredHeightMonotonicWithFileCount() throws {
         let provider = MultiFileClipDetailProvider()
         let clip1  = try makeMultiFileClip(entries: sampleEntries(count: 1))
@@ -107,13 +89,11 @@ struct ClipDetailProviderTests {
         let h10 = provider.preferredHeight(for: clip10)
         let h100 = provider.preferredHeight(for: clip100)
 
-        // 단조 증가
+        // 단조 증가 (raw 추정, 클램프 X — PanelView 가 ScrollView.frame(maxHeight:) 으로 책임)
         #expect(h1 < h3)
         #expect(h3 < h10)
-        // 100개는 maxHeight 상한 클램프
-        #expect(h100 == DesignTokens.WindowSize.clipDetailMaxHeight)
-        // 모든 값 <= maxHeight
-        #expect(h1 <= DesignTokens.WindowSize.clipDetailMaxHeight)
-        #expect(h10 <= DesignTokens.WindowSize.clipDetailMaxHeight)
+        #expect(h10 < h100)
+        // 100개 케이스 = raw 추정값이 clipDetailMaxHeight 초과 (클램프 제거 정합)
+        #expect(h100 > DesignTokens.WindowSize.clipDetailMaxHeight)
     }
 }

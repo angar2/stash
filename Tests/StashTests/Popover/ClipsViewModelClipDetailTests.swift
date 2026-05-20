@@ -120,8 +120,8 @@ struct ClipsViewModelClipDetailTests {
         #expect(nonNil.last?.zone == .clip)
     }
 
-    @Test("텍스트 클립 선택 → 콜백 nil + 추가 발화 없음")
-    func selectTextClipDoesNotTriggerDetail() async throws {
+    @Test("텍스트 클립 선택 + frame 설정 → 200ms 후 콜백 1회 (텍스트 clip 인자) — TASK-039 정합")
+    func selectTextClipTriggersDetailAfterDebounce() async throws {
         let (vm, seeded) = await makeStandardViewModel()
         let tracker = attachTracker(vm)
 
@@ -131,9 +131,13 @@ struct ClipsViewModelClipDetailTests {
 
         await sleepDebounce()
 
-        // 모든 콜백 emission 이 nil 이어야 (텍스트 clip 은 Provider 매칭 X).
+        // TASK-039 — 텍스트 활성 시도 Provider 매칭 (TextClipDetailProvider) → emit 발화.
         let nonNil = tracker.emissions.compactMap { $0 }
-        #expect(nonNil.isEmpty, "텍스트 클립 선택 시 non-nil 콜백 발화 X. 실제 non-nil=\(nonNil.count)")
+        #expect(nonNil.count >= 1, "텍스트 클립 선택 시 non-nil 콜백 1회 발화. 실제 non-nil=\(nonNil.count)")
+        if let last = nonNil.last {
+            #expect(last.clip.id == seeded[1].id, "최종 emit clip = 텍스트 clip")
+            #expect(last.clip.type == .text, "최종 emit clip.type = .text")
+        }
     }
 
     @Test("빠른 연속 selectedIdx 변경 → 200ms 후 최종 1회만 발화 (debounce)")
@@ -158,7 +162,7 @@ struct ClipsViewModelClipDetailTests {
         _ = initialEmissions
     }
 
-    @Test("focusZone 전환 → 즉시 nil 콜백 + 0.3s 후 Pin 다중파일이면 발화")
+    @Test("focusZone 전환 → 200ms 후 Pin 다중파일 emit (TASK-039 fix — 매칭 O 잔존 정책)")
     func focusZoneSwitchClearsDetailImmediately() async throws {
         let (vm, seeded) = await makeStandardViewModel()
         let tracker = attachTracker(vm)
@@ -170,18 +174,33 @@ struct ClipsViewModelClipDetailTests {
         await sleepDebounce()
         tracker.emissions.removeAll()
 
-        // focusZone .clip → .pin 전환 — Pin 다중파일이 pinSelectedIdx=0 자리에 있음.
+        // focusZone .clip → .pin 전환 — Pin 다중파일이 pinSelectedIdx=0 자리에 있음. frame 도 새로 게시.
         vm.focusZone = .pin
-
-        // 즉시 nil 콜백 (현재 detail 닫음).
-        #expect(tracker.emissions.contains(where: { $0 == nil }), "focusZone 전환 즉시 nil 콜백. 실제=\(tracker.emissions)")
-
-        // frame 도 새로 게시 (Pin 사이드바 안 활성 행 frame 으로 가정).
         vm.activeRowFrameInPopover = CGRect(x: 0, y: 30, width: 220, height: 44)
         await sleepDebounce()
 
+        // TASK-039 fix — *매칭 O 케이스 잔존 정책* 으로 *즉시 nil emit X* (기존 detail panel 잔존 + 200ms 후 새 anchor + content 교체). 깜빡임 차단.
         let nonNilAfter = tracker.emissions.compactMap { $0 }
         #expect(nonNilAfter.contains(where: { $0.zone == .pin }), "Pin 다중파일 활성 시 zone == .pin 콜백 발화. 실제 non-nil zones=\(nonNilAfter.map { $0.zone })")
+    }
+
+    @Test("focusZone → .settings (매칭 X) → 즉시 nil emit (TASK-039 fix — 매칭 X 케이스 panel 닫음)")
+    func focusZoneToSettingsImmediatelyEmitsNil() async throws {
+        let (vm, seeded) = await makeStandardViewModel()
+        let tracker = attachTracker(vm)
+
+        // 활성 다중파일 행 선택 + 200ms 대기 → detail 활성 상태.
+        let multiIdx = vm.visibleClips.firstIndex { $0.id == seeded[0].id } ?? 0
+        vm.activeRowFrameInPopover = CGRect(x: 0, y: 10, width: 380, height: 44)
+        vm.selectedIdx = multiIdx
+        await sleepDebounce()
+        tracker.emissions.removeAll()
+
+        // focusZone .clip → .settings — 매칭 X (activeClipForDetail nil).
+        vm.focusZone = .settings
+
+        // TASK-039 — *매칭 X 케이스* 는 즉시 nil emit (panel 닫음). 잔존 정책 영역 외.
+        #expect(tracker.emissions.contains(where: { $0 == nil }), "focusZone .settings 전환 즉시 nil emit. 실제=\(tracker.emissions)")
     }
 
     @Test("resetForOpen → 콜백 nil 발화 + frame .zero 초기화")
@@ -202,9 +221,9 @@ struct ClipsViewModelClipDetailTests {
         #expect(vm.activeRowFrameInPopover == .zero)
     }
 
-    @Test("same idx 다른 clip — reload 후 hook 재발화 (4축 clip.id 추적)")
+    @Test("same idx 다른 clip — reload 후 hook 재발화 (4축 clip.id 추적) — TASK-039 정합")
     func clipChangeAtSameIdxRetriggersDetail() async throws {
-        // 시드 = 텍스트 1개만. selectedIdx=0 일 때 detail 안 발화.
+        // 시드 = 텍스트 1개만. selectedIdx=0 시점 = TextClipDetailProvider emit (TASK-039 정합).
         let text = makeText(body: "first")
         let (vm, repo) = await makeViewModel(prefilled: [text])
         await vm.reload()
@@ -214,7 +233,8 @@ struct ClipsViewModelClipDetailTests {
         vm.selectedIdx = 0
         await sleepDebounce()
         let initialNonNil = tracker.emissions.compactMap { $0 }
-        #expect(initialNonNil.isEmpty, "텍스트 시점 non-nil 발화 X")
+        // TASK-039 — 텍스트도 Provider 매칭 → emit 발화. 첫 emit 이 텍스트 clip 인지 검증.
+        #expect(initialNonNil.contains(where: { $0.clip.id == text.id }), "텍스트 시점 emit = 텍스트 clip. 실제=\(initialNonNil.map { $0.clip.id })")
 
         // 0번 clip 을 다중파일로 대체 — repository 직접 조작 + reload.
         _ = try? await repo.delete(id: text.id)
