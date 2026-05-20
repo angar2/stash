@@ -72,10 +72,14 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.allCases.contains(.copy))
     }
 
-    @Test("TASK-024 — .copy.keyCode == 8 / .copy.modifiers == [.command]")
+    @Test("TASK-042 정정 — .copy 동적 조회 placeholder: keyCode == 0 / modifiers == [] (TASK-033 fix-2 PopoverShortcutStore 동적 조회 패턴 정합)")
     func copyKeyCodeAndModifiers() {
-        #expect(PopoverHotkey.copy.keyCode == 8)
-        #expect(PopoverHotkey.copy.modifiers == [.command])
+        // TASK-024 신설 시점: .copy hardcoded ⌘+C (keyCode=8 / modifiers=[.command]).
+        // TASK-033 fix-2: 변경 가능 단축키 (.copy/.paste/.togglePin/.togglePinSidebar/.deleteOne/.deleteAll) 를 PopoverShortcutStore 동적 조회로 전환 — keyCode/modifiers 는 placeholder (0/[]) 반환, 실제 매칭은 store 가 담당.
+        // 본 케이스는 *동적 조회 placeholder 회귀 가드* — hardcoded 로 되돌아가지 않도록.
+        #expect(PopoverHotkey.copy.keyCode == 0)
+        #expect(PopoverHotkey.copy.modifiers == [])
+        #expect(PopoverHotkey.copy.popoverShortcutID == .copy)
     }
 
     // MARK: - TASK-025: 검색바 always-active 정책 회귀 가드
@@ -87,9 +91,12 @@ struct PopoverHotkeyTests {
         #expect(matched == false)
     }
 
-    @Test("TASK-025 — PopoverHotkey.allCases.count == 10 (Enter 폐기 후 정합)")
-    func allCasesCountIsTen() {
-        #expect(PopoverHotkey.allCases.count == 10)
+    @Test("TASK-042 정정 — PopoverHotkey.allCases.count == 13 (TASK-036 페이지/양끝 점프 4 case 합산 후 정합)")
+    func allCasesCountIsThirteen() {
+        // TASK-025 신설 시점: Enter 폐기 후 10 case.
+        // TASK-036 추가: pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast 4 case → 14 가 아닌 13 인 이유는 TASK-024 ⌘+C/.copy 도입 시 +1 / TASK-021 cursor 숫자 alias 2 case 폐기 / TASK-025 .activateSearch 1 case 폐기 종합 결과.
+        // 현재 enum: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / escape — 13 case.
+        #expect(PopoverHotkey.allCases.count == 13)
     }
 
     @Test("TASK-025 — .escape matches: ESC 단독 true / ESC+⌘ false / ESC+⌥ false")

@@ -109,24 +109,37 @@ struct ClipRowView: View, Equatable {
     }
 
     /// TASK-026 — 다중 파일 묶음 아이콘 + N 배지. entries decode 실패 시 fallback (`square.stack` 단독).
+    /// TASK-042 — 배경 `Circle()` → `Capsule()` 전환 + minWidth 동적 (1자리=12 / 2자리·"99+"=16) + `lineLimit(1)` + `fixedSize` 박아 두 자리 이상 wrap/클리핑 차단. N≥100 은 "99+" 캡 (배지 폭 안정).
     @ViewBuilder
     private var multiFileIconWithBadge: some View {
         let count = clip.fileEntries?.count ?? 0
         ZStack(alignment: .topTrailing) {
             Image(systemName: "doc.on.doc")
                 .font(.system(size: 12, weight: .regular))
-            if count > 0 {
-                Text("\(count)")
+            if let text = Self.badgeText(for: count) {
+                let isSingleDigit = text.count <= 1
+                Text(text)
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, 3)
-                    .frame(minWidth: 12, minHeight: 12)
+                    .frame(minWidth: isSingleDigit ? 12 : 16, minHeight: 12)
                     .background(
-                        Circle().fill(DesignTokens.Colors.accent)
+                        Capsule().fill(DesignTokens.Colors.accent)
                     )
                     .offset(x: 6, y: -6)
             }
         }
+    }
+
+    /// TASK-042 — 배지에 표시할 텍스트 결정. `nil` 반환 시 배지 미표시.
+    /// 분기: count<=0 → nil (0·음수 가드) / 1≤count<100 → "\(count)" / count>=100 → "99+" 캡.
+    /// 단위 테스트 대상 — `nonisolated static` 으로 MainActor 격리 외 호출 허용.
+    nonisolated static func badgeText(for count: Int) -> String? {
+        guard count > 0 else { return nil }
+        if count >= 100 { return "99+" }
+        return "\(count)"
     }
 
     /// 이미지 썸네일 — NSImage 로드 성공 시 실제 이미지, 실패 시 그라데이션 박스 (TASK-023).
