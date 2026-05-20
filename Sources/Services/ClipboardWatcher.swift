@@ -18,19 +18,24 @@ actor ClipboardWatcher {
     /// TASK-026 fix — paste 진행 중에는 tick 자체 skip. 다중 파일 paste의 saveFiles 시간 소요로 인한
     /// *acknowledgeOwnWrite 대기 → synthesizeCommandV 지연* race 차단. PasteService 가 begin/end 호출.
     private var pastePending: Bool = false
+    /// TASK-043 — 사용자 명시 *클립보드 수집 토글*. false 시 tick 안 buildClip 진입 skip + lastChangeCount 동기화 유지 (활성 복귀 시 race 차단).
+    /// `ClipsViewModel.toggleCapture()` → `setEnabled(_:)` 외부 호출. Composition Root 초기값 = `UserDefaults.bool(forKey: Constants.clipboardCaptureEnabledKey)`.
+    private var enabled: Bool
 
     init(
         pasteboard: Pasteboard = SystemPasteboard.shared,
         fileClipService: FileClipService,
         repository: ClipRepository,
         onUserMessage: (@Sendable (String) async -> Void)? = nil,
-        frontmostTracker: FrontmostAppTracking? = nil
+        frontmostTracker: FrontmostAppTracking? = nil,
+        enabled: Bool = true
     ) {
         self.pasteboard = pasteboard
         self.fileClipService = fileClipService
         self.repository = repository
         self.onUserMessage = onUserMessage
         self.frontmostTracker = frontmostTracker
+        self.enabled = enabled
     }
 
     func start() {
@@ -62,9 +67,21 @@ actor ClipboardWatcher {
         Logger.clipboard.info("ClipboardWatcher: pastePending=\(pending)")
     }
 
+    /// TASK-043 — 사용자 *클립보드 수집 토글*. `ClipsViewModel.toggleCapture()` 가 호출.
+    /// `false` 시 tick 진입부 가드로 buildClip 미진입 + lastChangeCount 동기화 유지 (활성 복귀 race 차단).
+    func setEnabled(_ enabled: Bool) {
+        self.enabled = enabled
+        Logger.clipboard.info("ClipboardWatcher: enabled=\(enabled)")
+    }
+
     func tick() async {
         guard !pastePending else {
             // TASK-026 fix — paste 진행 중 tick race 차단.
+            return
+        }
+        guard enabled else {
+            // TASK-043 — 사용자 수집 비활성. lastChangeCount 만 동기화 (활성 복귀 시 *그 다음 변경*부터 캡쳐, 직전 클립 누적 race 차단).
+            lastChangeCount = pasteboard.changeCount
             return
         }
         let currentCount = pasteboard.changeCount

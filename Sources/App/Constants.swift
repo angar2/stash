@@ -51,4 +51,10 @@ enum Constants {
     static let clipsPerPageMin: Int = 1
     static let clipsPerPageMax: Int = 50
     static let clipListAutoFitFloor: Int = 3
+
+    // TASK-043 클립보드 수집 토글 — UserDefaults 키. ClipboardWatcher.enabled 초기값 + StatusItemController red dot indicator 추적.
+    static let clipboardCaptureEnabledKey: String = "clipboardCaptureEnabled"
+
+    // TASK-043 — ClipboardWatcher.enabled / red dot indicator 변경 시 StatusItemController 추종용 NotificationCenter 이름.
+    static let captureEnabledDidChangeNotification: Notification.Name = Notification.Name("stash.captureEnabledDidChange")
 }

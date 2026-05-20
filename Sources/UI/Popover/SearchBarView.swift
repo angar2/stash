@@ -6,6 +6,8 @@ struct PopoverHeaderView: View {
     /// 방식 2 — popover form은 동일 노출, 검색 입력 + 전체 삭제 클릭 모두 차단 (TASK-018).
     let mode: PopoverInvocationMode
     @State private var deleteAllHovered: Bool = false
+    /// TASK-043 — 일시정지/재개 버튼 hover state.
+    @State private var captureToggleHovered: Bool = false
 
     /// 방식 2일 때 true — 검색바·"전체 삭제" 등 인터랙션 일체 차단.
     private var isInteractionDisabled: Bool { mode == .method3 }
@@ -46,10 +48,39 @@ struct PopoverHeaderView: View {
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: deleteAllHovered)
                     .allowsHitTesting(!isInteractionDisabled)
             }
+            // TASK-043 — 클립보드 수집 일시정지/재개 버튼. clips.count 무관 항상 표시. 아이콘만 분기 (pause ↔ play), 색상은 *전체 삭제* 텍스트와 동일 회색 흐름 정합.
+            captureToggleButton
         }
         .padding(.horizontal, DesignTokens.Spacing.wordmarkPaddingHorz)
         .padding(.top, DesignTokens.Spacing.wordmarkPaddingTop)
         .padding(.bottom, DesignTokens.Spacing.wordmarkPaddingBottom)
+    }
+
+    /// TASK-043 — 워드마크 행 오른쪽 끝 *클립보드 수집 토글* 버튼. 활성=`pause.fill` / 비활성=`play.fill`. 색상은 두 경우 모두 기본 회색 (label-tertiary 흐름). 시각 강조는 메뉴바 트레이 red dot 가 단일 진입점.
+    private var captureToggleButton: some View {
+        Image(systemName: viewModel.captureEnabled ? "pause.fill" : "play.fill")
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(captureToggleHovered ? DesignTokens.Colors.searchDeleteAllLabelHover : DesignTokens.Colors.searchDeleteAllLabel)
+            .frame(width: 16, height: 16)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(captureToggleHovered ? Color.white.opacity(0.05) : Color.clear)
+            )
+            .contentShape(Rectangle())
+            .onHover { isHover in
+                guard !isInteractionDisabled else { return }
+                captureToggleHovered = isHover
+            }
+            .onTapGesture {
+                guard !isInteractionDisabled else { return }
+                viewModel.toggleCapture()
+            }
+            .pointingHandCursor(enabled: !isInteractionDisabled)
+            .help(viewModel.captureEnabled ? String(localized: "tooltip.capture.disable") : String(localized: "tooltip.capture.enable"))
+            .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: captureToggleHovered)
+            .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.captureEnabled)
+            .allowsHitTesting(!isInteractionDisabled)
+            .padding(.leading, 4)
     }
 
     // 검색 컨테이너 — popover.jsx L329-373 (padding 4 6 8)

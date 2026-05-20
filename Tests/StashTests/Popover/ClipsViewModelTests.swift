@@ -958,4 +958,53 @@ struct ClipsViewModelTests {
         await vm.paste(at: 0, zone: .clip)
         #expect(synthesizer.callCount == 0)
     }
+
+    // MARK: - TASK-043 클립보드 수집 토글
+
+    @Test("captureEnabled — UserDefaults 미등록 시 true default")
+    func captureEnabledDefaultsToTrue() async {
+        UserDefaults.standard.removeObject(forKey: Constants.clipboardCaptureEnabledKey)
+        let (vm, _, _) = await makeViewModel()
+        #expect(vm.captureEnabled == true)
+    }
+
+    @Test("captureEnabled — UserDefaults 박힌 false 복원")
+    func captureEnabledRestoresFromUserDefaults() async {
+        UserDefaults.standard.set(false, forKey: Constants.clipboardCaptureEnabledKey)
+        let (vm, _, _) = await makeViewModel()
+        #expect(vm.captureEnabled == false)
+        // 정리 — 다른 테스트 영향 차단.
+        UserDefaults.standard.removeObject(forKey: Constants.clipboardCaptureEnabledKey)
+    }
+
+    @Test("toggleCapture — 상태 반전 + UserDefaults persist + NotificationCenter post")
+    func toggleCapturePersistsAndNotifies() async {
+        UserDefaults.standard.removeObject(forKey: Constants.clipboardCaptureEnabledKey)
+        let (vm, _, _) = await makeViewModel()
+        let initial = vm.captureEnabled
+
+        var receivedNotificationEnabled: Bool? = nil
+        let observer = NotificationCenter.default.addObserver(
+            forName: Constants.captureEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            receivedNotificationEnabled = notification.userInfo?["enabled"] as? Bool
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        vm.toggleCapture()
+
+        #expect(vm.captureEnabled == !initial)
+        #expect(UserDefaults.standard.bool(forKey: Constants.clipboardCaptureEnabledKey) == !initial)
+        #expect(receivedNotificationEnabled == !initial)
+
+        // 한 번 더 토글 — 원복.
+        vm.toggleCapture()
+        #expect(vm.captureEnabled == initial)
+        #expect(UserDefaults.standard.bool(forKey: Constants.clipboardCaptureEnabledKey) == initial)
+        #expect(receivedNotificationEnabled == initial)
+
+        UserDefaults.standard.removeObject(forKey: Constants.clipboardCaptureEnabledKey)
+    }
 }

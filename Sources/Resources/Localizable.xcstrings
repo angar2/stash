@@ -90,6 +90,8 @@
     "time.suffix.hours" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시간 전" } } } },
     "time.suffix.minutes" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "분 전" } } } },
     "time.yesterday" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "어제" } } } },
+    "toast.capture.disabled" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집을 일시정지했어요" } } } },
+    "toast.capture.enabled" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집을 재개했어요" } } } },
     "toast.copy.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립보드에 복사됨" } } } },
     "toast.deleteAll.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "히스토리 전체 삭제됨 (Pin 제외)" } } } },
     "toast.loginItem.failed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인 항목 등록 실패" } } } },
@@ -102,6 +104,8 @@
     "toast.shortcut.modifierRequired" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "해당 단축키는 보조 키(⌘ ⇧ ⌥ ⌃)와 다른 키를 조합해야 합니다." } } } },
     "toast.multiFileLimitExceeded" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일은 최대 100개까지 한 번에 복사할 수 있어요" } } } },
     "toast.multiFileSaveFailed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "다중 파일 저장 실패 — 클립으로 추가되지 않았어요" } } } },
+    "tooltip.capture.disable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집 일시정지" } } } },
+    "tooltip.capture.enable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집 재개" } } } },
     "clip.row.multiFile.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "여러 파일" } } } }
   },
   "version" : "1.0"

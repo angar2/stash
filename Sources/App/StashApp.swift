@@ -91,6 +91,12 @@ struct StashApp: App {
         // TASK-033 — FrontmostAppTracker 신규. ClipboardWatcher 에 주입해 *저장하지 않을 앱* 매칭 시 클립 저장 skip.
         let frontmostTracker = FrontmostAppTracker()
         self.frontmostAppTracker = frontmostTracker
+        // TASK-043 — UserDefaults 마지막 상태 복원. 미등록 시 true default.
+        let captureEnabledInit: Bool = {
+            let defaults = UserDefaults.standard
+            if defaults.object(forKey: Constants.clipboardCaptureEnabledKey) == nil { return true }
+            return defaults.bool(forKey: Constants.clipboardCaptureEnabledKey)
+        }()
         let watcher = ClipboardWatcher(
             pasteboard: pb,
             fileClipService: fcs,
@@ -101,7 +107,8 @@ struct StashApp: App {
                     toastQ.enqueue(.warn, msg)
                 }
             },
-            frontmostTracker: frontmostTracker
+            frontmostTracker: frontmostTracker,
+            enabled: captureEnabledInit
         )
         self.clipboardWatcher = watcher
         self.hotkeyManager = HotkeyManager(
@@ -127,6 +134,8 @@ struct StashApp: App {
 
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
         let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, fileClipService: fcs, toastQueue: toastQ)
+        // TASK-043 — toggleCapture 호출 시 watcher.setEnabled actor 메서드 호출 대상 주입.
+        clipsVM.setClipboardWatcher(watcher)
         self.clipsViewModel = clipsVM
         let settingsVM = SettingsViewModel(loginItemService: self.loginItemService)
         self.settingsViewModel = settingsVM

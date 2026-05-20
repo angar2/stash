@@ -162,6 +162,14 @@ enum DesignTokens {
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
         )
 
+        // ─── 수집 토글 indicator (TASK-043) ──────────────────────────
+        /// 메뉴바 트레이 아이콘 우하단 red dot — 클립보드 수집 비활성 상태 시각 알림.
+        /// systemRed 정합 (#FF3B30 라이트 / #FF453A 다크).
+        static let captureDisabledDot = Color(
+            light: Color(red: 255/255, green: 59/255, blue: 48/255),
+            dark:  Color(red: 255/255, green: 69/255, blue: 58/255)
+        )
+
         // ─── Pin Sidebar 헤더 ────────────────────────────────────────
         static let pinSidebarHeader = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.40),
@@ -662,6 +670,7 @@ enum DesignTokens {
         static let toastTTLMid:     TimeInterval = 2.2   // 전체 삭제 / 단축키 충돌
         static let toastTTLPermission: TimeInterval = 2.5  // 권한 부여 / Pin 한도
         static let toastTTLLong:    TimeInterval = 3.5   // onboarding 완료
+        static let toastTTLCaptureToggle: TimeInterval = 2.0   // TASK-043 — 수집 토글 (UX-UI §6 알림 표 정합)
 
         // Onboarding modal fade-in — HTML L34-37
         static let onboardingFadeIn: TimeInterval = 0.2

@@ -90,6 +90,13 @@ final class ClipsViewModel {
     /// TASK-034 — 클립 삭제 시 디스크 카피본 cleanup. DB row 삭제 직후 호출 (delete / deleteAllExceptPinned).
     private let fileClipService: any FileClipService
     private weak var toastQueue: ToastQueue?
+    /// TASK-043 — 클립보드 수집 토글 시 `setEnabled(_:)` 호출 대상. Composition Root 가 `setClipboardWatcher(_:)` 으로 주입. nil 인 단위 테스트 케이스 대비 옵셔널.
+    private var clipboardWatcher: ClipboardWatcher?
+
+    // MARK: - Capture toggle (TASK-043)
+
+    /// 클립보드 수집 활성/비활성 상태. UserDefaults `Constants.clipboardCaptureEnabledKey` 진실 소스. init 시 UserDefaults 읽어 초기화. `toggleCapture()` 가 갱신.
+    var captureEnabled: Bool
 
     init(
         repository: any ClipRepository,
@@ -101,10 +108,42 @@ final class ClipsViewModel {
         self.pasteService = pasteService
         self.fileClipService = fileClipService
         self.toastQueue = toastQueue
+        // TASK-043 — UserDefaults 미등록 시 true default (UserDefaults.bool 자연 fallback).
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: Constants.clipboardCaptureEnabledKey) == nil {
+            self.captureEnabled = true
+        } else {
+            self.captureEnabled = defaults.bool(forKey: Constants.clipboardCaptureEnabledKey)
+        }
     }
 
     func setToastQueue(_ queue: ToastQueue) {
         self.toastQueue = queue
+    }
+
+    /// TASK-043 — Composition Root 가 ClipboardWatcher 인스턴스 주입. toggleCapture 호출 시 actor setEnabled 호출 대상.
+    func setClipboardWatcher(_ watcher: ClipboardWatcher) {
+        self.clipboardWatcher = watcher
+    }
+
+    /// TASK-043 — 클립보드 수집 토글 단일 진실 진입점. popover 상단 일시정지/재개 버튼이 호출.
+    /// 흐름: (1) captureEnabled 상태 반전 (2) UserDefaults persist (3) NotificationCenter `captureEnabledDidChange` post (StatusItemController red dot 추종)
+    ///       (4) ClipboardWatcher.setEnabled (actor 호출) (5) toastQueue success 발행.
+    func toggleCapture() {
+        let newValue = !captureEnabled
+        captureEnabled = newValue
+        UserDefaults.standard.set(newValue, forKey: Constants.clipboardCaptureEnabledKey)
+        NotificationCenter.default.post(
+            name: Constants.captureEnabledDidChangeNotification,
+            object: nil,
+            userInfo: ["enabled": newValue]
+        )
+        if let clipboardWatcher {
+            Task { await clipboardWatcher.setEnabled(newValue) }
+        }
+        let messageKey: String.LocalizationValue = newValue ? "toast.capture.enabled" : "toast.capture.disabled"
+        toastQueue?.enqueue(.success, String(localized: messageKey), ttl: DesignTokens.Animation.toastTTLCaptureToggle)
+        Logger.ui.info("ClipsViewModel.toggleCapture: enabled=\(newValue, privacy: .public)")
     }
 
     /// TASK-024 — Composition Root 가 `PermissionService.statusPublisher` 구독 → 본 메서드로 권한 상태 갱신. 동적 토글 (사용자가 시스템 환경설정에서 권한 변경) 즉시 반영. SettingsViewModel.updateAccessibilityGranted 와 동일 패턴.
