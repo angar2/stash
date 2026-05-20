@@ -161,6 +161,10 @@ final class PopoverWindow {
         if pinSidebarPanel.isVisible {
             resizePinSidebarPanel()
         }
+        // TASK-044 — refreshFrame async dispatch 종료 직후 first responder 복원 가드. `hosting.invalidateIntrinsicContentSize()` + `layoutSubtreeIfNeeded()` 가 SwiftUI body 재계산 시 NSTextField first responder 상태에 영향 가능 — `trySetSearchFirstResponder` 가 이미 textField 면 no-op, 아니면 복원.
+        if let mode = currentMode {
+            attemptSearchFirstResponder(mode: mode, reason: "refreshFrame")
+        }
         Logger.ui.info("PopoverWindow.refreshFrame — fitting=\(Int(fitting.width), privacy: .public)x\(Int(fitting.height), privacy: .public)")
     }
 
@@ -460,20 +464,15 @@ final class PopoverWindow {
         // hosting rebuild — 매 show마다 새 SwiftUI tree 박음 (mode 인자 변경 반영).
         rebuildHosting(mode: mode)
 
+        // TASK-044 — SwiftUI NSHostingView 의 lazy layout 강제 동기화. rebuildHosting 직후 NSTextField subview tree 가 박혀있도록 보장 → 직후 호출되는 `findFirstTextField` 가 nil 반환 회귀 차단.
+        visualEffectView.layoutSubtreeIfNeeded()
+
         // TASK-020 — NSApp.activate 호출 제거 (nonactivatingPanel 본질 보존). stash app이 active되지 않으므로 외부 앱이 frontmost 유지 + first responder 보존 + cursor 깜빡임 유지. paste 시점에 CGEvent ⌘V가 외부 앱의 마지막 cursor 위치에 정확히 도달.
         panel.orderFrontRegardless()
         panel.makeKey()
 
-        // first responder — 방식 1·2만. TASK-025 — NSTextField always-active 정책. find 실패 시 panel 자체로 fallback (안전망).
-        // method3 (보류) 은 검색바 isEnabled=false 라 first responder 진입 못 함 — 기존대로 panel 자체 first responder.
-        if mode != .method3 {
-            if let textField = PopoverPanel.findFirstTextField(in: panel.contentView) {
-                panel.makeFirstResponder(textField)
-            } else {
-                Logger.ui.warning("findFirstTextField returned nil — fallback to panel first responder (TASK-025)")
-                panel.makeFirstResponder(panel)
-            }
-        }
+        // TASK-044 — first responder 진입을 헬퍼로 위임. 동기 1회 + async retry 1회. method3 보류는 검색바 isEnabled=false 라 진입 X — 헬퍼 내부에서 가드.
+        attemptSearchFirstResponder(mode: mode, reason: "showInternal")
 
         // monitor 설치 — 방식 1·2만. method3 (보류) 는 ⌘ keyUp 으로만 닫힘.
         if mode != .method3 {
@@ -504,6 +503,43 @@ final class PopoverWindow {
                 await self?.handleClipCopy(at: idx, zone: zone)
             }
         )
+    }
+
+    /// TASK-044 — popover open / refreshFrame 후 NSTextField first responder 진입 헬퍼. 동기 1회 + async retry 1회 안전망.
+    /// 사유: TASK-025 의 `panel.makeFirstResponder(textField)` 가 SwiftUI NSHostingView 의 lazy layout 시점 이슈로 nil/false 반환 회귀 — 동기 호출이 실패하면 next runloop tick 에서 재시도. 재시도도 실패하면 panel 자체 fallback + warning.
+    /// method3 (⌘ hold 보류) 은 검색바 isEnabled=false 라 진입 X — 가드.
+    /// `reason` 은 호출 site 식별용 로그 라벨 (showInternal / refreshFrame).
+    private func attemptSearchFirstResponder(mode: PopoverInvocationMode, reason: String) {
+        guard mode != .method3 else { return }
+        if trySetSearchFirstResponder(reason: "\(reason)/sync") {
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.trySetSearchFirstResponder(reason: "\(reason)/async-retry") {
+                    return
+                }
+                Logger.ui.warning("attemptSearchFirstResponder failed after retry — fallback to panel first responder (TASK-044, reason=\(reason, privacy: .public))")
+                self.panel.makeFirstResponder(self.panel)
+            }
+        }
+    }
+
+    /// TASK-044 — 1회 진입 시도. 이미 NSTextField 또는 field editor 가 first responder 면 true (no-op). 아니면 `findFirstTextField` 탐색 후 `makeFirstResponder(textField)` 호출 결과 반환.
+    @discardableResult
+    private func trySetSearchFirstResponder(reason: String) -> Bool {
+        guard let textField = PopoverPanel.findFirstTextField(in: panel.contentView) else {
+            Logger.ui.debug("trySetSearchFirstResponder: findFirstTextField nil (TASK-044, reason=\(reason, privacy: .public))")
+            return false
+        }
+        if panel.firstResponder === textField || panel.firstResponder === textField.currentEditor() {
+            Logger.ui.debug("trySetSearchFirstResponder: already first responder (TASK-044, reason=\(reason, privacy: .public))")
+            return true
+        }
+        let ok = panel.makeFirstResponder(textField)
+        Logger.ui.debug("trySetSearchFirstResponder: makeFirstResponder=\(ok, privacy: .public) (TASK-044, reason=\(reason, privacy: .public))")
+        return ok
     }
 
     private func installLocalClickMonitor() {
