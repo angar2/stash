@@ -79,16 +79,7 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.45),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.50)
         )
-        // 빈 상태 큰 트레이 아이콘 색
-        static let emptyTrayIcon = Color(
-            light: Color(red: 0, green: 0, blue: 0, opacity: 0.30),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.45)
-        )
-        // 빈 상태 round 컨테이너 bg
-        static let emptyContainerBg = Color(
-            light: Color(red: 1, green: 1, blue: 1, opacity: 0.60),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.05)
-        )
+        // TASK-037 — 빈 상태 트레이 아이콘 / 라운드 컨테이너 색 토큰 폐기 (빈 상태 UI 단순화 — 멘트 only).
 
         // ─── 구분선 ───────────────────────────────────────────────────
         static let divider = Color(
@@ -400,10 +391,10 @@ enum DesignTokens {
         static let searchBoxIconGap:       CGFloat = 8
 
         // 클립 행 (popover.jsx L75-87)
+        // TASK-037 — 행 단일 고정 높이 정책. rowPaddingMultiV (multi-line 가변 padding) 폐기.
         static let rowMinHeight:           CGFloat = 44
         static let rowPaddingSingleH:      CGFloat = 12  // 단일줄 vertical 0
         static let rowPaddingMultiH:       CGFloat = 12
-        static let rowPaddingMultiV:       CGFloat = 8
         static let rowGap:                 CGFloat = 2
         static let rowInnerGap:            CGFloat = 10
         static let rowTrailingGap:         CGFloat = 8
@@ -444,14 +435,18 @@ enum DesignTokens {
         static let keycapPaddingVert:      CGFloat = 1
         static let keycapStrokeWidth:      CGFloat = 0.5
 
-        // 빈 상태 (popover.jsx L386-406)
+        // 빈 상태 (TASK-037 단순화 — 멘트 only. 84×84 라운드 컨테이너 + 트레이 아이콘 토큰 폐기)
         static let emptyPaddingTop:        CGFloat = 48
         static let emptyPaddingBottom:     CGFloat = 44
         static let emptyPaddingHorz:       CGFloat = 20
-        static let emptyContainerSize:     CGFloat = 84
-        static let emptyContainerToTitle:  CGFloat = 16
         static let emptyTitleToHint:       CGFloat = 3
-        static let emptyIconSize:          CGFloat = 44
+
+        // TASK-037 — 디스플레이 환경설정 / popover 동적 frame 토큰.
+        // clipListOverheadBase = clipList 외 SwiftUI body 영역 (검색바 + 환설정 행 + 힌트바 + popoverPadding × 2) 측정값.
+        // hasPinned 시 pinRow + margin 추가됨 (ClipsViewModel.effectiveClipListHeight 안 동적 합산).
+        static let clipListOverheadBase:   CGFloat = 164
+        // 디스플레이 탭 슬라이더 최대 너비.
+        static let displaySliderMaxWidth:  CGFloat = 240
 
         // Settings
         static let settingsTitlebarHeight: CGFloat = 42
@@ -515,8 +510,7 @@ enum DesignTokens {
         static let searchBox:       CGFloat = 10
         // Pin Sidebar 항목 — popover.jsx L583
         static let pinSidebarItem:  CGFloat = 10
-        // 빈 상태 round 컨테이너 — popover.jsx L390
-        static let emptyContainer:  CGFloat = 22
+        // TASK-037 — 빈 상태 round 컨테이너 Radius 토큰 폐기 (빈 상태 UI 단순화).
 
         // Settings — settings.jsx L444 (윈도우 12) + L495 (탭 8)
         static let settingsWindow:  CGFloat = 12
@@ -548,8 +542,8 @@ enum DesignTokens {
         // popover
         static let popoverWidth:        CGFloat = 380
         static let popoverHeight:       CGFloat = 520  // 1·2·3 통합 단일 height (TASK-018) — Method1=520·Method2=320·Method3=480 통합
-        static let popoverInsetBottom:  CGFloat = 28  // 방식 2/3 우하단 inset
-        static let popoverInsetRight:   CGFloat = 28
+        static let popoverInsetBottom:  CGFloat = 0  // 방식 2/3 우하단 inset (bottom) — 사용자 의도: 완전 붙음
+        static let popoverInsetRight:   CGFloat = 0  // 방식 2/3 우측 inset
         // 312 → 276 (TASK-018 Phase 4) — single-line 행(44) + rowGap(2) × 6행 - 마지막 gap(2) = 274 + 행 외곽 2px 여유. Pin 행이 잘린 마지막 행을 가리던 현상 제거.
         static let clipListMaxHeight:   CGFloat = 276
 

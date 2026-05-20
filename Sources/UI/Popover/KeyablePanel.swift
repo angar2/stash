@@ -16,4 +16,11 @@ final class KeyablePanel: NSPanel {
         }
         super.keyDown(with: event)
     }
+
+    /// TASK-037 fix-5 — macOS 자동 frame 보정 차단. setFrame / setFrameOrigin 호출 시 우리가 박은 frame 그대로 사용.
+    /// 사유: visible 영역 초과 시 macOS 가 popover 위치를 자동 보정 (visible 안으로 이동). 우하단 anchor 정합 깨짐.
+    /// 호출처 (refreshFrame / positionAtBottomRight) 가 화면 cap + 좌표 정확성 책임.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        return frameRect
+    }
 }

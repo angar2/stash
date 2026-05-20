@@ -23,7 +23,7 @@ struct GeneralTab: View {
             hint: nil,
             showDivider: true
         ) {
-            customToggle(
+            customSettingsToggle(
                 isOn: Binding(
                     get: { viewModel.loginItemEnabled },
                     set: { viewModel.toggleLoginItem($0) }
@@ -40,7 +40,7 @@ struct GeneralTab: View {
             showDivider: true
         ) {
             VStack(alignment: .leading, spacing: 8) {
-                customToggle(
+                customSettingsToggle(
                     isOn: Binding(
                         // TASK-033 — 권한 X 시 시각 OFF 강제. UserDefaults 값 (autoPasteEnabled) 은 보존 — 권한 회복 시 사용자 선호 ON 복원.
                         get: { viewModel.accessibilityGranted && viewModel.autoPasteEnabled },
@@ -88,36 +88,39 @@ struct GeneralTab: View {
         }
     }
 
-    // MARK: - Helpers
+}
 
-    private func customToggle(isOn: Binding<Bool>, disabled: Bool) -> some View {
-        Button(action: {
-            guard !disabled else { return }
-            isOn.wrappedValue.toggle()
-        }) {
-            ZStack(alignment: isOn.wrappedValue ? .trailing : .leading) {
-                Capsule()
-                    .fill(toggleFillColor(isOn: isOn.wrappedValue, disabled: disabled))
-                    .frame(width: 36, height: 22)
-                Circle()
-                    .fill(disabled ? Color.white.opacity(0.5) : Color.white)
-                    .frame(width: 18, height: 18)
-                    .shadow(color: Color.black.opacity(0.25), radius: 1, y: 1)
-                    .padding(.horizontal, 2)
-            }
-            .animation(.easeInOut(duration: 0.15), value: isOn.wrappedValue)
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        .opacity(disabled ? 0.6 : 1.0)
-    }
+// MARK: - Shared toggle helpers (TASK-037 fix-refactor — DisplayTab 등 다른 탭 공유 위해 file-level 박음. settingsCard / settingsRow 동일 패턴.)
 
-    private func toggleFillColor(isOn: Bool, disabled: Bool) -> Color {
-        if disabled {
-            return DesignTokens.Colors.toggleOffBg
+@MainActor
+func customSettingsToggle(isOn: Binding<Bool>, disabled: Bool) -> some View {
+    Button(action: {
+        guard !disabled else { return }
+        isOn.wrappedValue.toggle()
+    }) {
+        ZStack(alignment: isOn.wrappedValue ? .trailing : .leading) {
+            Capsule()
+                .fill(settingsToggleFillColor(isOn: isOn.wrappedValue, disabled: disabled))
+                .frame(width: 36, height: 22)
+            Circle()
+                .fill(disabled ? Color.white.opacity(0.5) : Color.white)
+                .frame(width: 18, height: 18)
+                .shadow(color: Color.black.opacity(0.25), radius: 1, y: 1)
+                .padding(.horizontal, 2)
         }
-        return isOn ? DesignTokens.Colors.toggleOnBg : DesignTokens.Colors.toggleOffBg
+        .animation(.easeInOut(duration: 0.15), value: isOn.wrappedValue)
     }
+    .buttonStyle(.plain)
+    .disabled(disabled)
+    .opacity(disabled ? 0.6 : 1.0)
+}
+
+@MainActor
+func settingsToggleFillColor(isOn: Bool, disabled: Bool) -> Color {
+    if disabled {
+        return DesignTokens.Colors.toggleOffBg
+    }
+    return isOn ? DesignTokens.Colors.toggleOnBg : DesignTokens.Colors.toggleOffBg
 }
 
 // MARK: - Shared settings UI helpers

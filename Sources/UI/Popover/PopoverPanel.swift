@@ -82,7 +82,8 @@ enum PopoverPanel {
         )
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.level = .floating
+        // TASK-037 fix-8 — Dock window level + 1. Dock 자동 숨김 + 마우스 호버로 Dock 등장 시 popover 가 Dock 에 가려지지 않도록 *Dock 위 level* 강제.
+        p.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.dockWindow)) + 1)
         p.hasShadow = true
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.transient, .fullScreenAuxiliary, .canJoinAllSpaces]
@@ -94,6 +95,8 @@ enum PopoverPanel {
         ve.isEmphasized = true
         ve.wantsLayer = true
         ve.layer?.cornerRadius = DesignTokens.Radius.popoverOuter
+        // TASK-037 fix-11 — 방식 2 우하단 anchor 정합. bottom corners square 박아 popover 바닥/우측이 화면 visible 가장자리에 *완전 붙음* (cornerRadius 12px 만큼 떨어져 보이던 시각 차단).
+        ve.layer?.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         ve.layer?.masksToBounds = true
         ve.layer?.borderWidth = 0.5
         ve.layer?.borderColor = NSColor.black.withAlphaComponent(0.2).cgColor
@@ -103,23 +106,20 @@ enum PopoverPanel {
         return (p, ve)
     }
 
-    /// SwiftUI rootView를 NSVisualEffectView 안 subview로 박음 (transparent layer + 4-edge constraint)
+    /// SwiftUI rootView를 NSVisualEffectView 안 subview로 박음 (autoresizing — NSHostingView intrinsic 영향 차단).
+    /// TASK-037 fix-10 — fix-9 의 4-edge constraint + fittingSize 조합이 *경쟁 사이클* 만듦 (NSHostingView intrinsic → NSPanel 자동 contentSize fit ↔ 우리 setFrame). autoresizing 박으면 NSHostingView 가 visualEffectView frame 단순 fill — intrinsic 가 NSPanel.frame 영향 X. PopoverWindow.refreshFrame 의 fittingSize 측정 + setFrame 으로 SwiftUI body intrinsic 과 NSPanel.frame 정확 일치 보장 (fix-7 의 mismatch 해소).
     static func mount<Root: View>(_ rootView: Root, in visualEffectView: NSVisualEffectView) -> NSHostingView<AnyView> {
         // 기존 subview 제거
         visualEffectView.subviews.forEach { $0.removeFromSuperview() }
 
         let hosting = NSHostingView(rootView: AnyView(rootView))
-        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.translatesAutoresizingMaskIntoConstraints = true
+        hosting.frame = visualEffectView.bounds
+        hosting.autoresizingMask = [.width, .height]
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = NSColor.clear.cgColor
 
         visualEffectView.addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
-            hosting.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor)
-        ])
         return hosting
     }
 

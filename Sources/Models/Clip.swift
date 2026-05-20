@@ -2,7 +2,7 @@
 import Foundation
 import GRDB
 
-struct Clip: Identifiable, Codable, Sendable {
+struct Clip: Identifiable, Codable, Sendable, Equatable {
     let id: UUID
     let type: ClipType
     let body: String?

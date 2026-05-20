@@ -42,4 +42,13 @@ enum Constants {
     static let imageFileExtensions: Set<String> = [
         "png", "jpg", "jpeg", "gif", "tiff", "tif", "bmp", "heic", "heif", "webp"
     ]
+
+    // TASK-037 디스플레이 탭 — 한 번에 보이는 클립 수 N (사용자 환경설정).
+    // default 6 = TASK-036 토큰 추정값 (clipListMaxHeight 276 ÷ rowMinHeight 44) 인계.
+    // 범위 1~50. 화면 높이 초과 시 effectiveClipListHeight 가 자동 cap.
+    // floor=3 (autoFit ON 시 최소 컨테이너 행 수). 단 N<3 시 floor=N.
+    static let clipsPerPageDefault: Int = 6
+    static let clipsPerPageMin: Int = 1
+    static let clipsPerPageMax: Int = 50
+    static let clipListAutoFitFloor: Int = 3
 }

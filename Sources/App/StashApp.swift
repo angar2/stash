@@ -46,8 +46,11 @@ struct StashApp: App {
 
     init() {
         // TASK-033 — UserDefaults default values 등록. 사용자 설정 없을 때 기본값. autoPasteEnabled default true (자동 paste 기본 ON).
+        // TASK-037 — 디스플레이 탭 신규 — clipsPerPage default 6 (TASK-036 토큰 추정값 인계), autoFitClipListHeight default false.
         UserDefaults.standard.register(defaults: [
-            "autoPasteEnabled": true
+            "autoPasteEnabled": true,
+            "clipsPerPage": 6,
+            "autoFitClipListHeight": false
         ])
 
         // ① Persistence — 가장 안쪽부터 (ARCHITECTURE §9-4 step 2-3)

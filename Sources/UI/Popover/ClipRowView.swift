@@ -3,7 +3,7 @@
 import SwiftUI
 import AppKit
 
-struct ClipRowView: View {
+struct ClipRowView: View, Equatable {
     let clip: Clip
     let isSelected: Bool
     let isFocused: Bool      // focusZone === "clip" 일 때만 시각 활성
@@ -18,14 +18,23 @@ struct ClipRowView: View {
     let onTogglePin: () -> Void
     let onDelete: () -> Void
 
+    /// TASK-037 fix-15b — Equatable conformance. closure 제외 시각 영향 prop 만 비교.
+    /// `.equatable()` modifier 와 함께 사용 → SwiftUI 가 변경된 행만 re-render → 호버 응답 빠름 (selectedIdx 변경 시 다른 행 skip).
+    /// Swift 6 concurrency — `nonisolated` 박아 MainActor 격리 외 호출 허용.
+    nonisolated static func == (lhs: ClipRowView, rhs: ClipRowView) -> Bool {
+        lhs.clip == rhs.clip &&
+        lhs.isSelected == rhs.isSelected &&
+        lhs.isFocused == rhs.isFocused &&
+        lhs.isFlashing == rhs.isFlashing &&
+        lhs.mode == rhs.mode &&
+        lhs.showTimeLabel == rhs.showTimeLabel &&
+        lhs.searchQuery == rhs.searchQuery
+    }
+
     @State private var hovering: Bool = false
     @State private var xHovered: Bool = false
     /// TASK-019 fix 4차 — 핀 아이콘 hover state. 본체 + Pin 사이드바 양쪽 동일 (사용자 결정).
     @State private var pinHovered: Bool = false
-
-    private var isMultiline: Bool {
-        (clip.body ?? "").contains("\n") || (clip.body ?? "").count > 50
-    }
 
     private var visuallySelected: Bool {
         isSelected && isFocused
@@ -45,8 +54,8 @@ struct ClipRowView: View {
             actionButton
         }
         .padding(.horizontal, DesignTokens.Spacing.rowPaddingMultiH)
-        .padding(.vertical, isMultiline ? DesignTokens.Spacing.rowPaddingMultiV : 0)
-        .frame(minHeight: DesignTokens.Spacing.rowMinHeight)
+        // TASK-037 — 행 단일 고정 높이 정책. multi-line 가변 padding 제거.
+        .frame(height: DesignTokens.Spacing.rowMinHeight)
         .background(rowBackground)
         .overlay(rowBorder)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
@@ -59,7 +68,8 @@ struct ClipRowView: View {
             hovering = isHover
             if isHover { onHover() }
         }
-        .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: visuallySelected)
+        // TASK-037 fix-16 — visuallySelected animation 폐기. 호버 시 highlight 가 120ms fade 거쳐서 *마우스 지나간 후 뒤늦게 색 변경* 인식. 즉시 highlight 박힘.
+        // isFlashing animation 은 paste flash 시각 효과라 유지.
         .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: isFlashing)
         // TASK-027 — 활성 행 frame 을 popover coordinateSpace 에 게시. 비활성 행은 .zero (PreferenceKey reduce 가 ignore).
         .background(
@@ -262,9 +272,10 @@ struct ClipRowView: View {
             let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? String(localized: "clip.row.file"))
             return [name]
         case .text:
+            // TASK-037 — 행 단일 고정 높이 정책. 첫 줄만 노출, 초과는 truncate.
             let body = clip.body ?? ""
-            let lines = body.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            return Array(lines.prefix(2))
+            let firstLine = body.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) ?? ""
+            return [firstLine]
         }
     }
 
