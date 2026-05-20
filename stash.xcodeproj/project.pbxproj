@@ -81,6 +81,7 @@
 		953F4F0E0325B21E5B7E8FC2 /* PointingHandCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4A46B13BFEBCF3BFB58B9D /* PointingHandCursor.swift */; };
 		9BF65CD5AA23A4DC31E850C2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 44BCFC059BCC9584CB16A6FF /* Localizable.xcstrings */; };
 		9D50F84A474877E53EE26A1D /* FileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D48CC145A382F6D5F7FAD1 /* FileClipService.swift */; };
+		A044B0F1A2B3C4D5E6F70011 /* PopoverWindowFirstResponderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A044F0F1A2B3C4D5E6F70022 /* PopoverWindowFirstResponderTests.swift */; };
 		A17D47FD5990831B39B0D417 /* AboutTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE472B0FB7855E82A42A7F44 /* AboutTab.swift */; };
 		A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */; };
 		A87CA74854FDFC9DA007C3C9 /* MockNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19923362833B37310A4C6F15 /* MockNotificationCenter.swift */; };
@@ -227,6 +228,7 @@
 		9F4544552328E6B3EF5155EA /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		A017DCEBF0C30CE6B3DD8871 /* StoredFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredFile.swift; sourceTree = "<group>"; };
 		A3B102F4B10CEF166C7FD5DD /* PopoverPanelMaskedCornersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelMaskedCornersTests.swift; sourceTree = "<group>"; };
+		A044F0F1A2B3C4D5E6F70022 /* PopoverWindowFirstResponderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindowFirstResponderTests.swift; sourceTree = "<group>"; };
 		A6577C41BC09D20FF8725437 /* V4_AddFilePathsJson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V4_AddFilePathsJson.swift; sourceTree = "<group>"; };
 		A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarView.swift; sourceTree = "<group>"; };
 		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
@@ -554,6 +556,7 @@
 				10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */,
 				BC1EC507344EB93C02DA1DB0 /* PopoverHotkeyTests.swift */,
 				A3B102F4B10CEF166C7FD5DD /* PopoverPanelMaskedCornersTests.swift */,
+				A044F0F1A2B3C4D5E6F70022 /* PopoverWindowFirstResponderTests.swift */,
 			);
 			path = Popover;
 			sourceTree = "<group>";
@@ -883,6 +886,7 @@
 				F30A06D12BFA6ACD99080BEC /* PermissionServiceTests.swift in Sources */,
 				AEC85CC1FAB99CF5BB37353C /* PopoverHotkeyTests.swift in Sources */,
 				B3C8AD19ED78CE098BA384A2 /* PopoverPanelMaskedCornersTests.swift in Sources */,
+				A044B0F1A2B3C4D5E6F70011 /* PopoverWindowFirstResponderTests.swift in Sources */,
 				BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
 				052EDE64F4FE003F70E14BA9 /* SystemWrapperTests.swift in Sources */,
