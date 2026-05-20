@@ -45,6 +45,12 @@ final class PopoverWindow {
         DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
     }
 
+    /// 복사 위치 라인 표시 여부 — Clip extension 단일 진실 소스 호출 (TASK-039 refactor).
+    /// `ClipDetailPanelView.copyLocationState` 와 동일 분기 정책 — PanelView 의 SwiftUI 컴퓨티드와 PopoverWindow 의 NSPanel height 계산이 *동일 정책* 으로 일치 보장.
+    static func hasCopyLocation(for clip: Clip) -> Bool {
+        clip.clipDetailCopyLocationState != nil
+    }
+
     init(
         viewModel: ClipsViewModel,
         onOpenSettings: @MainActor @escaping () -> Void
@@ -287,6 +293,11 @@ final class PopoverWindow {
             hideClipDetailPanel()
             return
         }
+        // TASK-039 — zone/PinSidebar 정합 가드. zone == .pin 인데 PinSidebar 비가시 시 emit 거부 (잘못된 anchor=popover 박힘 차단, race fix).
+        if request.zone == .pin && !pinSidebarPanel.isVisible {
+            hideClipDetailPanel()
+            return
+        }
         // anchor 결정 — zone == .pin && pinSidebar 가시 시 pinSidebar 좌측, 그 외 popover 좌측.
         let anchorFrame: NSRect
         if request.zone == .pin && pinSidebarPanel.isVisible {
@@ -294,9 +305,19 @@ final class PopoverWindow {
         } else {
             anchorFrame = panel.frame
         }
-        // detail panel height — Provider.preferredHeight 우선, fallback clipDetailMaxHeight.
+        // detail panel height (TASK-039) — Provider.preferredHeight (본문 자체 raw 추정) + 본문 상하 padding (2 × clipDetailPadding) + 메타 footer + (해당 시) 복사 위치 라인 블록.
+        // Provider 본문이 본문 max 도달 시 PanelView 의 ScrollView.frame(maxHeight:) 가 클램프 → 본문은 max content 까지만 확장. 본문 padding + 복사 위치 라인 + 메타 footer 는 항상 박힘.
         let provider = ClipDetailRegistry.provider(for: request.clip)
-        let detailH = provider?.preferredHeight(for: request.clip) ?? DesignTokens.WindowSize.clipDetailMaxHeight
+        let rawContentH = provider?.preferredHeight(for: request.clip) ?? DesignTokens.WindowSize.clipDetailMaxHeight
+        let hasLocation = Self.hasCopyLocation(for: request.clip)
+        let vPad = 2 * DesignTokens.Spacing.clipDetailPadding // top + bottom 균일 padding
+        let extraH = vPad
+            + DesignTokens.Spacing.clipMetaFooterHeight
+            + (hasLocation ? DesignTokens.Spacing.clipMetaLocationBlockHeight : 0)
+        // 본문 max = clipDetailMaxHeight - extraH. content height 가 max 초과면 max 로 클램프 (panel 안 내부 스크롤).
+        let contentMaxH = max(DesignTokens.WindowSize.clipDetailMaxHeight - extraH, 0)
+        let contentH = min(rawContentH, contentMaxH)
+        let detailH = contentH + extraH
         // TASK-027 fix — panel 총 width = 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). maskImage 로 panel 자체를 말풍선 모양으로 잘라냄.
         let totalW = Self.clipDetailTotalWidth
         let gap = DesignTokens.Spacing.clipDetailGap
@@ -317,6 +338,12 @@ final class PopoverWindow {
         // detail panel 내부 arrowOffsetY (SwiftUI, top-down) 기본값 = detailH / 2 → detail.originY = rowCenterY_screen - detailH/2.
         var arrowOffsetY = detailH / 2
         var originY = rowCenterY_screen - (detailH - arrowOffsetY)
+
+        // TASK-039 fix — anchor (PinSidebar) height < detailH 케이스 시각 정합. PinSidebar 가 bottom-aligned 인 데다 1 행만 박혀 height 작은 케이스에서 detail panel 이 PinSidebar 위로 크게 확장 → 시각상 *본체 popover 좌측* 처럼 보이는 비정합. detail bottom = anchor bottom 정렬 (PinSidebar bottom-aligned 정합) + arrowOffsetY 재계산.
+        if request.zone == .pin && pinSidebarPanel.isVisible && detailH > anchorFrame.height {
+            originY = anchorFrame.origin.y // PinSidebar bottom (NSPanel bottom-up 좌표)
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        }
 
         // 화면 상/하단 클램프 — 클램프 발생 시 arrowOffsetY 보정으로 꼭지가 행 center 유지.
         let minY = screenVisible.minY + safe

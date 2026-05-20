@@ -12,8 +12,17 @@ final class ClipsViewModel {
     var searchQuery: String = ""
     var focusZone: FocusZone = .clip {
         didSet {
-            // TASK-027 — focusZone (.clip ↔ .pin) 전환 시 detail panel 재평가.
-            if oldValue != focusZone { scheduleClipDetailUpdate() }
+            guard oldValue != focusZone else { return }
+            // TASK-039 — zone 변경 = anchor 변경 = 이전 row frame 무효 (본체 popover ↔ PinSidebar 좌표계 불일치).
+            // activeRowFrameInPopover reset (.zero) → 다음 schedule 매칭 X → 즉시 nil emit. 새 zone 행 frame 게시 시 정확 좌표 emit.
+            activeRowFrameInPopover = .zero
+            // `.pin && !pinSidebarOpen` (Pin 행 막 hover, PinSidebar 펼침 대기) — 즉시 nil emit + task skip. pinSidebarOpen didSet 의 schedule 가 처리.
+            if focusZone == .pin && !pinSidebarOpen {
+                onShowClipDetailChange?(nil)
+                lastEmittedClipId = nil
+                return
+            }
+            scheduleClipDetailUpdate()
         }
     }
     var selectedIdx: Int = 0 {
@@ -31,6 +40,8 @@ final class ClipsViewModel {
             // TASK-019 — `PopoverWindow`가 별도 NSPanel 호스팅 토글. @Observable stored property 의 didSet 정상 동작.
             if oldValue != pinSidebarOpen {
                 onPinSidebarOpenChange?(pinSidebarOpen)
+                // TASK-039 — PinSidebar 가시 상태 변경은 detail anchor 분기 결정 변수. race 차단 위해 명시 re-schedule.
+                scheduleClipDetailUpdate()
             }
         }
     }
@@ -70,6 +81,8 @@ final class ClipsViewModel {
         }
     }
     private var clipDetailTask: Task<Void, Never>?
+    /// 마지막 emit 한 clip.id 추적 (TASK-039 fix) — schedule 진입 시 clip 변경 검출 → 다른 clip 으로 변경되면 즉시 nil emit (panel hide). 같은 clip frame 변경 만 잔존 정책 적용.
+    private var lastEmittedClipId: UUID?
 
     // MARK: - Dependencies
     private let repository: any ClipRepository
@@ -529,9 +542,7 @@ final class ClipsViewModel {
     /// Pin 사이드 hover 이탈 — 200ms 지연 닫힘
     func pinSidebarHoverExit() {
         // TASK-030 — 클립 상세 sub-panel 떠 있는 동안 사이드바 닫힘 차단. 사용자가 사이드바 → 상세 sub-panel 마우스 이동 시 사이드바가 자동 닫히는 버그 회피.
-        if isDetailPanelOpen {
-            return
-        }
+        if isDetailPanelOpen { return }
         pinHoverActive = false
         scheduleSidebarCloseIfNeeded()
     }
@@ -601,13 +612,25 @@ final class ClipsViewModel {
         clipDetailTask?.cancel()
         clipDetailTask = nil
 
-        // 즉시 현재 detail 닫음 — 사용자가 행 이동 / focus 전환 직후 panel 깜빡임 방지.
-        onShowClipDetailChange?(nil)
+        // TASK-039 — emit 정책:
+        // - 매칭 X (활성 없음 / Provider nil / frame 미게시) → 즉시 nil emit (panel hide).
+        // - 매칭 O + clip 변경 (lastEmittedClipId != active.clip.id) → 즉시 nil emit (hover 이동 시 즉각 사라짐).
+        // - 매칭 O + 같은 clip → 기존 panel 잔존 + 200ms 후 갱신 (깜빡임 차단).
+        let active = activeClipForDetail()
+        let provider = active.map { ClipDetailRegistry.provider(for: $0.clip) } ?? nil
 
-        guard let active = activeClipForDetail() else { return }
-        guard ClipDetailRegistry.provider(for: active.clip) != nil else { return }
-        // frame이 미게시 상태 (.zero) — GeometryReader hook 도착 전이면 잠시 후 frame didSet 으로 다시 호출됨.
-        guard activeRowFrameInPopover != .zero else { return }
+        guard let active,
+              provider != nil,
+              activeRowFrameInPopover != .zero else {
+            onShowClipDetailChange?(nil)
+            lastEmittedClipId = nil
+            return
+        }
+
+        if let lastId = lastEmittedClipId, lastId != active.clip.id {
+            onShowClipDetailChange?(nil)
+            lastEmittedClipId = nil
+        }
 
         let snapshotClipId = active.clip.id
         let snapshotZone = active.zone
@@ -627,20 +650,26 @@ final class ClipsViewModel {
                 rowFrameInPopover: self.activeRowFrameInPopover
             )
             Logger.ui.debug("ClipDetail: emit request — clipId=\(snapshotClipId.uuidString, privacy: .public) zone=\(String(describing: snapshotZone), privacy: .public)")
+            self.lastEmittedClipId = current.clip.id
             self.onShowClipDetailChange?(req)
         }
     }
 
     /// 현재 활성 클립 (focusZone 분기). 경계 검사 — 잘못된 idx 또는 빈 리스트 시 nil.
+    /// `.clip` / `.pin` 외 zone (`.settings` 등) 은 nil 반환 — detail panel 잔존 차단 (TASK-039 fix).
     private func activeClipForDetail() -> (clip: Clip, zone: FocusZone)? {
-        if focusZone == .pin {
-            let pins = pinnedClips
-            guard pinSelectedIdx >= 0, pinSelectedIdx < pins.count else { return nil }
-            return (pins[pinSelectedIdx], .pin)
-        } else {
+        switch focusZone {
+        case .clip:
             let list = visibleClips
             guard selectedIdx >= 0, selectedIdx < list.count else { return nil }
             return (list[selectedIdx], .clip)
+        case .pin:
+            let pins = pinnedClips
+            guard pinSelectedIdx >= 0, pinSelectedIdx < pins.count else { return nil }
+            return (pins[pinSelectedIdx], .pin)
+        default:
+            // `.settings` 등 — detail panel 미진입 (TASK-039 fix). focusZone 변경 시 즉시 nil emit → detail 닫음.
+            return nil
         }
     }
 }

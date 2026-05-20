@@ -54,6 +54,8 @@
 		62F7992F5C66EE8C42F91330 /* ClipListHeightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD70 /* ClipListHeightTests.swift */; };
 		62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */; };
 		62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */; };
+		62F7992F5C66EE8C42F913A1 /* ClipDetailProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCDA1 /* ClipDetailProvidersTests.swift */; };
+		62F7992F5C66EE8C42F913A2 /* ClipMetaFooterFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCDA2 /* ClipMetaFooterFormatTests.swift */; };
 		62F7992F5C66EE8C42F91329 /* ClipsViewModelPinPasteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */; };
 		62F7992F5C66EE8C42F9132A /* ClipRowViewHighlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */; };
 		62F7992F5C66EE8C42F91338 /* PopoverPanelMaskedCornersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10537D5F27411AA8B43FCD81 /* PopoverPanelMaskedCornersTests.swift */; };
@@ -97,6 +99,7 @@
 		B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */; };
 		C027C037DA34A8B9C1F7E801 /* ClipDetailProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */; };
 		C027C037DA34A8B9C1F7E802 /* ClipDetailPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */; };
+		C039C039AB12CD34EF560001 /* ClipMetaFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B039B039AB12CD34EF560001 /* ClipMetaFooterView.swift */; };
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
 		BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */; };
 		BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */; };
@@ -152,6 +155,8 @@
 		10537D5F27411AA8B43FCD70 /* ClipListHeightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipListHeightTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProviderTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelClipDetailTests.swift; sourceTree = "<group>"; };
+		10537D5F27411AA8B43FCDA1 /* ClipDetailProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProvidersTests.swift; sourceTree = "<group>"; };
+		10537D5F27411AA8B43FCDA2 /* ClipMetaFooterFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipMetaFooterFormatTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelPinPasteTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipRowViewHighlightTests.swift; sourceTree = "<group>"; };
 		10537D5F27411AA8B43FCD81 /* PopoverPanelMaskedCornersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelMaskedCornersTests.swift; sourceTree = "<group>"; };
@@ -221,6 +226,7 @@
 		A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarView.swift; sourceTree = "<group>"; };
 		B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProvider.swift; sourceTree = "<group>"; };
 		B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailPanelView.swift; sourceTree = "<group>"; };
+		B039B039AB12CD34EF560001 /* ClipMetaFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipMetaFooterView.swift; sourceTree = "<group>"; };
 		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
 		A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A8DD0387836461CD98892A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -368,6 +374,7 @@
 				A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */,
 				B027B027ABCDEF0123456789 /* ClipDetailProvider.swift */,
 				B027B027ABCDEF0123456790 /* ClipDetailPanelView.swift */,
+				B039B039AB12CD34EF560001 /* ClipMetaFooterView.swift */,
 				65F80FE7237142D5889644C8 /* PlainNSTextField.swift */,
 				68F53E3FEBB345388DD7C99C /* KeyCapView.swift */,
 				B5A52843E961156954C45322 /* PopoverPanel.swift */,
@@ -529,6 +536,8 @@
 				10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */,
 				10537D5F27411AA8B43FCD63 /* ClipDetailProviderTests.swift */,
 				10537D5F27411AA8B43FCD64 /* ClipsViewModelClipDetailTests.swift */,
+				10537D5F27411AA8B43FCDA1 /* ClipDetailProvidersTests.swift */,
+				10537D5F27411AA8B43FCDA2 /* ClipMetaFooterFormatTests.swift */,
 				10537D5F27411AA8B43FCD65 /* ClipsViewModelPinPasteTests.swift */,
 				10537D5F27411AA8B43FCD66 /* ClipRowViewHighlightTests.swift */,
 				10537D5F27411AA8B43FCD70 /* ClipListHeightTests.swift */,
@@ -786,6 +795,7 @@
 				B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */,
 				C027C037DA34A8B9C1F7E801 /* ClipDetailProvider.swift in Sources */,
 				C027C037DA34A8B9C1F7E802 /* ClipDetailPanelView.swift in Sources */,
+				C039C039AB12CD34EF560001 /* ClipMetaFooterView.swift in Sources */,
 				3857B7103C74EC8CA7397168 /* PopoverPanel.swift in Sources */,
 				4AB55E7FE9D73BCA49388FAB /* PrivacyTab.swift in Sources */,
 				835F6FE3B1AA9EA3A1C6DA5B /* SMLoginItemRegistrar.swift in Sources */,
@@ -833,6 +843,8 @@
 				62F7992F5C66EE8C42F91330 /* ClipListHeightTests.swift in Sources */,
 				62F7992F5C66EE8C42F91327 /* ClipDetailProviderTests.swift in Sources */,
 				62F7992F5C66EE8C42F91328 /* ClipsViewModelClipDetailTests.swift in Sources */,
+				62F7992F5C66EE8C42F913A1 /* ClipDetailProvidersTests.swift in Sources */,
+				62F7992F5C66EE8C42F913A2 /* ClipMetaFooterFormatTests.swift in Sources */,
 				62F7992F5C66EE8C42F91329 /* ClipsViewModelPinPasteTests.swift in Sources */,
 				62F7992F5C66EE8C42F9132A /* ClipRowViewHighlightTests.swift in Sources */,
 				62F7992F5C66EE8C42F91338 /* PopoverPanelMaskedCornersTests.swift in Sources */,
