@@ -8,6 +8,9 @@ struct HistoryPopover: View {
     let mode: PopoverInvocationMode
     let onOpenSettings: () -> Void
     let onDismiss: () -> Void
+    /// TASK-037 fix-1 — @AppStorage 로 UserDefaults 추적. SwiftUI 가 KVO 자동 감지 → 슬라이더/체크박스 변경 시 body 재계산 → .frame(maxHeight:) 실시간 반영.
+    @AppStorage("clipsPerPage") private var clipsPerPage: Int = Constants.clipsPerPageDefault
+    @AppStorage("autoFitClipListHeight") private var autoFitClipListHeight: Bool = false
     /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
     /// HistoryPopover는 idx + zone 전달 → Window 측이 hide → restore → sleep → viewModel.paste(at:zone:) 순서 보장.
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
@@ -53,8 +56,9 @@ struct HistoryPopover: View {
             preferencesRow
             KeyboardHintsView(mode: mode, accessibilityGranted: viewModel.accessibilityGranted)
         }
-        .frame(width: DesignTokens.WindowSize.popoverWidth)
+        // TASK-037 fix-12 — `.padding(6).frame(width: 380)` 순서. outer width = popoverWidth (380) 고정 / inner content = popoverWidth - 12 (368). SwiftUI body intrinsic.width = NSPanel.frame.width 매치 — 자식 view 잘림/빈 영역 차단.
         .padding(DesignTokens.Spacing.popoverPadding)
+        .frame(width: DesignTokens.WindowSize.popoverWidth)
         // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 popoverBody root 에 박음 (ScrollView 박으면 검색바/Pin/환경설정/힌트 offset 어긋남).
         // ClipRowView 의 GeometryReader 가 게시하는 frame 이 NSPanel contentView top 기준 (top-down) 이 되어 NSPanel.frame.height 와 정합.
         .popoverClipDetailHook(viewModel: viewModel, activeZone: .clip)
@@ -116,13 +120,23 @@ struct HistoryPopover: View {
                             onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
                             onDelete: { Task { await viewModel.delete(at: idx) } }
                         )
+                        // TASK-037 fix-15b — Equatable conformance + .equatable() → SwiftUI 가 변경된 행만 re-render. 호버 응답 빠름.
+                        .equatable()
                         .id(clip.id)
                     }
                 }
                 // TASK-018 Phase 7 — 검색·Pin·환경설정 행과 동일 좌우 outer inset.
                 .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
             }
-            .frame(maxHeight: DesignTokens.WindowSize.clipListMaxHeight)
+            // TASK-037 fix-2 — `.frame(maxHeight:)` (상한) → `.frame(height:)` (명시 고정).
+            // 상한만 박으면 autoFit OFF + visibleCount 적은 케이스 (예: N=20, 클립 4개) 에서 SwiftUI 가 4행 분만 차지 → 컨테이너 N×rowHeight 안 늘어남.
+            // height 명시 박으면 컨테이너가 항상 N×rowHeight (autoFit OFF) 또는 visibleCount×rowHeight (autoFit ON) 차지.
+            .frame(height: ClipsViewModel.effectiveClipListHeight(
+                visibleCount: visibleClips.count,
+                clipsPerPage: clipsPerPage,
+                autoFit: autoFitClipListHeight,
+                hasPinned: hasPinned
+            ))
             // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.
             .onChange(of: viewModel.pendingScrollToId) { _, newId in
                 guard let id = newId else { return }
@@ -135,22 +149,9 @@ struct HistoryPopover: View {
         }
     }
 
-    // 빈 상태 — popover.jsx L386-406 정합 (84×84 round 컨테이너 + variant 2 SVG 44 + 큰 제목 + 보조)
+    // 빈 상태 — TASK-037 단순화. 라운드 컨테이너 + 트레이 아이콘 제거. 멘트 2종 (제목 + 보조) only.
     private var emptyState: some View {
         VStack(spacing: 0) {
-            ZStack {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.emptyContainer, style: .continuous)
-                    .fill(DesignTokens.Colors.emptyContainerBg)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.emptyContainer, style: .continuous)
-                            .stroke(Color.white.opacity(0.5), lineWidth: 0.5)
-                    )
-                    .frame(width: DesignTokens.Spacing.emptyContainerSize, height: DesignTokens.Spacing.emptyContainerSize)
-                TrayIconView(full: false, size: DesignTokens.Spacing.emptyIconSize)
-                    .foregroundStyle(DesignTokens.Colors.emptyTrayIcon)
-            }
-            .padding(.bottom, DesignTokens.Spacing.emptyContainerToTitle)
-
             Text(String(localized: "empty.title"))
                 .font(DesignTokens.Typography.emptyTitle)
                 .foregroundStyle(DesignTokens.Colors.emptyTitleColor)

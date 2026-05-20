@@ -149,6 +149,8 @@ final class ClipsViewModel {
             clampSelection()
             // TASK-027 — same idx 자리 다른 clip 진입 케이스 (didSet 미발화). 명시 호출.
             scheduleClipDetailUpdate()
+            // TASK-037 — visibleClips 변동 알림. autoFit ON 시 PopoverWindow 가 NSPanel frame 재계산.
+            NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
         } catch {
             Logger.ui.error("ClipsViewModel.reload error: \(error.localizedDescription, privacy: .public)")
         }
@@ -161,6 +163,8 @@ final class ClipsViewModel {
             selectedIdx = 0
             // TASK-027 — selectedIdx 가 이미 0 인 상태에서 = 0 박으면 didSet 미발화. 명시 호출.
             scheduleClipDetailUpdate()
+            // TASK-037 — 검색 결과 변동도 visibleClips 변동. autoFit ON 시 컨테이너 자라남/줄어듦.
+            NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
         } catch {
             Logger.ui.error("ClipsViewModel.performSearch error: \(error.localizedDescription, privacy: .public)")
         }
@@ -240,13 +244,49 @@ final class ClipsViewModel {
         pendingScrollToId = list[newIdx].id
     }
 
-    /// TASK-036 — 페이지 점프 사이즈. `clipListMaxHeight ÷ rowMinHeight` 토큰 기반 정수 (현 276/44 → 6 행). 결정적 — LazyVStack lazy render 비대칭 영향 X.
-    /// 멀티라인 행 섞이면 실제 가시 < 추정값 가능하나 anchor:nil 스크롤 모델 이 cursor 를 가시 영역으로 끌어옴 (FEATURES §3-6).
-    /// TASK-037 후속 — Settings *한 페이지 클립 수 N* 도입 시 본 함수 본문을 `UserDefaults.standard.integer(forKey: ...)` 로 교체 (단일 변경점).
+    /// TASK-036 — 페이지 점프 사이즈. TASK-037 으로 사용자 환경설정 N (UserDefaults `clipsPerPage`) 동적 조회.
+    /// 매 호출 시점 최신값 조회 — 슬라이더 변경 즉시 다음 page jump 부터 반영.
     private func effectivePageSize() -> Int {
-        let listHeight = DesignTokens.WindowSize.clipListMaxHeight
+        let raw = UserDefaults.standard.integer(forKey: "clipsPerPage")
+        return max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, raw))
+    }
+
+    /// TASK-037 — 디스플레이 환경설정 변경 시 NotificationCenter 채널. PopoverWindow 가 구독해서 NSPanel frame 동적 재계산.
+    /// 트리거: (a) SettingsViewModel.setClipsPerPage/setAutoFitClipListHeight 호출 끝 / (b) reload() 끝 (visibleClips 변동 — autoFit ON 시 의미).
+    static let displayLayoutDidChange = Notification.Name("stash.displayLayoutDidChange")
+
+    /// TASK-037 — 클립 리스트 영역 동적 높이 계산 (순수 함수, 인자 명시).
+    /// SwiftUI 가 `@AppStorage` 등으로 추적한 값을 호출처에서 전달해야 body 재계산이 트리거됨.
+    /// 공식: autoFit ON → `rows = max(min(visibleCount, N), min(N, 3))` / OFF → `rows = N`.
+    /// floor=3 룰: autoFit ON 시 컨테이너 최소 3행 보장. 단 N<3 시 N 우선.
+    /// 화면 cap: popover 가 화면 visible 영역 초과 시 cap 적용 (popover top = visible.maxY 까지 박혀 menu bar 바로 아래에 붙음).
+    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool) -> CGFloat {
+        let n = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, clipsPerPage))
         let rowHeight = DesignTokens.Spacing.rowMinHeight
-        return max(1, Int(listHeight / rowHeight))
+        let rowGap = DesignTokens.Spacing.rowGap
+        let rows: Int
+        if autoFit {
+            // floor=3 룰: 최소 3행 보장 (단, N<3 인 경우 N 우선)
+            rows = max(min(visibleCount, n), min(n, Constants.clipListAutoFitFloor))
+        } else {
+            rows = n
+        }
+        let raw = CGFloat(rows) * rowHeight + CGFloat(max(0, rows - 1)) * rowGap
+        // 화면 cap — clipList 외 SwiftUI body overhead (검색바 / 환설정행 / 힌트바 / popoverPadding × 2) 차감.
+        // hasPinned 시 pinRow + margin 추가.
+        let baseOverhead = DesignTokens.Spacing.clipListOverheadBase
+        let pinRowOverhead: CGFloat = hasPinned ? (DesignTokens.Spacing.pinRowHeight + DesignTokens.Spacing.pinRowMarginVert * 2) : 0
+        let totalOverhead = baseOverhead + pinRowOverhead
+        let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
+        let cap = max(rowHeight, screenAvailable)  // 최소 1행 보장
+        return min(raw, cap)
+    }
+
+    /// TASK-037 — UserDefaults 직접 조회 wrapper. SwiftUI 외부 호출용.
+    static func effectiveClipListHeightFromUserDefaults(visibleCount: Int, hasPinned: Bool) -> CGFloat {
+        let n = UserDefaults.standard.integer(forKey: "clipsPerPage")
+        let autoFit = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
+        return effectiveClipListHeight(visibleCount: visibleCount, clipsPerPage: n, autoFit: autoFit, hasPinned: hasPinned)
     }
 
     /// Pin 사이드바 안 hover — pinSelectedIdx 갱신 (TASK-019 fix 2차).

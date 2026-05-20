@@ -34,6 +34,12 @@ final class PopoverWindow {
     /// 마지막 표시 detail 요청 — PinSidebar 사이즈 변경 시 anchor 재계산용 (TASK-027 Phase 5).
     private var lastShownDetailRequest: ClipDetailRequest?
 
+    /// TASK-037 — 디스플레이 환경설정 / visibleClips 변동 시 NSPanel frame 재계산용 NotificationCenter observer 핸들.
+    private var displayLayoutObserver: NSObjectProtocol?
+
+    /// TASK-037 fix-9 — 현재 NSHostingView. fittingSize 측정 위해 보관. rebuildHosting 시 갱신.
+    private var currentHosting: NSHostingView<AnyView>?
+
     /// detail panel 총 width — 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). NSPanel make / setFrame / originX 계산 모두 본 값 사용 (TASK-027 refactor — 3 곳 중복 계산 통합).
     static var clipDetailTotalWidth: CGFloat {
         DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
@@ -91,6 +97,65 @@ final class PopoverWindow {
                 self.hideClipDetailPanel()
             }
         }
+
+        // TASK-037 — 디스플레이 환경설정 / visibleClips 변동 알림 구독 → NSPanel frame 동적 재계산.
+        displayLayoutObserver = NotificationCenter.default.addObserver(
+            forName: ClipsViewModel.displayLayoutDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refreshFrame()
+            }
+        }
+
+    }
+
+    /// TASK-037 fix-13 (fix-15 폐기 후 복원): refreshFrame 본문을 DispatchQueue.main.async 안에 박음.
+    /// 사유: @AppStorage / NotificationCenter 동기 호출 시점에는 SwiftUI body 가 *아직 재계산 안 됨* → fittingSize 옛 값 → 영구 mismatch.
+    /// async tick = SwiftUI render 완료 후 fittingSize 측정. 매 호출마다 큐 박힘 → 순차 처리 (Task cancel 패턴 폐기 — 드래그 중간 변경 skip 인식 차단).
+    private func refreshFrame() {
+        guard panel.isVisible else { return }
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                self?._performRefreshFrame()
+            }
+        }
+    }
+
+    private func _performRefreshFrame() {
+        guard panel.isVisible, let hosting = currentHosting else { return }
+        hosting.invalidateIntrinsicContentSize()
+        hosting.layoutSubtreeIfNeeded()
+        hosting.displayIfNeeded()
+        let fitting = hosting.fittingSize
+
+        let prevTop = panel.frame.origin.y + panel.frame.height
+        let newOriginX: CGFloat
+        let newOriginY: CGFloat
+        switch currentMode {
+        case .method1:
+            newOriginX = panel.frame.origin.x
+            newOriginY = prevTop - fitting.height
+        case .method2, .method3, .none:
+            if let screen = NSScreen.main {
+                let visible = screen.visibleFrame
+                newOriginX = visible.maxX - fitting.width - DesignTokens.WindowSize.popoverInsetBottom
+                newOriginY = visible.minY + DesignTokens.WindowSize.popoverInsetBottom
+            } else {
+                newOriginX = panel.frame.origin.x
+                newOriginY = panel.frame.origin.y
+            }
+        }
+
+        let newFrame = NSRect(x: newOriginX, y: newOriginY, width: fitting.width, height: fitting.height)
+        // animate:false + display:false → displayIfNeeded — SwiftUI body 재계산 + NSPanel frame transition 충돌 차단.
+        panel.setFrame(newFrame, display: false, animate: false)
+        panel.displayIfNeeded()
+        if pinSidebarPanel.isVisible {
+            resizePinSidebarPanel()
+        }
+        Logger.ui.info("PopoverWindow.refreshFrame — fitting=\(Int(fitting.width), privacy: .public)x\(Int(fitting.height), privacy: .public)")
     }
 
     /// TASK-019 fix 2차 — pinnedClips count 변화 시 panel size 재조정 (bottom-aligned 유지).
@@ -393,6 +458,9 @@ final class PopoverWindow {
         // 키 이벤트 핸들러 — 모든 mode 설치.
         installKeyDownHandler(mode: mode)
 
+        // TASK-037 — 디스플레이 환경설정 + visibleClips.count 기반 NSPanel frame 동적 갱신 (open 시점 1회).
+        refreshFrame()
+
         Logger.ui.info("PopoverWindow shown — mode=\(String(describing: mode), privacy: .public)")
     }
 
@@ -485,6 +553,7 @@ final class PopoverWindow {
             },
             anchorOffsetX: mode == .method1 ? currentAnchorOffsetX : nil
         )
-        _ = PopoverPanel.mount(view, in: visualEffectView)
+        // TASK-037 fix-9 — hosting 보관 (fittingSize 측정용).
+        self.currentHosting = PopoverPanel.mount(view, in: visualEffectView)
     }
 }

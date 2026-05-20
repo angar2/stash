@@ -7,11 +7,13 @@ struct SettingsWindow: View {
     @State private var selectedTab: SettingsTab = .general
 
     enum SettingsTab: String, CaseIterable, Identifiable {
-        case general, shortcuts, privacy, about
+        // TASK-037 — `.display` 신규. allCases 순서 = 일반 / 디스플레이 / 단축키 / 개인정보 / 정보 (UX-UI §4-1).
+        case general, display, shortcuts, privacy, about
         var id: String { rawValue }
         var titleKey: String {
             switch self {
             case .general: return "settings.tab.general"
+            case .display: return "settings.tab.display"
             case .shortcuts: return "settings.tab.shortcuts"
             case .privacy: return "settings.tab.privacy"
             case .about: return "settings.tab.about"
@@ -20,6 +22,7 @@ struct SettingsWindow: View {
         var icon: String {
             switch self {
             case .general: return "gearshape"
+            case .display: return "macwindow"
             case .shortcuts: return "keyboard"
             case .privacy: return "lock.shield"
             case .about: return "info.circle"
@@ -35,6 +38,7 @@ struct SettingsWindow: View {
                 Group {
                     switch selectedTab {
                     case .general:    GeneralTab(viewModel: viewModel)
+                    case .display:    DisplayTab(viewModel: viewModel)
                     case .shortcuts:  ShortcutsTab(viewModel: viewModel)
                     case .privacy:    PrivacyTab(viewModel: viewModel)
                     case .about:      AboutTab(viewModel: viewModel)

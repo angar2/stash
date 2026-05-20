@@ -49,6 +49,8 @@ struct PinSidebarView: View {
                                 // (clip.isPinned == true 이므로 ClipRowView 의 X 아이콘 분기 진입 X)
                             }
                         )
+                        // TASK-037 fix-15b — Equatable + .equatable() → 호버 응답 빠름.
+                        .equatable()
                     }
                     if viewModel.pinnedClips.isEmpty {
                         Text(String(localized: "pin.sidebar.empty"))
