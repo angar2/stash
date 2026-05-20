@@ -95,8 +95,6 @@ enum PopoverPanel {
         ve.isEmphasized = true
         ve.wantsLayer = true
         ve.layer?.cornerRadius = DesignTokens.Radius.popoverOuter
-        // TASK-037 fix-11 — 방식 2 우하단 anchor 정합. bottom corners square 박아 popover 바닥/우측이 화면 visible 가장자리에 *완전 붙음* (cornerRadius 12px 만큼 떨어져 보이던 시각 차단).
-        ve.layer?.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         ve.layer?.masksToBounds = true
         ve.layer?.borderWidth = 0.5
         ve.layer?.borderColor = NSColor.black.withAlphaComponent(0.2).cgColor
