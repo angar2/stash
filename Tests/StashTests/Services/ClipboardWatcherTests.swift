@@ -12,12 +12,14 @@ struct ClipboardWatcherTests {
     private func makeWatcher(
         pasteboard: MockPasteboard = MockPasteboard(),
         fileClipService: MockFileClipService = MockFileClipService(),
-        repository: InMemoryClipRepository = InMemoryClipRepository()
+        repository: InMemoryClipRepository = InMemoryClipRepository(),
+        frontmostTracker: FrontmostAppTracking? = nil
     ) -> ClipboardWatcher {
         ClipboardWatcher(
             pasteboard: pasteboard,
             fileClipService: fileClipService,
-            repository: repository
+            repository: repository,
+            frontmostTracker: frontmostTracker
         )
     }
 
@@ -412,6 +414,96 @@ struct ClipboardWatcherTests {
         #expect(clips.count == 1)
         #expect(clips[0].type == .image)  // 메모리 비트맵 분기 정상 동작
     }
+
+    // MARK: - TASK-040 출처 앱 박음 (sourceAppBundleId)
+
+    /// 텍스트 클립 — stub tracker 의 currentBundleId 가 sourceAppBundleId 로 박힘.
+    @Test func tickStoresFrontmostBundleIdForTextClip() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.setString("hello", forType: .string)
+        let repo = InMemoryClipRepository()
+        let tracker = StubFrontmostAppTracker(bundleId: "com.apple.Safari")
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, frontmostTracker: tracker)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].sourceAppBundleId == "com.apple.Safari")
+    }
+
+    /// 메모리 비트맵 (.tiff data) — 동일.
+    @Test func tickStoresFrontmostBundleIdForMemoryBitmapClip() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.availableTypes = [.tiff]
+        pb.dataStore[.tiff] = Data("img".utf8)
+        let repo = InMemoryClipRepository()
+        let tracker = StubFrontmostAppTracker(bundleId: "com.apple.Preview")
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, frontmostTracker: tracker)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].type == .image)
+        #expect(clips[0].sourceAppBundleId == "com.apple.Preview")
+    }
+
+    /// 단일 파일 URL — 동일.
+    @Test func tickStoresFrontmostBundleIdForSingleFileClip() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.fileURLs = [URL(fileURLWithPath: "/tmp/document.pdf")]
+        let repo = InMemoryClipRepository()
+        let tracker = StubFrontmostAppTracker(bundleId: "com.apple.finder")
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, frontmostTracker: tracker)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].type == .file)
+        #expect(clips[0].sourceAppBundleId == "com.apple.finder")
+    }
+
+    /// 다중 파일 URL — 동일.
+    @Test func tickStoresFrontmostBundleIdForMultiFileClip() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.fileURLs = [
+            URL(fileURLWithPath: "/tmp/a.txt"),
+            URL(fileURLWithPath: "/tmp/b.txt"),
+            URL(fileURLWithPath: "/tmp/c.txt")
+        ]
+        let repo = InMemoryClipRepository()
+        let tracker = StubFrontmostAppTracker(bundleId: "com.apple.finder")
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, frontmostTracker: tracker)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].isMultiFile == true)
+        #expect(clips[0].sourceAppBundleId == "com.apple.finder")
+    }
+
+    /// tracker 미주입 (nil) — sourceAppBundleId 가 nil 로 박힘 (fallback 정합).
+    @Test func tickStoresNilSourceAppBundleIdWhenTrackerNotInjected() async throws {
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.setString("hello", forType: .string)
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, frontmostTracker: nil)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].sourceAppBundleId == nil)
+    }
+}
+
+/// TASK-040 — `FrontmostAppTracking` stub. `@MainActor` 격리 + struct 초기화 nonisolated 패턴.
+fileprivate struct StubFrontmostAppTracker: FrontmostAppTracking {
+    let bundleId: String?
+    @MainActor var currentBundleId: String? { bundleId }
 }
 
 /// 다중 파일 임계/실패 테스트용 — actor 캡쳐 안전 메시지 박스. 다른 테스트 파일 노출 X (fileprivate).
