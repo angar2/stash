@@ -1,5 +1,6 @@
 // 적층 카드 아이콘 — icons.jsx TrayIconVariant2 SVG path 100% 정합
 // viewBox 0 0 22 22 — 3 layer rect (top opacity 0.5/0.4 / mid 0.75/0.5 / bottom fill or stroke only)
+// TASK-043 — 수집 비활성 red dot indicator 는 본 view 가 아닌 `StatusItemController` 의 NSView subview overlay 로 처리 (NSStatusItem template image 가 색상을 알파로 평탄화하기 때문).
 import SwiftUI
 
 struct TrayIconView: View {
