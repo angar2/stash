@@ -323,7 +323,7 @@ enum DesignTokens {
         static let clipBody        = Font.system(size: 13, weight: .medium)
         // 클립 본문 (mono — code-like)
         static let clipBodyMono    = Font.system(size: 12.5, weight: .medium, design: .monospaced)
-        // 행 헤더 (Pin 목록 / 환경설정)
+        // 행 헤더 (핀 목록 / 환경설정)
         static let rowHeader       = Font.system(size: 12.5, weight: .medium)
         static let rowHeaderBold   = Font.system(size: 12.5, weight: .semibold)
         // 시간 메타 (tabular-nums)
@@ -432,7 +432,7 @@ enum DesignTokens {
         static let pinSidebarItemPadH:     CGFloat = 10
         static let pinSidebarItemGap:      CGFloat = 8
         // Pin sidebar 동적 height 계산 상수 (TASK-019 fix 2차 ~ 6차 — `PopoverWindow.computePinSidebarHeight`)
-        static let pinSidebarHeaderHeight: CGFloat = 32  // 헤더 ("Pin 목록 · N") 영역 height
+        static let pinSidebarHeaderHeight: CGFloat = 32  // 헤더 ("핀 목록 · N") 영역 height
         static let pinSidebarHeightSafety: CGFloat = 20  // outer padding 위에 추가 안전 여유
         static let pinSidebarHeightBottomMargin: CGFloat = 40  // popoverHeight 와의 최소 간격 (사이드바가 본체보다 항상 작게)
 

@@ -1,5 +1,5 @@
 // Pin 사이드 메뉴 — popover.jsx L539-602 100% 정합 + TASK-019 fix 2차 (ClipRowView 재사용)
-// 220 width / Liquid Glass / "Pin 목록 · N" UPPERCASE 헤더 + 항목은 본체 클립 행과 동일 ClipRowView 형태
+// 220 width / Liquid Glass / "핀 목록 · N" UPPERCASE 헤더 + 항목은 본체 클립 행과 동일 ClipRowView 형태
 import SwiftUI
 
 struct PinSidebarView: View {
@@ -78,7 +78,7 @@ struct PinSidebarView: View {
     }
 
     private var header: some View {
-        // TASK-019 fix 3차 — `textCase(.uppercase)` 제거 (B9). "Pin 목록 · N" 원형 표시.
+        // TASK-019 fix 3차 — `textCase(.uppercase)` 제거 (B9). "핀 목록 · N" 원형 표시.
         Text(String(localized: "pin.sidebar.title") + " · \(viewModel.pinnedClips.count)")
             .font(DesignTokens.Typography.pinSidebarHeader)
             .tracking(0.4)
