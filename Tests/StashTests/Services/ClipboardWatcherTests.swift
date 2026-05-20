@@ -13,13 +13,15 @@ struct ClipboardWatcherTests {
         pasteboard: MockPasteboard = MockPasteboard(),
         fileClipService: MockFileClipService = MockFileClipService(),
         repository: InMemoryClipRepository = InMemoryClipRepository(),
-        frontmostTracker: FrontmostAppTracking? = nil
+        frontmostTracker: FrontmostAppTracking? = nil,
+        enabled: Bool = true
     ) -> ClipboardWatcher {
         ClipboardWatcher(
             pasteboard: pasteboard,
             fileClipService: fileClipService,
             repository: repository,
-            frontmostTracker: frontmostTracker
+            frontmostTracker: frontmostTracker,
+            enabled: enabled
         )
     }
 
@@ -497,6 +499,76 @@ struct ClipboardWatcherTests {
         let clips = try await repo.fetchAll()
         #expect(clips.count == 1)
         #expect(clips[0].sourceAppBundleId == nil)
+    }
+
+    // MARK: - TASK-043 클립보드 수집 토글 — enabled flag
+
+    @Test func tickSkipsBuildClipWhenDisabled() async throws {
+        // 비활성 상태에서 changeCount + body 박혀도 buildClip 진입 X (repo 비어있어야).
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.setString("disabled-text", forType: .string)
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, enabled: false)
+
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.isEmpty)
+    }
+
+    @Test func tickSyncsLastChangeCountWhenDisabled() async throws {
+        // 비활성 중에도 lastChangeCount 정상 동기화 — 활성 복귀 시 *그 다음 변경*부터 캡쳐 (직전 클립 누적 race 차단).
+        let pb = MockPasteboard()
+        pb.changeCount = 10
+        pb.setString("during-disabled", forType: .string)
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, enabled: false)
+
+        // 비활성 상태 tick — buildClip skip 이지만 lastChangeCount 동기화.
+        await watcher.tick()
+        #expect(try await repo.fetchAll().isEmpty)
+
+        // 활성 복귀 — changeCount 동일 (10) 이면 변경 감지 X → 직전 클립 누적 X.
+        await watcher.setEnabled(true)
+        await watcher.tick()
+        #expect(try await repo.fetchAll().isEmpty)
+
+        // changeCount 증가 (사용자가 새 텍스트 ⌘C) → 새 클립만 캡쳐.
+        pb.changeCount = 11
+        pb.setString("after-resume", forType: .string)
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 1)
+        #expect(clips[0].body == "after-resume")
+    }
+
+    @Test func setEnabledRoundTrip() async throws {
+        // setEnabled 라운드트립 — true → false → true → false 각 단계 후 tick 분기 정합.
+        let pb = MockPasteboard()
+        pb.changeCount = 1
+        pb.setString("first", forType: .string)
+        let repo = InMemoryClipRepository()
+        let watcher = makeWatcher(pasteboard: pb, repository: repo, enabled: true)
+
+        // 활성 — 첫 tick 캡쳐.
+        await watcher.tick()
+        #expect(try await repo.fetchAll().count == 1)
+
+        // 비활성 토글.
+        await watcher.setEnabled(false)
+        pb.changeCount = 2
+        pb.setString("during-paused", forType: .string)
+        await watcher.tick()
+        #expect(try await repo.fetchAll().count == 1)  // 비활성 — 추가 X
+
+        // 활성 복귀.
+        await watcher.setEnabled(true)
+        pb.changeCount = 3
+        pb.setString("after-second-resume", forType: .string)
+        await watcher.tick()
+        let clips = try await repo.fetchAll()
+        #expect(clips.count == 2)
+        #expect(clips.first?.body == "after-second-resume")  // 최신 last_used_at DESC 정렬 가정
     }
 }
 
