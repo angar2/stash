@@ -99,10 +99,11 @@ struct HotkeyMonitorTests {
 }
 
 // MARK: - PopoverHotkey enum 단축키 매핑 검증 (TASK-017 리팩토링 회귀 방지)
+// TASK-042 — PopoverHotkeyTests (`Tests/StashTests/Popover/PopoverHotkeyTests.swift`, TASK-024) 와 이름 충돌 회피 위해 `PopoverHotkeyMappingTests` 로 리네임.
 
 @MainActor
-@Suite("PopoverHotkey")
-struct PopoverHotkeyTests {
+@Suite("PopoverHotkey — mapping")
+struct PopoverHotkeyMappingTests {
     /// keyCode + modifiers 매핑이 FEATURES §4 사양과 일치하는지 검증.
     @Test("↑ 단독 keyCode=126 modifiers=[] (TASK-021)")
     func upArrow_matchesPlainUp() {
