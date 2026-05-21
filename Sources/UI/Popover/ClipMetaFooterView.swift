@@ -39,10 +39,12 @@ struct ClipMetaFooterView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: DesignTokens.Spacing.clipMetaHGap)
-            // 복사 시간 (tabular monospace)
+            // 복사 시간 (tabular monospace) — TASK-045: 일시 보존 우선 정책. layoutPriority(1) + fixedSize 로 HStack 압축 단계에서 ideal width (`yyyy-MM-dd HH:mm` 16자) 우선 확보 → 잘림 X 보장. 앱이름은 잔여 폭만 점유하고 초과분 .tail truncate.
             Text(Self.formatTime(clip.createdAt))
                 .font(DesignTokens.Typography.clipMetaTime)
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .layoutPriority(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, DesignTokens.Spacing.clipMetaPadH)
         .padding(.vertical, DesignTokens.Spacing.clipMetaPadV)
