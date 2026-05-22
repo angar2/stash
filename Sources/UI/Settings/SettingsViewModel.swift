@@ -23,6 +23,8 @@ final class SettingsViewModel {
     var clipsPerPage: Int = Constants.clipsPerPageDefault
     /// 클립 리스트 컨테이너 높이 자동 조정 체크박스. ON 시 컨테이너 행 수 = `max(min(visibleCount, N), min(N, 3))`. default false.
     var autoFitClipListHeight: Bool = false
+    /// TASK-052 — popover 하단 `KeyboardHintsView` 표시 여부. default true. OFF 시 힌트바 (상단 Divider 포함) 전체 비표시 + popover height 자동 축소.
+    var hintBarVisible: Bool = true
 
     /// TASK-033 — 환경설정 윈도우 내부 토스트 큐 (popover 토스트와 별개 시스템). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
     let settingsToast: ToastQueue = ToastQueue()
@@ -133,12 +135,26 @@ final class SettingsViewModel {
         Logger.ui.info("autoFitClipListHeight set: \(value, privacy: .public)")
     }
 
+    /// TASK-052 — 단축키 설명 표시 체크박스 토글. UserDefaults 갱신 + state 갱신 + NSPanel frame 재계산 알림.
+    /// `HistoryPopover` 가 `@AppStorage("hintBarVisible")` 로 동일 키 추적 → SwiftUI body 즉시 재계산 (KeyboardHintsView if 분기), `displayLayoutDidChange` notification 으로 `PopoverWindow._performRefreshFrame` 가 fittingSize 재측정 후 NSPanel.setFrame.
+    func setHintBarVisible(_ value: Bool) {
+        hintBarVisible = value
+        UserDefaults.standard.set(value, forKey: "hintBarVisible")
+        NotificationCenter.default.post(name: ClipsViewModel.displayLayoutDidChange, object: nil)
+        Logger.ui.info("hintBarVisible set: \(value, privacy: .public)")
+    }
+
     private func loadDisplayPreferences() {
-        // register defaults 가 StashApp 진입점에서 박혔으므로 integer/bool 조회 시 default 값 (6 / false) 자연 반환.
+        // register defaults 가 StashApp 진입점에서 박혔으므로 integer/bool 조회 시 default 값 (6 / false / true) 자연 반환.
         // 단, 사용자가 잘못된 값 (음수 / 30 초과) 박은 케이스 방어 — clamp.
         let rawN = UserDefaults.standard.integer(forKey: "clipsPerPage")
         clipsPerPage = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, rawN))
         autoFitClipListHeight = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
+        // TASK-052 fix — register defaults 의존 폐기 + `loadAutoPasteEnabled` 패턴 정합 (`object(forKey:) != nil` 분기). default true 는 stored property 초기값 으로 보존 — 사용자가 toggle 한 적 없으면 시각 ON 유지.
+        if UserDefaults.standard.object(forKey: "hintBarVisible") != nil {
+            hintBarVisible = UserDefaults.standard.bool(forKey: "hintBarVisible")
+        }
+        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public)")
     }
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.

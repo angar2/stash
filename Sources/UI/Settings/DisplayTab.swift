@@ -1,4 +1,4 @@
-// 설정 디스플레이 탭 — popover 표시 환경 사용자 제어 (TASK-037). 한 번에 보이는 클립 수 슬라이더 + 높이 자동 조정 체크박스.
+// 설정 디스플레이 탭 — popover 표시 환경 사용자 제어 (TASK-037 / TASK-052). 한 번에 보이는 클립 수 슬라이더 + 높이 자동 조정 체크박스 + 단축키 설명 표시 체크박스.
 import SwiftUI
 
 struct DisplayTab: View {
@@ -9,6 +9,7 @@ struct DisplayTab: View {
             settingsCard {
                 clipsPerPageRow
                 autoFitRow
+                hintBarVisibleRow
             }
         }
     }
@@ -46,12 +47,29 @@ struct DisplayTab: View {
         settingsRow(
             label: String(localized: "settings.display.autoFit.label"),
             hint: String(localized: "settings.display.autoFit.hint"),
-            showDivider: false
+            showDivider: true
         ) {
             customSettingsToggle(
                 isOn: Binding(
                     get: { viewModel.autoFitClipListHeight },
                     set: { viewModel.setAutoFitClipListHeight($0) }
+                ),
+                disabled: false
+            )
+        }
+    }
+
+    /// TASK-052 — 단축키 설명 표시 체크박스. default ON. OFF 시 popover 하단 `KeyboardHintsView` 비표시 + popover height 자동 축소 (`displayLayoutDidChange` notification).
+    private var hintBarVisibleRow: some View {
+        settingsRow(
+            label: String(localized: "settings.display.hintBar.label"),
+            hint: String(localized: "settings.display.hintBar.hint"),
+            showDivider: false
+        ) {
+            customSettingsToggle(
+                isOn: Binding(
+                    get: { viewModel.hintBarVisible },
+                    set: { viewModel.setHintBarVisible($0) }
                 ),
                 disabled: false
             )

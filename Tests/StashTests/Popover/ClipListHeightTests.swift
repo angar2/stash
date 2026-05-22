@@ -17,14 +17,22 @@ struct ClipListHeightTests {
     }
 
     /// 테스트 시작 시 UserDefaults 격리 + 사후 default 복원.
-    private func withDefaults(n: Int, autoFit: Bool, _ body: () -> Void) {
+    /// TASK-052 — hintBarVisible UserDefaults 도 격리. 기본 true (다른 suite parallel 영향 차단).
+    private func withDefaults(n: Int, autoFit: Bool, hintBarVisible: Bool = true, _ body: () -> Void) {
         let prevN = UserDefaults.standard.integer(forKey: "clipsPerPage")
         let prevAutoFit = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
+        let prevHintBarRaw = UserDefaults.standard.object(forKey: "hintBarVisible")
         UserDefaults.standard.set(n, forKey: "clipsPerPage")
         UserDefaults.standard.set(autoFit, forKey: "autoFitClipListHeight")
+        UserDefaults.standard.set(hintBarVisible, forKey: "hintBarVisible")
         body()
         UserDefaults.standard.set(prevN, forKey: "clipsPerPage")
         UserDefaults.standard.set(prevAutoFit, forKey: "autoFitClipListHeight")
+        if let prevRaw = prevHintBarRaw as? Bool {
+            UserDefaults.standard.set(prevRaw, forKey: "hintBarVisible")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "hintBarVisible")
+        }
     }
 
     @Test("autoFit OFF + N=10 + visible=3 → N×rowHeight 고정")
@@ -126,6 +134,46 @@ struct ClipListHeightTests {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 5, hasPinned: false)
             // raw(50) 또는 화면 cap. 본 단위 테스트는 raw(50) 이하 보장 검증.
             #expect(h <= raw(50))
+        }
+    }
+
+    // MARK: - TASK-052 단축키 설명 표시 토글 — 화면 cap 도달 시 clipList 확장
+
+    @Test("TASK-052 — hintBarVisible OFF 시 clipList cap 이 ON 보다 hintBarOverhead 만큼 큼 (raw > cap 케이스)")
+    func hintBarVisible_offExpandsClipListCap() {
+        // raw > cap 강제 — N=50 (max) 으로 raw 가 충분히 크게 박음 (50 × rowHeight + 49 × rowGap > 모든 모니터 가용 높이).
+        let n = Constants.clipsPerPageMax
+        let hOn = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: true)
+        let hOff = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: false)
+        // 두 값 모두 cap 적용 — 차이 = hintBarOverhead. raw 가 cap 초과 보장이라 ON/OFF 둘 다 cap 박힘.
+        #expect(hOff - hOn == DesignTokens.Spacing.hintBarOverhead)
+    }
+
+    @Test("TASK-052 — hintBarVisible 무관 raw < cap 케이스 (N=3, 작은 N) 동일 height")
+    func hintBarVisible_smallNDoesNotChange() {
+        // N=3 이면 raw(3) = 3 × rowHeight + 2 × rowGap — 일반 모니터 가용 높이 미만. 둘 다 raw 반환 → 동일.
+        let hOn = ClipsViewModel.effectiveClipListHeight(visibleCount: 3, clipsPerPage: 3, autoFit: false, hasPinned: false, hintBarVisible: true)
+        let hOff = ClipsViewModel.effectiveClipListHeight(visibleCount: 3, clipsPerPage: 3, autoFit: false, hasPinned: false, hintBarVisible: false)
+        #expect(hOn == hOff)
+        #expect(hOn == raw(3))
+    }
+
+    @Test("TASK-052 — effectiveClipListHeightFromUserDefaults — hintBarVisible UserDefaults 조회 (default true)")
+    func hintBarVisible_userDefaultsDefault() {
+        // hintBarVisible UserDefaults 키 제거 → default true 적용. effectiveClipListHeightFromUserDefaults 가 effectiveClipListHeight(... hintBarVisible: true) 호출과 동등.
+        let prevRaw = UserDefaults.standard.object(forKey: "hintBarVisible")
+        UserDefaults.standard.removeObject(forKey: "hintBarVisible")
+        defer {
+            if let prev = prevRaw as? Bool {
+                UserDefaults.standard.set(prev, forKey: "hintBarVisible")
+            }
+        }
+        withDefaults(n: Constants.clipsPerPageMax, autoFit: false, hintBarVisible: true) {
+            // 격리 helper 가 set true 박지만 직접 removeObject 후 호출
+            UserDefaults.standard.removeObject(forKey: "hintBarVisible")
+            let hFromDefaults = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: Constants.clipsPerPageMax, hasPinned: false)
+            let hExplicitOn = ClipsViewModel.effectiveClipListHeight(visibleCount: Constants.clipsPerPageMax, clipsPerPage: Constants.clipsPerPageMax, autoFit: false, hasPinned: false, hintBarVisible: true)
+            #expect(hFromDefaults == hExplicitOn)
         }
     }
 }

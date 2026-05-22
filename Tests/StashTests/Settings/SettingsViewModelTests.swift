@@ -13,12 +13,14 @@ struct SettingsViewModelTests {
         UserDefaults.standard.removeObject(forKey: "pasteMode")
         UserDefaults.standard.removeObject(forKey: "autoPasteEnabled")
         UserDefaults.standard.removeObject(forKey: "blockedAppBundleIds")
-        // TASK-037 — 디스플레이 환경설정 키 클린 + register defaults 재적용 (테스트 격리).
+        // TASK-037 / TASK-052 — 디스플레이 환경설정 키 클린 + register defaults 재적용 (테스트 격리).
         UserDefaults.standard.removeObject(forKey: "clipsPerPage")
         UserDefaults.standard.removeObject(forKey: "autoFitClipListHeight")
+        UserDefaults.standard.removeObject(forKey: "hintBarVisible")
         UserDefaults.standard.register(defaults: [
             "clipsPerPage": Constants.clipsPerPageDefault,
-            "autoFitClipListHeight": false
+            "autoFitClipListHeight": false,
+            "hintBarVisible": true
         ])
         let vm = SettingsViewModel(loginItemService: svc)
         vm.accessibilityGranted = accessibilityGranted
@@ -180,4 +182,42 @@ struct SettingsViewModelTests {
         let vm2 = SettingsViewModel(loginItemService: svc2)
         #expect(vm2.autoFitClipListHeight == true)
     }
+
+    // MARK: - TASK-052 단축키 설명 표시 토글
+
+    @Test("TASK-052 — hintBarVisible 기본값 true (register defaults 의존)")
+    func hintBarVisible_defaultIsTrue() {
+        let (vm, _) = makeViewModel()
+        #expect(vm.hintBarVisible == true)
+    }
+
+    @Test("TASK-052 — setHintBarVisible(false) → state + UserDefaults 갱신")
+    func hintBarVisible_setFalse() {
+        let (vm, _) = makeViewModel()
+        vm.setHintBarVisible(false)
+        #expect(vm.hintBarVisible == false)
+        #expect(UserDefaults.standard.bool(forKey: "hintBarVisible") == false)
+    }
+
+    @Test("TASK-052 — setHintBarVisible(true) 복원 → state + UserDefaults 갱신")
+    func hintBarVisible_setTrue() {
+        let (vm, _) = makeViewModel()
+        vm.setHintBarVisible(false)
+        vm.setHintBarVisible(true)
+        #expect(vm.hintBarVisible == true)
+        #expect(UserDefaults.standard.bool(forKey: "hintBarVisible") == true)
+    }
+
+    @Test("TASK-052 — hintBarVisible 라운드트립 — UserDefaults 저장 후 새 인스턴스에서 복원")
+    func hintBarVisible_roundtrip() {
+        let (vm1, _) = makeViewModel()
+        vm1.setHintBarVisible(false)
+        #expect(UserDefaults.standard.bool(forKey: "hintBarVisible") == false)
+
+        let reg2 = MockLoginItemRegistrar()
+        let svc2 = LoginItemService(registrar: reg2)
+        let vm2 = SettingsViewModel(loginItemService: svc2)
+        #expect(vm2.hintBarVisible == false)
+    }
+    // 비고 (TASK-052): notification (displayLayoutDidChange) 발행 자체는 별도 단위 검증 X — 인접 setter (`setAutoFitClipListHeight` / `setClipsPerPage`) 도 동일 notification 발행하지만 발행 횟수 자체는 검증 X (NotificationCenter 격리 비용 + 다른 suite 와의 cross-talk). 발행 흐름은 수동 시나리오 (popover open 상태 토글 → height 즉시 변동) 가 단일 진실 가드.
 }

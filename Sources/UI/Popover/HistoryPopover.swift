@@ -11,6 +11,8 @@ struct HistoryPopover: View {
     /// TASK-037 fix-1 — @AppStorage 로 UserDefaults 추적. SwiftUI 가 KVO 자동 감지 → 슬라이더/체크박스 변경 시 body 재계산 → .frame(maxHeight:) 실시간 반영.
     @AppStorage("clipsPerPage") private var clipsPerPage: Int = Constants.clipsPerPageDefault
     @AppStorage("autoFitClipListHeight") private var autoFitClipListHeight: Bool = false
+    /// TASK-052 — 단축키 설명 표시 토글. OFF 시 `KeyboardHintsView` if 분기 false → 전체 비표시 + popover height 자동 축소.
+    @AppStorage("hintBarVisible") private var hintBarVisible: Bool = true
     /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
     /// HistoryPopover는 idx + zone 전달 → Window 측이 hide → restore → sleep → viewModel.paste(at:zone:) 순서 보장.
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
@@ -54,7 +56,10 @@ struct HistoryPopover: View {
                 pinRow
             }
             preferencesRow
-            KeyboardHintsView(mode: mode, accessibilityGranted: viewModel.accessibilityGranted)
+            // TASK-052 — 단축키 설명 표시 토글 OFF 시 KeyboardHintsView 전체 (상단 Divider 포함) 비표시. SettingsViewModel.setHintBarVisible 가 발행하는 displayLayoutDidChange notification 으로 PopoverWindow._performRefreshFrame 가 fittingSize 재측정 → NSPanel.setFrame 으로 popover height 자동 축소.
+            if hintBarVisible {
+                KeyboardHintsView(mode: mode, accessibilityGranted: viewModel.accessibilityGranted)
+            }
         }
         // TASK-037 fix-12 — `.padding(6).frame(width: 380)` 순서. outer width = popoverWidth (380) 고정 / inner content = popoverWidth - 12 (368). SwiftUI body intrinsic.width = NSPanel.frame.width 매치 — 자식 view 잘림/빈 영역 차단.
         .padding(DesignTokens.Spacing.popoverPadding)
@@ -135,7 +140,8 @@ struct HistoryPopover: View {
                 visibleCount: visibleClips.count,
                 clipsPerPage: clipsPerPage,
                 autoFit: autoFitClipListHeight,
-                hasPinned: hasPinned
+                hasPinned: hasPinned,
+                hintBarVisible: hintBarVisible
             ))
             // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.
             .onChange(of: viewModel.pendingScrollToId) { _, newId in
