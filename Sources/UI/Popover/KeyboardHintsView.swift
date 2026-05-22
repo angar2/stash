@@ -32,19 +32,19 @@ struct KeyboardHintsView: View {
         }
     }
 
-    private var hints: [Hint] {
-        // TASK-033 fix-2 — 변경 가능 5종 (copy / paste / deleteOne / deleteAll / pinToggle) 은 PopoverShortcutStore 동적 조회. 사용자가 환경설정 단축키 변경 시 popover 재오픈 또는 view rebuild 시 즉시 반영. ↑/↓ · ⌘↑/⌘↓ · ⌘⇧↑/⌘⇧↓ 는 hardcoded (변경 불가).
+    /// TASK-050 — 단위 테스트 (`KeyboardHintsViewTests`) 접근을 위해 internal 노출. SwiftUI 외부 호출처 없음 (자체 body 안에서만 사용).
+    var hints: [Hint] {
+        // TASK-033 fix-2 — 변경 가능 5종 (copy / paste / deleteOne / deleteAll / pinToggle) 은 PopoverShortcutStore 동적 조회. 사용자가 환경설정 단축키 변경 시 popover 재오픈 또는 view rebuild 시 즉시 반영. ↑↓ · ⌘↑↓ · ⌘⇧↑↓ 는 hardcoded (변경 불가).
         // TASK-024 — ⌘V 행만 `enabled = accessibilityGranted` 분기. 권한 X 시 회색조.
-        // TASK-036 — `page` (⌘↑/⌘↓ 페이지 점프) + `jumpEdge` (⌘⇧↑/⌘⇧↓ 양 끝 점프) hint 분리. 학습 흐름: 단독 → 페이지 → 양끝.
+        // TASK-050 — 이동 단축키 3 hint (move/page/jumpEdge) → 1 통합 cell. 키캡 안 화살표 2 문자 동시 (↑↓ / ⌘↑↓ / ⌘⇧↑↓) + 키캡 그룹 spacing 분리 (구분자 없음) + 라벨 단일화 "이동". `hint.page` / `hint.jumpToEdge` i18n 키 폐기 (Phase 2 xcstrings 정리).
+        // TASK-050 — pin 힌트 순서 paste 다음 / del 앞으로 재배치 (클립 조작 흐름: 행 선택 → 복사/붙여넣기/고정 → 삭제 학습 일관성).
         return [
-            Hint(id: "move", parts: [.keys(["↑", "↓"])], label: String(localized: "hint.move"), enabled: true),
-            Hint(id: "page", parts: [.keys(["⌘↑", "⌘↓"])], label: String(localized: "hint.page"), enabled: true),
-            Hint(id: "jumpEdge", parts: [.keys(["⌘⇧↑", "⌘⇧↓"])], label: String(localized: "hint.jumpToEdge"), enabled: true),
+            Hint(id: "move", parts: [.keys(["↑↓"]), .keys(["⌘↑↓"]), .keys(["⌘⇧↑↓"])], label: String(localized: "hint.move"), enabled: true),
             Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: String(localized: "hint.copy"), enabled: true),
             Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
+            Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: String(localized: "hint.pin"), enabled: true),
             Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: String(localized: "hint.delete"), enabled: true),
-            Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: String(localized: "hint.deleteAll"), enabled: true),
-            Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: String(localized: "hint.pin"), enabled: true)
+            Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: String(localized: "hint.deleteAll"), enabled: true)
         ]
     }
 
@@ -93,7 +93,8 @@ struct KeyboardHintsView: View {
             )
     }
 
-    private struct Hint {
+    /// TASK-050 — 단위 테스트 접근을 위해 internal 노출.
+    struct Hint {
         let id: String
         let parts: [Part]
         let label: String
@@ -101,7 +102,8 @@ struct KeyboardHintsView: View {
         let enabled: Bool
     }
 
-    private enum Part {
+    /// TASK-050 — 단위 테스트 접근을 위해 internal 노출.
+    enum Part {
         case keys([String])
         case or
     }
