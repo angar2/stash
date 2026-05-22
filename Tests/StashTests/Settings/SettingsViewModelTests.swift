@@ -56,6 +56,61 @@ struct SettingsViewModelTests {
         #expect(vm.autoPasteEnabled == prev)
     }
 
+    // MARK: - TASK-047 권한 변동 시 autoPasteEnabled 대칭 정합
+
+    @Test("TASK-047 — 권한 X→O 회복 시 autoPasteEnabled 자동 ON + UserDefaults 저장")
+    func permissionGranted_autoPasteAutoOn() {
+        let (vm, _) = makeViewModel(accessibilityGranted: false)
+        vm.autoPasteEnabled = false
+        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+
+        vm.updateAccessibilityGranted(true)
+
+        #expect(vm.accessibilityGranted == true)
+        #expect(vm.autoPasteEnabled == true)
+        #expect(UserDefaults.standard.bool(forKey: "autoPasteEnabled") == true)
+    }
+
+    @Test("TASK-047 — 권한 X→O 회복 시 autoPasteEnabled 이미 true 면 멱등 (UserDefaults set skip)")
+    func permissionGranted_autoPasteAlreadyOn_idempotent() {
+        let (vm, _) = makeViewModel(accessibilityGranted: false)
+        vm.autoPasteEnabled = true
+        // 멱등 가드 검증 — UserDefaults 명시 false 박음 → set skip 되어야 false 유지. 가드 깨지면 true 로 덮어쓰여짐.
+        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+
+        vm.updateAccessibilityGranted(true)
+
+        #expect(vm.accessibilityGranted == true)
+        #expect(vm.autoPasteEnabled == true)
+        #expect(UserDefaults.standard.bool(forKey: "autoPasteEnabled") == false)
+    }
+
+    @Test("TASK-047 — 권한 O→X 회수 시 autoPasteEnabled 자동 OFF + UserDefaults 저장")
+    func permissionRevoked_autoPasteForcedOff() {
+        let (vm, _) = makeViewModel(accessibilityGranted: true)
+        vm.autoPasteEnabled = true
+        UserDefaults.standard.set(true, forKey: "autoPasteEnabled")
+
+        vm.updateAccessibilityGranted(false)
+
+        #expect(vm.accessibilityGranted == false)
+        #expect(vm.autoPasteEnabled == false)
+        #expect(UserDefaults.standard.bool(forKey: "autoPasteEnabled") == false)
+    }
+
+    @Test("TASK-047 — 권한 동일값 호출은 멱등 (prev == granted 가드)")
+    func permissionSameValue_noop() {
+        let (vm, _) = makeViewModel(accessibilityGranted: true)
+        vm.autoPasteEnabled = true
+        UserDefaults.standard.set(true, forKey: "autoPasteEnabled")
+
+        vm.updateAccessibilityGranted(true)
+
+        #expect(vm.accessibilityGranted == true)
+        #expect(vm.autoPasteEnabled == true)
+        #expect(UserDefaults.standard.bool(forKey: "autoPasteEnabled") == true)
+    }
+
     @Test("저장하지 않을 앱 추가/삭제 — 중복 방지")
     func blockedAppManagement() {
         let (vm, _) = makeViewModel()
