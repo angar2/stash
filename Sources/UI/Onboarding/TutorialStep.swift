@@ -1,6 +1,6 @@
 // Onboarding 3단계 — onboarding-toast.jsx OB_Tutorial L144-202 정합
-// 헤더 + 2 카드 (메뉴바 클릭 / ⌘ double-tap) + 완료 버튼.
-// TASK-018 Phase 9 — 새 방식 3 (⌘ hold) v1.0 보류. onboarding 안내에서 제거.
+// 헤더 + 1 카드 (메뉴바 클릭) + 완료 버튼.
+// TASK-018 Phase 9 — 방식 3 (⌘ hold) v1.0 보류 / TASK-046 — ⌘ double-tap 트리거 폐기 (방식 2 popover 자체는 유지 — 트리거 = ⌘⇧V SPM). ⌘ double-tap 표기 카드만 삭제. 방식 2 SPM 단축키 안내 카드 신규 + 디자인 정합은 BACKLOG *온보딩 전체 개편* 별도 task 위임.
 import SwiftUI
 
 struct TutorialStep: View {
@@ -20,17 +20,12 @@ struct TutorialStep: View {
             }
             .padding(.bottom, 22)
 
-            // 2 카드 — 방식 1 (메뉴바 클릭) / 방식 2 (⌘ double-tap). 방식 3 (⌘ hold) v1.0 보류 (TASK-018 Phase 9).
+            // 1 카드 — 방식 1 (메뉴바 클릭). ⌘ double-tap 표기 카드 삭제 (TASK-046 — 방식 2 트리거가 ⌘⇧V SPM 으로 변경됨에 따라 표기 정합 필요. 카드 신규는 BACKLOG 온보딩 개편 task 위임) / 방식 3 (⌘ hold) v1.0 보류 (TASK-018 Phase 9).
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
                     keys: String(localized: "onboarding.tutorial.method1.keys"),
                     title: String(localized: "onboarding.tutorial.method1.title"),
                     desc:  String(localized: "onboarding.tutorial.method1.detail")
-                )
-                tutorialCard(
-                    keys: String(localized: "onboarding.tutorial.method2.keys"),
-                    title: String(localized: "onboarding.tutorial.method2.title"),
-                    desc:  String(localized: "onboarding.tutorial.method2.detail")
                 )
             }
             .padding(.bottom, 22)

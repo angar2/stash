@@ -1,6 +1,10 @@
 // 단축키 힌트바 — popover.jsx L165-207 100% 정합 (TASK-033 fix-2 — PopoverShortcutStore 동적 조회로 사용자 변경 단축키 즉시 반영)
 import SwiftUI
 
+// PopoverInvocationMode — popover 호출 진입 모드 분기 (popover form 단위 분기).
+// .method1 = 메뉴바 클릭 popover form (NSStatusItem 좌클릭, 메뉴바 아이콘 아래 앵커).
+// .method2 = 키보드 단축키 진입 popover form (활성 화면 우하단). 트리거 진입점 = ⌘⇧V SPM (Carbon RegisterEventHotKey, Accessibility 권한 무관, default `⌘⇧V`, ShortcutsTab Recorder 변경 가능). 이전 ⌘ double-tap 트리거는 TASK-046 에서 폐기 — 코드 분기/명명은 처음부터 *키보드 단축키 진입 form* 의미라 트리거 변경에도 그대로 유지.
+// .method3 = ⌘ hold popover form (TASK-018 Phase 9 v1.0 보류 / 호출 사이트 미연결). 코드 분기는 미래 부활 가능 유지.
 enum PopoverInvocationMode: Sendable {
     case method1
     case method2
