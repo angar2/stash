@@ -82,22 +82,58 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.copy.popoverShortcutID == .copy)
     }
 
-    // MARK: - TASK-025: 검색바 always-active 정책 회귀 가드
+    // MARK: - TASK-051: .confirm Enter 분기 매칭
 
-    @Test("TASK-025 — .activateSearch enum 제거 가드: Enter (keyCode=36) 단독 매칭 0건")
-    func enterKeyMatchesNoHotkey() {
+    @Test("TASK-051 — .confirm 매칭: 일반 Return (keyCode=36) 단독 true")
+    func confirmMatchesPlainReturn() {
         let event = makeKeyEvent(keyCode: 36, modifiers: [])
-        let matched = PopoverHotkey.allCases.contains { $0.matches(event: event) }
-        #expect(matched == false)
+        #expect(PopoverHotkey.confirm.matches(event: event) == true)
     }
 
-    @Test("TASK-042 정정 — PopoverHotkey.allCases.count == 13 (TASK-036 페이지/양끝 점프 4 case 합산 후 정합)")
-    func allCasesCountIsThirteen() {
-        // TASK-025 신설 시점: Enter 폐기 후 10 case.
-        // TASK-036 추가: pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast 4 case → 14 가 아닌 13 인 이유는 TASK-024 ⌘+C/.copy 도입 시 +1 / TASK-021 cursor 숫자 alias 2 case 폐기 / TASK-025 .activateSearch 1 case 폐기 종합 결과.
-        // 현재 enum: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / escape — 13 case.
-        #expect(PopoverHotkey.allCases.count == 13)
+    @Test("TASK-051 — .confirm 매칭: Numpad Enter (keyCode=76) 단독 true (일반 Return 과 동시 매칭)")
+    func confirmMatchesNumpadEnter() {
+        let event = makeKeyEvent(keyCode: 76, modifiers: [])
+        #expect(PopoverHotkey.confirm.matches(event: event) == true)
     }
+
+    @Test("TASK-051 — .confirm 비매칭: ⌘+Return false (modifier 조합 X)")
+    func confirmDoesNotMatchCommandReturn() {
+        let event = makeKeyEvent(keyCode: 36, modifiers: [.command])
+        #expect(PopoverHotkey.confirm.matches(event: event) == false)
+    }
+
+    @Test("TASK-051 — .confirm 비매칭: ⇧+Return false (modifier 조합 X)")
+    func confirmDoesNotMatchShiftReturn() {
+        let event = makeKeyEvent(keyCode: 36, modifiers: [.shift])
+        #expect(PopoverHotkey.confirm.matches(event: event) == false)
+    }
+
+    @Test("TASK-051 — .confirm 비매칭: Space (keyCode=49) 단독 false (다른 키)")
+    func confirmDoesNotMatchSpace() {
+        let event = makeKeyEvent(keyCode: 49, modifiers: [])
+        #expect(PopoverHotkey.confirm.matches(event: event) == false)
+    }
+
+    @Test("TASK-051 — .confirm 정합: popoverShortcutID nil (변경 불가) / keyCode 36 primary / modifiers []")
+    func confirmEnumProperties() {
+        #expect(PopoverHotkey.confirm.popoverShortcutID == nil)
+        #expect(PopoverHotkey.confirm.keyCode == 36)
+        #expect(PopoverHotkey.confirm.modifiers == [])
+    }
+
+    @Test("TASK-051 — PopoverHotkey.allCases 에 .confirm 포함")
+    func allCasesContainsConfirm() {
+        #expect(PopoverHotkey.allCases.contains(.confirm))
+    }
+
+    @Test("TASK-051 — PopoverHotkey.allCases.count == 14 (TASK-036 13 case 합산 + TASK-051 .confirm 신규)")
+    func allCasesCountIsFourteen() {
+        // TASK-025 시점 10 case → TASK-036 +4 (pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast) → TASK-051 +1 (.confirm).
+        // 현재 enum 14 case: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / confirm / escape.
+        #expect(PopoverHotkey.allCases.count == 14)
+    }
+
+    // MARK: - TASK-025: 검색바 always-active 정책 회귀 가드
 
     @Test("TASK-025 — .escape matches: ESC 단독 true / ESC+⌘ false / ESC+⌥ false")
     func escapeMatching() {

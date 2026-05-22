@@ -20,6 +20,7 @@ enum PopoverHotkey: CaseIterable {
     case deleteAll              // ⌥+⌘+⌫ default (TASK-033 fix-2 — .deleteAll)
     case copy                   // ⌘+C default (TASK-033 fix-2 — .copy. 항상 .copyBack 호출, 권한 무관 활성)
     case paste                  // ⌘+V default (TASK-033 fix-2 — .paste. Accessibility 권한 게이트 조건부 활성)
+    case confirm                // Enter 단독 (TASK-051, 변경 불가 — 일반 Return keyCode 36 + Numpad Enter keyCode 76 동시 매칭. autoPasteEnabled 분기 paste/copy 라우팅. IME marked text 시 monitor 가 forward)
     case escape                 // ESC 단독 (변경 불가 — macOS 표준 닫기/취소)
 
     /// TASK-033 fix-2 — 변경 가능 단축키의 PopoverShortcutStore ID 매핑. 변경 불가 (방향키/ESC/⌘+방향키/⌘+⇧+방향키) 는 nil 반환 (hardcoded keyCode/modifiers 사용).
@@ -31,15 +32,17 @@ enum PopoverHotkey: CaseIterable {
         case .togglePinSidebar: return .pinSidebarToggle
         case .deleteOne: return .deleteOne
         case .deleteAll: return .deleteAll
-        case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .escape: return nil
+        case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .confirm, .escape: return nil
         }
     }
 
     /// 변경 불가 단축키만 사용하는 hardcoded keyCode (NSEvent.keyCode raw 값).
+    /// TASK-051 — `.confirm` 은 일반 Return 36 + Numpad Enter 76 둘 다 매칭하므로 본 프로퍼티는 *primary* (36) 반환. matches(event:) 분기에서 76 도 함께 검사.
     var keyCode: UInt16 {
         switch self {
         case .moveSelectionUp, .pageUp, .moveSelectionToFirst: return 126        // ↑ (단독 / ⌘+↑ / ⌘+⇧+↑)
         case .moveSelectionDown, .pageDown, .moveSelectionToLast: return 125     // ↓ (단독 / ⌘+↓ / ⌘+⇧+↓)
+        case .confirm: return 36                                                 // Return (primary — matches(event:) 가 Numpad 76 도 함께 검사)
         case .escape: return 53                                                  // ESC
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0  // PopoverShortcutStore 동적 조회
         }
@@ -48,7 +51,7 @@ enum PopoverHotkey: CaseIterable {
     /// 변경 불가 단축키만 사용하는 hardcoded modifiers.
     var modifiers: NSEvent.ModifierFlags {
         switch self {
-        case .moveSelectionUp, .moveSelectionDown, .escape: return []
+        case .moveSelectionUp, .moveSelectionDown, .confirm, .escape: return []
         case .pageUp, .pageDown: return [.command]                              // TASK-036 — ⌘+↑/⌘+↓ 페이지 점프
         case .moveSelectionToFirst, .moveSelectionToLast: return [.command, .shift]  // TASK-036 — ⌘+⇧+↑/⌘+⇧+↓ 양 끝 점프
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return []  // PopoverShortcutStore 동적 조회
@@ -56,14 +59,20 @@ enum PopoverHotkey: CaseIterable {
     }
 
     /// event 매칭. 변경 가능 단축키 → PopoverShortcutStore 동적 조회. 변경 불가 → hardcoded.
+    /// TASK-051 — `.confirm` 만 keyCode 2종 (일반 Return 36 + Numpad Enter 76) 동시 매칭 분기. 다른 case 는 단일 keyCode 패턴 유지.
     func matches(event: NSEvent) -> Bool {
         if let id = popoverShortcutID {
             // PopoverShortcutStore 조회 → 사용자 변경값 또는 default 반환. nil 이면 매칭 X.
             guard let shortcut = PopoverShortcutStore.get(id) else { return false }
             return shortcut.matches(event: event)
         }
-        // 변경 불가 (방향키/ESC) — hardcoded
         let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
+        // TASK-051 — `.confirm` 은 일반 Return (36) + Numpad Enter (76) 둘 다 매칭.
+        if self == .confirm {
+            guard event.keyCode == 36 || event.keyCode == 76 else { return false }
+            return event.modifierFlags.intersection(meaningful) == modifiers
+        }
+        // 변경 불가 (방향키/ESC) — hardcoded 단일 keyCode
         guard event.keyCode == keyCode else { return false }
         return event.modifierFlags.intersection(meaningful) == modifiers
     }
@@ -288,6 +297,26 @@ enum PopoverPanel {
                 Task { @MainActor in await handleClipPaste(idx, zone) }
             }
             return true
+        case .confirm:
+            // TASK-051 — Enter 키 (일반 36 + Numpad 76) autoPasteEnabled 분기 라우팅.
+            // autoPasteEnabled = true → handleClipPaste (⌘V 와 동일 흐름) / false → handleClipCopy (⌘C 와 동일 흐름).
+            // 권한 X 정합: SettingsViewModel.updateAccessibilityGranted O→X 회수 시 autoPasteEnabled 강제 OFF — 자연스러운 copy 폴백.
+            // 안전망: handleClipPaste 경로의 ClipsViewModel.paste 가 effectiveMode 매트릭스로 권한 X 시 .copyBack 자동 폴백.
+            // IME marked text 보호 가드는 installPopoverKeyEventMonitor 가 매칭 루프 직전 처리.
+            do {
+                let zone = viewModel.focusZone
+                let idx = viewModel.activeIdx
+                let auto = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+                Logger.ui.debug("Enter dispatched — autoPasteEnabled=\(auto, privacy: .public) zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public)")
+                Task { @MainActor in
+                    if auto {
+                        await handleClipPaste(idx, zone)
+                    } else {
+                        await handleClipCopy(idx, zone)
+                    }
+                }
+            }
+            return true
         case .escape:
             // TASK-025 — 2-tier 단순화. 검색어 clear 분기 폐기 (검색 활성 단계 개념 제거).
             // 핀 사이드바 열림 → 사이드바만 닫기 / 그 외 → popover dismiss.
@@ -315,6 +344,18 @@ enum PopoverPanel {
     ) -> Any? {
         return NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak panel, weak viewModel] event in
             guard let panel, let viewModel, event.window === panel else { return event }
+            // TASK-051 — IME marked text 가드. 검색바 NSTextField first responder 의 field editor (NSTextView) 에
+            // marked text (한글/일본어/중국어 IME 변환 중간 상태) 가 있을 때 Enter 누르면 *변환 확정* 의도이므로
+            // confirm dispatch 차단 + NSTextView forward. monitor 가 NSResponder chain 전 단계에서 발화하므로
+            // NSTextInputContext.handleEvent (IME 처리) 전에 가드 박아야 정확.
+            if event.keyCode == 36 || event.keyCode == 76 {
+                if let textField = PopoverPanel.findFirstTextField(in: panel.contentView),
+                   let editor = textField.currentEditor() as? NSTextView,
+                   editor.hasMarkedText() {
+                    Logger.ui.debug("Enter forwarded — IME marked text detected (TASK-051)")
+                    return event
+                }
+            }
             // PopoverHotkey 매칭 가로채 dispatch.
             for hotkey in PopoverHotkey.allCases where hotkey.matches(event: event) {
                 let handled = Self.dispatch(
