@@ -164,28 +164,22 @@ struct StashApp: App {
             popoverWindow: popover
         )
 
-        // ⑨ HotkeyMonitor callback 연결 — 새 방식 2 (⌘ double-tap) 진입만 연결.
-        // TASK-018 Phase 9 — 새 방식 3 (⌘ hold) v1.0 *보류*. 사유: (a) 일반 ⌘+key 단축키 사용 중 의도 안 한 popover 오트리거 사용성 저해, (b) 방식 1/2 popover 열린 상태에서 단축키 입력 시 방식 3 진입으로 전환되어 사용성 저해. 코드 분기(`PopoverWindow.mode == .method3`)는 유지 (미래 부활 가능). onHoldStart/onHoldEnd 콜백 미연결 = 호출 사이트 X.
+        // ⑨ HotkeyMonitor callback 연결 — TASK-018 Phase 9 ⌘ hold *v1.0 보류* (onHoldStart/onHoldEnd 미연결). TASK-046 — ⌘ double-tap 트리거 폐기로 `onDoubleTap` 콜백 삭제. 방식 2 popover 호출 자체는 유지 — 트리거는 ⑨-2 SPM 단축키 (default `⌘⇧V`) 가 담당.
+        // ⌘ hold 보류 사유: (a) 일반 ⌘+key 단축키 사용 중 의도 안 한 popover 오트리거 사용성 저해, (b) 방식 1/2 popover 열린 상태에서 단축키 입력 시 방식 3 진입으로 전환되어 사용성 저해. 코드 분기(`PopoverWindow.mode == .method3`)는 유지 (미래 부활 가능). 호출 사이트 X.
         let hotkeyMon = self.hotkeyMonitor
         hotkeyMon.onHoldStart = nil
         hotkeyMon.onHoldEnd = nil
-        hotkeyMon.onDoubleTap = { [popover, clipsVM] in
-            Task { @MainActor in
-                await clipsVM.reload()
-                popover.show(mode: .method2)
-            }
-        }
 
         // ⑨-2 TASK-032 — KeyboardShortcuts SPM (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관) 진입점 등록.
         // default ⌘⇧V — 사용자가 ShortcutsTab Recorder 로 변경하기 전 (getShortcut == nil 분기) 에만 박음 (사용자 변경 보존).
-        // HotkeyMonitor (방식 2 ⌘ double-tap, modifier-only 후킹, 권한 필수) 와 별개 진입점 — 권한 거부 사용자도 popover 진입 가능 (방식 4).
+        // HotkeyMonitor (⌘ hold 영역, modifier-only 후킹, 권한 필수, TASK-018 Phase 9 보류) 와 별개 진입점 — 권한 거부 사용자도 popover 진입 가능. TASK-046 — 방식 2 popover 호출 트리거 단일화 (⌘ double-tap 트리거 폐기 후 SPM 단축키 통로만 / TASK-032 시점 ⌘⇧V SPM 을 *방식 4* 별도 진입점으로 잘못 분리 박은 명명도 본 task로 통합 정합 — 방식 4 폐기 + 방식 2 트리거 흡수).
         if KeyboardShortcuts.getShortcut(for: .popoverOpen) == nil {
             KeyboardShortcuts.setShortcut(.init(.v, modifiers: [.command, .shift]), for: .popoverOpen)
             Logger.hotkey.info("TASK-032 — popoverOpen default shortcut set: ⌘⇧V")
         }
         self.hotkeyManager.register(name: .popoverOpen) { [popover, clipsVM] in
             Task { @MainActor in
-                Logger.hotkey.info("TASK-032 — popoverOpen shortcut triggered (방식 4)")
+                Logger.hotkey.info("popoverOpen shortcut triggered (방식 2 — SPM)")
                 await clipsVM.reload()
                 popover.show(mode: .method2)
             }
