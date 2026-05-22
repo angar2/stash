@@ -264,14 +264,21 @@ final class PopoverWindow {
         Logger.ui.info("Pin sidebar panel shown — origin=(\(originX, privacy: .public),\(originY, privacy: .public)) h=\(sidebarHeight, privacy: .public)")
     }
 
-    /// TASK-019 — Pin 사이드바 동적 height 계산. pinnedClips count 기반 + 본체 popoverHeight 미만 상한.
-    /// 모든 상수는 `DesignTokens.Spacing` 으로 분리 (`pinSidebarHeaderHeight` / `pinSidebarHeightSafety` / `pinSidebarHeightBottomMargin`).
-    /// ClipRowView 의 실제 single-line 행 height = `rowMinHeight + rowGap`. multiline 시 ScrollView 내부 스크롤이 흡수.
+    /// TASK-019 / TASK-048 — Pin 사이드바 동적 height 계산. pinnedClips count 기반 + 본체 popoverHeight 미만 상한.
+    /// 모든 상수는 `DesignTokens.Spacing` 으로 분리 (`pinSidebarHeaderHeight` / `pinSidebarHeightBottomMargin`).
+    /// 식: `header + rows*rowMinHeight + (rows-1)*rowGap + pinSidebarPadding*2`. `LazyVStack(spacing: rowGap)` 이 (count-1) gaps 만 박는 실제 레이아웃 정합.
+    /// maxPinnedClips=10 하드 캡이라 10 pins 가 ScrollView 진입 없이 정지 상태 fit. 11+ 케이스 발생 X 이나 식 자체 정확성 가드용 clamp 분기 보존.
     private func computePinSidebarHeight() -> CGFloat {
-        let itemH = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap
-        let outerPad = DesignTokens.Spacing.pinSidebarPadding * 2 + DesignTokens.Spacing.pinSidebarHeightSafety
-        let count = max(1, viewModel.pinnedClips.count)
-        let contentH = DesignTokens.Spacing.pinSidebarHeaderHeight + CGFloat(count) * itemH + outerPad
+        Self.computePinSidebarHeight(pinnedCount: viewModel.pinnedClips.count)
+    }
+
+    /// pure helper — 테스트 진입점. count 만 받아 동일 식 반환.
+    static func computePinSidebarHeight(pinnedCount: Int) -> CGFloat {
+        let count = max(1, pinnedCount)
+        let rowsBlock = CGFloat(count) * DesignTokens.Spacing.rowMinHeight
+            + CGFloat(max(0, count - 1)) * DesignTokens.Spacing.rowGap
+        let outerPad = DesignTokens.Spacing.pinSidebarPadding * 2
+        let contentH = DesignTokens.Spacing.pinSidebarHeaderHeight + rowsBlock + outerPad
         let upperBound = DesignTokens.WindowSize.popoverHeight - DesignTokens.Spacing.pinSidebarHeightBottomMargin
         return min(contentH, upperBound)
     }
