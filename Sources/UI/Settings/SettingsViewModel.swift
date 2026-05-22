@@ -48,13 +48,19 @@ final class SettingsViewModel {
     }
 
     /// TASK-033 — 권한 변동 감지 (Composition Root가 `PermissionService.statusPublisher` 구독해 호출).
-    /// O→X 회수 시: 자동 paste 토글 강제 OFF + 토스트 발행. X→O 부여 시: 토스트 1회 발행 (UX-UI §6-1 *"stash가 활성화되었어요"* 정합).
+    /// O→X 회수 시: 자동 paste 토글 강제 OFF + 토스트 발행. X→O 부여 시: autoPasteEnabled 자동 ON (TASK-047 — FEATURES.md §541 *"권한 부여 시점에 auto-paste 모드로 자동 복귀"* 정합) + 토스트 1회 발행 (UX-UI §6-1 *"stash가 활성화되었어요"* 정합).
     func updateAccessibilityGranted(_ granted: Bool) {
         let prev = self.accessibilityGranted
         self.accessibilityGranted = granted
         guard prev != granted else { return }
         Logger.ui.info("SettingsViewModel.accessibilityGranted → \(granted, privacy: .public)")
         if !prev && granted {
+            // TASK-047 — 회수 분기 `if autoPasteEnabled` 가드와 대칭. 이미 true 면 UserDefaults 쓰기 + 로그 skip (멱등 가드).
+            if !autoPasteEnabled {
+                autoPasteEnabled = true
+                UserDefaults.standard.set(true, forKey: "autoPasteEnabled")
+                Logger.ui.info("Permission granted — autoPasteEnabled auto-ON")
+            }
             settingsToast.enqueue(.success, String(localized: "toast.permission.granted"), ttl: 2.5)
         } else if prev && !granted {
             if autoPasteEnabled {
