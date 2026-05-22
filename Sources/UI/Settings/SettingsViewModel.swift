@@ -25,6 +25,8 @@ final class SettingsViewModel {
     var autoFitClipListHeight: Bool = false
     /// TASK-052 — popover 하단 `KeyboardHintsView` 표시 여부. default true. OFF 시 힌트바 (상단 Divider 포함) 전체 비표시 + popover height 자동 축소.
     var hintBarVisible: Bool = true
+    /// TASK-053 — 앱 강조 색상 모드. `.default` (stash 자체 `#0D6FFF`) / `.system` (`Color.accentColor` macOS 시스템 추종). UX-UI §4-3 *콘텐츠 색상* 라디오 분기 진실 소스.
+    var accentColorMode: AccentColorMode = .default
 
     /// TASK-033 — 환경설정 윈도우 내부 토스트 큐 (popover 토스트와 별개 시스템). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
     let settingsToast: ToastQueue = ToastQueue()
@@ -144,6 +146,14 @@ final class SettingsViewModel {
         Logger.ui.info("hintBarVisible set: \(value, privacy: .public)")
     }
 
+    /// TASK-053 — 콘텐츠 색상 라디오. UserDefaults 갱신 + state 갱신.
+    /// 강조 view 들이 `@AppStorage(AccentColorMode.userDefaultsKey)` 박고 body sentinel 로 SwiftUI 의존성 등록 — UserDefaults 변경 시 자동 body 재평가.
+    func setAccentColorMode(_ mode: AccentColorMode) {
+        accentColorMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: AccentColorMode.userDefaultsKey)
+        Logger.ui.info("accentColorMode set: \(mode.rawValue, privacy: .public)")
+    }
+
     private func loadDisplayPreferences() {
         // register defaults 가 StashApp 진입점에서 박혔으므로 integer/bool 조회 시 default 값 (6 / false / true) 자연 반환.
         // 단, 사용자가 잘못된 값 (음수 / 30 초과) 박은 케이스 방어 — clamp.
@@ -154,7 +164,9 @@ final class SettingsViewModel {
         if UserDefaults.standard.object(forKey: "hintBarVisible") != nil {
             hintBarVisible = UserDefaults.standard.bool(forKey: "hintBarVisible")
         }
-        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public)")
+        // TASK-053 — 콘텐츠 색상 모드. `AccentColorMode.current` 가 키 없음/잘못된 값 자연 `.default` 반환.
+        accentColorMode = AccentColorMode.current
+        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public)")
     }
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.

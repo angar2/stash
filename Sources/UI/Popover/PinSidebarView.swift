@@ -8,9 +8,12 @@ struct PinSidebarView: View {
     /// 핀 항목 *paste* 시 호출 — PopoverWindow.handleClipPaste 흐름과 동일 (dismiss → frontmost 복원 → sleep → paste).
     /// TASK-028 — 핀 행 paste 호출 시 `zone: .pin` 명시 전달. hide() → collapsePinSidebar() → focusZone=.clip 흐름이 paste 대상에 영향 X.
     let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 핀 행 body 재평가 트리거 (`.equatable()` 박힌 상태에서 모드 변경 회피 X).
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return VStack(alignment: .leading, spacing: 0) {
             header
             ScrollView {
                 LazyVStack(spacing: DesignTokens.Spacing.rowGap) {

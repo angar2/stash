@@ -5,6 +5,8 @@ import SwiftUI
 struct SettingsWindow: View {
     @Bindable var viewModel: SettingsViewModel
     @State private var selectedTab: SettingsTab = .general
+    // TASK-053 — 콘텐츠 색상 모드 변경 시 Settings 윈도우 body 재평가 트리거.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     enum SettingsTab: String, CaseIterable, Identifiable {
         // TASK-037 — `.display` 신규. allCases 순서 = 일반 / 디스플레이 / 단축키 / 개인정보 / 정보 (UX-UI §4-1).
@@ -31,7 +33,8 @@ struct SettingsWindow: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return VStack(spacing: 0) {
             tabBar
             Divider().foregroundStyle(DesignTokens.Colors.divider)
             ScrollView {

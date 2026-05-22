@@ -104,6 +104,7 @@
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
 		BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */; };
 		BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */; };
+		A053D5301122334455667788 /* AccentColorModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053D5400099887766554433 /* AccentColorModeTests.swift */; };
 		C2A67641484C9AAC8048802B /* WelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD85BD91D8682814D2823A3 /* WelcomeStep.swift */; };
 		C5F0A3EF48AC1EFB7F4802C9 /* DisplayTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58C5059A01A33A5DB1B7BE2 /* DisplayTab.swift */; };
 		C76DC45858A556435C206A04 /* ToastWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51FFD4FA98602BA3727BF56B /* ToastWindow.swift */; };
@@ -237,6 +238,7 @@
 		A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarView.swift; sourceTree = "<group>"; };
 		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
 		A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
+		A053D5400099887766554433 /* AccentColorModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorModeTests.swift; sourceTree = "<group>"; };
 		A8C2523A8FC86D3032EFD079 /* MultiFileClipModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiFileClipModelTests.swift; sourceTree = "<group>"; };
 		A8DD0387836461CD98892A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AE472B0FB7855E82A42A7F44 /* AboutTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutTab.swift; sourceTree = "<group>"; };
@@ -458,6 +460,7 @@
 			isa = PBXGroup;
 			children = (
 				A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */,
+				A053D5400099887766554433 /* AccentColorModeTests.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -896,6 +899,7 @@
 				B3C8AD19ED78CE098BA384A2 /* PopoverPanelMaskedCornersTests.swift in Sources */,
 				5377E8AB49CD565122FE785F /* PopoverWindowFirstResponderTests.swift in Sources */,
 				BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */,
+				A053D5301122334455667788 /* AccentColorModeTests.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
 				052EDE64F4FE003F70E14BA9 /* SystemWrapperTests.swift in Sources */,
 			);

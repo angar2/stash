@@ -216,9 +216,12 @@ private struct MultiFileDetailContentView: View {
     let entries: [ClipFileEntry]
     let onFileTap: @MainActor (URL) -> Void
     let searchQuery: String
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 매칭 하이라이트 색상 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 0) {
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
                 fileRow(entry)
             }
@@ -295,6 +298,8 @@ struct TextClipDetailProvider: ClipDetailProvider {
 private struct TextDetailContentView: View {
     let body_: String
     let searchQuery: String
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 매칭 하이라이트 색상 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     init(body: String, searchQuery: String) {
         self.body_ = body
@@ -302,7 +307,8 @@ private struct TextDetailContentView: View {
     }
 
     var body: some View {
-        Text(ClipRowView.highlightedAttributedString(
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return Text(ClipRowView.highlightedAttributedString(
             body_,
             query: searchQuery,
             baseFont: DesignTokens.Typography.clipBody
@@ -419,6 +425,8 @@ private struct SingleFileDetailContentView: View {
     let clip: Clip
     let onTap: @MainActor (URL) -> Void
     let searchQuery: String
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 매칭 하이라이트 색상 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     private var pathString: String {
         clip.fileLocationPath ?? ""
@@ -437,7 +445,8 @@ private struct SingleFileDetailContentView: View {
     }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.clipDetailRowInnerGap) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return HStack(spacing: DesignTokens.Spacing.clipDetailRowInnerGap) {
             Image(systemName: isDirectory ? "folder" : "doc")
                 .font(.system(size: DesignTokens.Spacing.clipDetailRowIconSize, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)

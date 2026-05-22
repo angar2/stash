@@ -5,9 +5,12 @@ import SwiftUI
 struct OnboardingWindow: View {
     @Bindable var viewModel: OnboardingViewModel
     let onClose: () -> Void
+    // TASK-053 — 콘텐츠 색상 모드 변경 시 Onboarding body 재평가 트리거.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return VStack(spacing: 0) {
             progressDots
             Group {
                 switch viewModel.phase {
