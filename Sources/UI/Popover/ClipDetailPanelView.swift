@@ -14,6 +14,8 @@ struct ClipDetailPanelView: View {
     let clip: Clip
     let onFileTap: @MainActor (URL) -> Void
     let searchQuery: String
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 상세 sub-window 본문 검색 매칭 하이라이트 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     init(clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String = "") {
         self.clip = clip
@@ -45,7 +47,8 @@ struct ClipDetailPanelView: View {
     var body: some View {
         // 좌측 contentW(=clipDetailWidth) 영역에 본문 박음. 우측 arrowW(=clipDetailArrowWidth) 영역은 빈 공간 — panel maskImage 가 그 영역을 꼭지 삼각형 모양으로 잘라냄.
         // panel 의 NSVisualEffectView .popover material 이 base blur 처리. SwiftUI body 자체 배경은 투명 (default).
-        HStack(spacing: 0) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return HStack(spacing: 0) {
             VStack(spacing: 0) {
                 // 1. 본문 — ScrollView wrapping + max height 클램프 (내부 스크롤). 외부 padding 균일 적용 (상하좌우 clipDetailPadding=12). Provider 본문은 raw content.
                 ScrollView(.vertical, showsIndicators: true) {

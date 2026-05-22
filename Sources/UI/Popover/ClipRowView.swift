@@ -21,6 +21,7 @@ struct ClipRowView: View, Equatable {
     /// TASK-037 fix-15b — Equatable conformance. closure 제외 시각 영향 prop 만 비교.
     /// `.equatable()` modifier 와 함께 사용 → SwiftUI 가 변경된 행만 re-render → 호버 응답 빠름 (selectedIdx 변경 시 다른 행 skip).
     /// Swift 6 concurrency — `nonisolated` 박아 MainActor 격리 외 호출 허용.
+    /// TASK-053 fix-3 — accentColorMode 변경 시 부모 root `.id` 변경으로 view tree 강제 재생성 → ClipRowView 자체 새 instance — Equatable 비교 무관.
     nonisolated static func == (lhs: ClipRowView, rhs: ClipRowView) -> Bool {
         lhs.clip == rhs.clip &&
         lhs.isSelected == rhs.isSelected &&
@@ -35,13 +36,16 @@ struct ClipRowView: View, Equatable {
     @State private var xHovered: Bool = false
     /// TASK-019 fix 4차 — 핀 아이콘 hover state. 본체 + Pin 사이드바 양쪽 동일 (사용자 결정).
     @State private var pinHovered: Bool = false
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 본 행 body 재평가 트리거 (선택 그라데이션 / Pin 아이콘 / multi-file 캡슐 / 검색 매칭 즉시 갱신).
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     private var visuallySelected: Bool {
         isSelected && isFocused
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
             HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
                 typeIconArea
                 content

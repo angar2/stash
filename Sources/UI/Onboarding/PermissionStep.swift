@@ -4,11 +4,14 @@ import SwiftUI
 
 struct PermissionStep: View {
     @Bindable var viewModel: OnboardingViewModel
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 강조 아이콘 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     private var granted: Bool { viewModel.permissionGrantedSnapshot }
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return VStack(spacing: 0) {
             largeIcon
                 .padding(.top, 8)
                 .padding(.bottom, 18)

@@ -4,16 +4,47 @@
 import SwiftUI
 import AppKit
 
+// TASK-053 — 앱 강조 색상 모드. UX-UI §4-3 *콘텐츠 색상* 라디오 분기. UserDefaults 영속.
+enum AccentColorMode: String {
+    /// stash 자체 파란 `#0D6FFF` — 디폴트.
+    case `default`
+    /// SwiftUI `Color.accentColor` — macOS 시스템 환경설정 > 일반 > 강조 색상 추종.
+    case system
+
+    static let userDefaultsKey: String = "accentColorMode"
+
+    /// UserDefaults 조회 — 키 없음/잘못된 값 → `.default`.
+    static var current: AccentColorMode {
+        guard let raw = UserDefaults.standard.string(forKey: userDefaultsKey),
+              let mode = AccentColorMode(rawValue: raw) else {
+            return .default
+        }
+        return mode
+    }
+}
+
 enum DesignTokens {
 
     // MARK: - Colors
     enum Colors {
-        // ─── 시스템 accent ─────────────────────────────────────────────
-        static let accent = Color(red: 13/255, green: 111/255, blue: 255/255)  // #0D6FFF (popover.jsx L11)
+        // ─── 앱 강조 색상 (TASK-053) ──────────────────────────────────
+        /// stash 자체 파란 `#0D6FFF` 기본값. `AccentColorMode` 분기 진실 소스 (디폴트 모드 base).
+        static let defaultAccent = Color(red: 13/255, green: 111/255, blue: 255/255)  // #0D6FFF (popover.jsx L11)
+        /// 앱 강조 색상 — UserDefaults `accentColorMode` 분기.
+        /// - `.default` → `defaultAccent` (stash 자체 파란 `#0D6FFF`).
+        /// - `.system` → `Color(nsColor: NSColor.controlAccentColor)` — macOS 시스템 환경설정 > 일반 > 강조 색상 직접 추종.
+        /// `Color.accentColor` 는 `Assets.xcassets/AccentColor.colorset` 의 *Asset 파란* 을 반환해 시스템 추종 X → AppKit `NSColor.controlAccentColor` 를 직접 wrap (TASK-053 root cause).
+        /// computed property — 호출 시점 UserDefaults 조회. View body 재평가 시점에 새 값 반영.
+        static var accent: Color {
+            switch AccentColorMode.current {
+            case .default: return defaultAccent
+            case .system: return Color(nsColor: NSColor.controlAccentColor)
+            }
+        }
         static let accentForeground = Color.white
         // TASK-035 — 검색 매칭 텍스트 전경 (UX-UI §7-3). accent 별칭으로 의미 분리 — 향후 매칭 색상만 별도 조정 가능.
-        static let searchMatchForeground = accent
-        // 앱 아이콘 그라데이션 보조 (적층 카드 보라 톤)
+        static var searchMatchForeground: Color { accent }
+        // 앱 아이콘 그라데이션 보조 (적층 카드 보라 톤) — TASK-053 비대상 (로고 디자인 결로 고정).
         static let appIconAccent = Color(red: 100/255, green: 50/255, blue: 200/255)
         static let primaryButtonStart = Color(red: 45/255, green: 134/255, blue: 245/255)  // 그라데이션 상단
 
@@ -24,19 +55,26 @@ enum DesignTokens {
         )
 
         // ─── 클립 행 선택 그라데이션 (linear-gradient 180deg) — popover.jsx L52-58 ───
-        static let clipRowSelectionTop = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.14),
-            dark:  Color(red: 64/255, green: 140/255, blue: 255/255, opacity: 0.32)
-        )
-        static let clipRowSelectionBottom = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.10),
-            dark:  Color(red: 40/255, green: 110/255, blue: 230/255, opacity: 0.32)
-        )
+        // TASK-053 fix-5 — 라이트/다크 모두 accent 베이스 + 런타임 opacity 곱 (모드 분기 자동 추종, 다크 모드도 시스템 강조 색상 추종).
+        static var clipRowSelectionTop: Color {
+            Color(
+                light: accent.opacity(0.14),
+                dark:  accent.opacity(0.32)
+            )
+        }
+        static var clipRowSelectionBottom: Color {
+            Color(
+                light: accent.opacity(0.10),
+                dark:  accent.opacity(0.32)
+            )
+        }
         // 선택 행 inset 보더
-        static let clipRowSelectionBorder = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.22),
-            dark:  Color(red: 80/255, green: 150/255, blue: 255/255, opacity: 0.35)
-        )
+        static var clipRowSelectionBorder: Color {
+            Color(
+                light: accent.opacity(0.22),
+                dark:  accent.opacity(0.35)
+            )
+        }
 
         // ─── paste 직후 700ms 초록 플래시 — popover.jsx L60-66 ───
         static let pasteFlash = Color(
@@ -98,10 +136,10 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.04),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.07)
         )
-        // searchFocused 시 보더 (파란 라인)
-        static let searchBoxFocusedBorder = Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.50)
+        // searchFocused 시 보더 (파란 라인) — TASK-053 accent 베이스 추종.
+        static var searchBoxFocusedBorder: Color { accent.opacity(0.50) }
         // searchFocused 시 outer ring
-        static let searchBoxFocusedRing = Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.22)
+        static var searchBoxFocusedRing: Color { accent.opacity(0.22) }
 
         // 검색 아이콘 (비활성)
         static let searchIconInactive = Color(
@@ -131,26 +169,34 @@ enum DesignTokens {
         )
 
         // ─── 클립 행 액션 (Pin/X 버튼) ───────────────────────────────
-        // 선택된 행의 X 버튼 bg
-        static let clipDeleteBg = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.10),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.10)
-        )
+        // 선택된 행의 X 버튼 bg — TASK-053 fix-5 라이트/다크 모두 accent 베이스 추종.
+        static var clipDeleteBg: Color {
+            Color(
+                light: accent.opacity(0.10),
+                dark:  accent.opacity(0.22)
+            )
+        }
         /// X 버튼 hover 시 배경 — baseline opacity 0.10 → 0.22 (시각 피드백).
-        static let clipDeleteBgHover = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255, opacity: 0.22),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.22)
-        )
-        // 선택된 행의 X 아이콘
-        static let clipDeleteIcon = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
-        )
-        // 선택된 행의 typeIcon (강조)
-        static let clipTypeIconSelected = Color(
-            light: Color(red: 13/255, green: 111/255, blue: 255/255),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
-        )
+        static var clipDeleteBgHover: Color {
+            Color(
+                light: accent.opacity(0.22),
+                dark:  accent.opacity(0.38)
+            )
+        }
+        // 선택된 행의 X 아이콘 — TASK-053 fix-2. 라이트 모드는 비선택 아이콘과 동일 회색 톤 고정 (커서 이동 시 색상 변경 X). 다크 모드는 기존 흰 강조 유지 (별도 task 정합).
+        static var clipDeleteIcon: Color {
+            Color(
+                light: Color(red: 0, green: 0, blue: 0, opacity: 0.45),
+                dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
+            )
+        }
+        // 선택된 행의 typeIcon — TASK-053 fix-2. 라이트 모드는 비선택과 동일 회색 톤 고정. 다크 모드는 기존 흰 강조 유지.
+        static var clipTypeIconSelected: Color {
+            Color(
+                light: Color(red: 0, green: 0, blue: 0, opacity: 0.45),
+                dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
+            )
+        }
         // 검색바 안 "전체 삭제" 텍스트 버튼
         static let searchDeleteAllLabel = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.30),
@@ -292,8 +338,8 @@ enum DesignTokens {
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.70)
         )
 
-        // Toggle / Radio
-        static let toggleOnBg = accent  // TASK-033 — #0D6FFF accent 통일 (사용자 결정: 다른 파란 요소들과 같은 색상)
+        // Toggle / Radio — TASK-053 accent 추종 (var 로 변환 — accent 분기 시 자동 갱신).
+        static var toggleOnBg: Color { accent }
         static let toggleOffBg = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.15),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.15)

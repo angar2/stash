@@ -42,9 +42,13 @@ struct HistoryPopover: View {
         self.anchorOffsetX = anchorOffsetX
     }
 
+    // TASK-053 — 콘텐츠 색상 모드 변경 시 popover body 재평가 트리거. 자식 view (ClipRowView / SearchBarView 등) 도 각자 @AppStorage 박아 자체 추적.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+
     var body: some View {
         // arrow tail은 다음 fix 사이클에서 panel 외부 별도 NSView로 박음 (NSVisualEffectView cornerRadius 안에서 잘리는 문제 회피)
-        popoverBody
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return popoverBody
     }
 
     private var popoverBody: some View {
@@ -273,9 +277,10 @@ struct HistoryPopover: View {
     private var preferencesRow: some View {
         let selected = viewModel.focusZone == .settings
         return HStack(spacing: DesignTokens.Spacing.rowInnerGap) {
+            // TASK-053 fix-1 — 환경설정 톱니 아이콘은 강조 색상 추종 X. 선택/비선택 무관 항상 `preferencesRow` 회색 톤 (텍스트와 동일). 선택 시각 구분은 행 bg 그라데이션 만으로.
             Image(systemName: "gearshape")
                 .font(.system(size: 12, weight: .regular))
-                .foregroundStyle(selected ? DesignTokens.Colors.accent : DesignTokens.Colors.preferencesRow)
+                .foregroundStyle(DesignTokens.Colors.preferencesRow)
             Text(String(localized: "preferences.row"))
                 .font(DesignTokens.Typography.rowHeader)
                 .foregroundStyle(DesignTokens.Colors.preferencesRow)

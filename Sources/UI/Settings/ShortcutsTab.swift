@@ -343,9 +343,12 @@ struct PopoverShortcutRecorder: NSViewRepresentable {
 
 struct ShortcutsTab: View {
     @Bindable var viewModel: SettingsViewModel
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 강조 텍스트 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     var body: some View {
-        VStack(spacing: 14) {
+        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        return VStack(spacing: 14) {
             settingsCard {
                 VStack(spacing: 0) {
                     let allIds = PopoverShortcutID.allCases

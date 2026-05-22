@@ -6,6 +6,8 @@ struct PopoverHeaderView: View {
     /// 방식 2 — popover form은 동일 노출, 검색 입력 + 전체 삭제 클릭 모두 차단 (TASK-018).
     let mode: PopoverInvocationMode
     @State private var deleteAllHovered: Bool = false
+    /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 박스 포커스 보더/ring 즉시 갱신.
+    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
     /// TASK-043 — 일시정지/재개 버튼 hover state.
     @State private var captureToggleHovered: Bool = false
 
@@ -13,7 +15,8 @@ struct PopoverHeaderView: View {
     private var isInteractionDisabled: Bool { mode == .method3 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        return VStack(alignment: .leading, spacing: 0) {
             wordmarkRow
             searchContainer
         }
