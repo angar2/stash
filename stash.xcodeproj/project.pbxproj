@@ -32,6 +32,11 @@
 		3248A6FA6E90FEAA7DBFDDFC /* Clip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF515538B2714E20FDDBCC8B /* Clip.swift */; };
 		32E9CC4D329DCBF07C2E84D9 /* HotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45A2C65902CBAC074B1FB4E /* HotkeyRegistrar.swift */; };
 		3857B7103C74EC8CA7397168 /* PopoverPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A52843E961156954C45322 /* PopoverPanel.swift */; };
+		E783122C00DF4ADDA1343452 /* PopoverAnchor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E03412DD8C48589D783335 /* PopoverAnchor.swift */; };
+		6148792ABE23498F9FD02CE9 /* PopoverAnchorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE282C3757254DA09A65DB25 /* PopoverAnchorTests.swift */; };
+		03F8ECADFA8E449ABD198210 /* PopoverResizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85769D8EF99142B89106F000 /* PopoverResizeTests.swift */; };
+		2643D065339A41F6AC41F960 /* PopoverDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63F4EA09F764CB0BA61E3B4 /* PopoverDragTests.swift */; };
+		9C9C700C6D884DA8898119D0 /* SettingsViewModelPopoverPositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69731A77838C43BDB326CEFC /* SettingsViewModelPopoverPositionTests.swift */; };
 		3893E04B2D35E07792DECF6E /* ClipRowViewHighlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7759FF45D27A254EF93BFD71 /* ClipRowViewHighlightTests.swift */; };
 		3B8A0E0BDAC35859AFDC41B8 /* KeyCapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2639102006CC9123B5C2E6 /* KeyCapView.swift */; };
 		3EDB733AD807B660D4717334 /* FocusZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA66964C40C39F55E4018818 /* FocusZone.swift */; };
@@ -246,6 +251,11 @@
 		B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardError.swift; sourceTree = "<group>"; };
 		B51675DBE82CD8A70455CBC7 /* StashApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashApp.swift; sourceTree = "<group>"; };
 		B5A52843E961156954C45322 /* PopoverPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanel.swift; sourceTree = "<group>"; };
+		98E03412DD8C48589D783335 /* PopoverAnchor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverAnchor.swift; sourceTree = "<group>"; };
+		EE282C3757254DA09A65DB25 /* PopoverAnchorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverAnchorTests.swift; sourceTree = "<group>"; };
+		85769D8EF99142B89106F000 /* PopoverResizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverResizeTests.swift; sourceTree = "<group>"; };
+		E63F4EA09F764CB0BA61E3B4 /* PopoverDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverDragTests.swift; sourceTree = "<group>"; };
+		69731A77838C43BDB326CEFC /* SettingsViewModelPopoverPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelPopoverPositionTests.swift; sourceTree = "<group>"; };
 		B923EDBE5786A27FC11377E1 /* HotkeyMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitorTests.swift; sourceTree = "<group>"; };
 		BB0BF56AE76BBD5260707B92 /* UNNotificationCenterImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNNotificationCenterImpl.swift; sourceTree = "<group>"; };
 		BB73764772D958CF04E1CA92 /* ClipDetailPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailPanelView.swift; sourceTree = "<group>"; };
@@ -392,6 +402,7 @@
 				0C2639102006CC9123B5C2E6 /* KeyCapView.swift */,
 				A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */,
 				08C5FE97C34B296DA2CE7BF8 /* PlainNSTextField.swift */,
+				98E03412DD8C48589D783335 /* PopoverAnchor.swift */,
 				B5A52843E961156954C45322 /* PopoverPanel.swift */,
 				68024B3A70B6A090A9FB5402 /* PopoverWindow.swift */,
 				9A8CE78E45821C6CDDC8E566 /* SearchBarView.swift */,
@@ -461,6 +472,7 @@
 			children = (
 				A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */,
 				A053D5400099887766554433 /* AccentColorModeTests.swift */,
+				69731A77838C43BDB326CEFC /* SettingsViewModelPopoverPositionTests.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -566,6 +578,9 @@
 				BC1EC507344EB93C02DA1DB0 /* PopoverHotkeyTests.swift */,
 				A3B102F4B10CEF166C7FD5DD /* PopoverPanelMaskedCornersTests.swift */,
 				87ADFB6223D52E81CAC6C7F4 /* PopoverWindowFirstResponderTests.swift */,
+				EE282C3757254DA09A65DB25 /* PopoverAnchorTests.swift */,
+				85769D8EF99142B89106F000 /* PopoverResizeTests.swift */,
+				E63F4EA09F764CB0BA61E3B4 /* PopoverDragTests.swift */,
 			);
 			path = Popover;
 			sourceTree = "<group>";
@@ -824,6 +839,7 @@
 				4E08A08994CC2F2CBBD582BD /* PlainNSTextField.swift in Sources */,
 				953F4F0E0325B21E5B7E8FC2 /* PointingHandCursor.swift in Sources */,
 				3857B7103C74EC8CA7397168 /* PopoverPanel.swift in Sources */,
+				E783122C00DF4ADDA1343452 /* PopoverAnchor.swift in Sources */,
 				FCFDF16441483CA979876223 /* PopoverWindow.swift in Sources */,
 				FC40E4B90B8CD481EA673185 /* PreferencesWindowController.swift in Sources */,
 				4AB55E7FE9D73BCA49388FAB /* PrivacyTab.swift in Sources */,
@@ -896,6 +912,10 @@
 				F30A06D12BFA6ACD99080BEC /* PermissionServiceTests.swift in Sources */,
 				B20C0B3764BA11E1C693C9EF /* PinSidebarHeightTests.swift in Sources */,
 				AEC85CC1FAB99CF5BB37353C /* PopoverHotkeyTests.swift in Sources */,
+				6148792ABE23498F9FD02CE9 /* PopoverAnchorTests.swift in Sources */,
+				03F8ECADFA8E449ABD198210 /* PopoverResizeTests.swift in Sources */,
+				2643D065339A41F6AC41F960 /* PopoverDragTests.swift in Sources */,
+				9C9C700C6D884DA8898119D0 /* SettingsViewModelPopoverPositionTests.swift in Sources */,
 				B3C8AD19ED78CE098BA384A2 /* PopoverPanelMaskedCornersTests.swift in Sources */,
 				5377E8AB49CD565122FE785F /* PopoverWindowFirstResponderTests.swift in Sources */,
 				BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */,

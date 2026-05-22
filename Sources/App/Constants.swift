@@ -56,4 +56,22 @@ enum Constants {
 
     // TASK-043 — ClipboardWatcher.enabled / red dot indicator 변경 시 StatusItemController 추종용 NotificationCenter 이름.
     static let captureEnabledDidChangeNotification: Notification.Name = Notification.Name("stash.captureEnabledDidChange")
+
+    // TASK-054 popover 진입 위치 + 드래그/리사이즈 — UX-UI §4-3 *보관함 오픈 위치* 영속.
+    // 5종 anchor enum raw 직렬화 + 영구 좌표 4종 (X/Y/Screen) + 토글 1종.
+    static let popoverDefaultAnchorKey: String = "popoverDefaultAnchor"
+    static let popoverRememberLastPositionKey: String = "popoverRememberLastPosition"
+    static let popoverLastPositionXKey: String = "popoverLastPositionX"
+    static let popoverLastPositionYKey: String = "popoverLastPositionY"
+    static let popoverLastPositionScreenIdKey: String = "popoverLastPositionScreenId"
+
+    // TASK-054 클립 행 click vs drag 분리 임계 — mouseDown → mouseDragged 누적 거리 ≥ 5pt 시 윈도우 이동 진입.
+    // macOS NSEvent 표준 정합 (시스템 click vs drag distinction 일반 5pt). UX-UI §4-3 본문 *클립 행 5pt threshold* 단일 진실.
+    static let clipRowDragThreshold: CGFloat = 5
+
+    // TASK-054 fix-1 popover width 영속 (사용자 freeform 변경 + 항상 영속).
+    // UserDefaults 키 / cap 범위 — UX-UI §4-3 본문 단일 진실. 방식 1·2 공유 단일 키 (사용자 결정).
+    static let popoverWidthKey: String = "popoverWidth"
+    static let popoverWidthMin: CGFloat = 280
+    static let popoverWidthMax: CGFloat = 600
 }

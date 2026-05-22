@@ -65,9 +65,9 @@ struct HistoryPopover: View {
                 KeyboardHintsView(mode: mode, accessibilityGranted: viewModel.accessibilityGranted)
             }
         }
-        // TASK-037 fix-12 — `.padding(6).frame(width: 380)` 순서. outer width = popoverWidth (380) 고정 / inner content = popoverWidth - 12 (368). SwiftUI body intrinsic.width = NSPanel.frame.width 매치 — 자식 view 잘림/빈 영역 차단.
+        // TASK-054 fix-2 — root width 고정 (`frame(width: popoverWidth)`) → `maxWidth: .infinity` 로 전환. 시스템 표준 NSWindow resize 도입 (TASK-054 fix-1) 으로 NSPanel width 가 동적이라 *SwiftUI body 가 NSPanel.contentView fill* 되어야 자식들 (검색바·클립행·핀행·환경설정행·힌트바) 의 `Spacer()`·`frame(maxWidth: .infinity, alignment: .leading)` 패턴이 *부모 폭 따라 좌/우 정렬* 자연 적용.
         .padding(DesignTokens.Spacing.popoverPadding)
-        .frame(width: DesignTokens.WindowSize.popoverWidth)
+        .frame(maxWidth: .infinity)
         // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 popoverBody root 에 박음 (ScrollView 박으면 검색바/Pin/환경설정/힌트 offset 어긋남).
         // ClipRowView 의 GeometryReader 가 게시하는 frame 이 NSPanel contentView top 기준 (top-down) 이 되어 NSPanel.frame.height 와 정합.
         .popoverClipDetailHook(viewModel: viewModel, activeZone: .clip)
@@ -97,7 +97,8 @@ struct HistoryPopover: View {
                 .frame(width: tailWidth, height: tailHeight)
             Spacer()
         }
-        .frame(width: DesignTokens.WindowSize.popoverWidth)
+        // TASK-054 fix-2 — arrow tail bar 도 popover 전체 폭 따라 늘어남. width 동적 시 button 중심 anchor 시각은 windowDidResize 가 `currentAnchorOffsetX` 재계산.
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Clips area

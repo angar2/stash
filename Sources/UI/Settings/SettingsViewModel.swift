@@ -27,6 +27,11 @@ final class SettingsViewModel {
     var hintBarVisible: Bool = true
     /// TASK-053 — 앱 강조 색상 모드. `.default` (stash 자체 `#0D6FFF`) / `.system` (`Color.accentColor` macOS 시스템 추종). UX-UI §4-3 *콘텐츠 색상* 라디오 분기 진실 소스.
     var accentColorMode: AccentColorMode = .default
+    /// TASK-054 — 방식 2 popover 진입 anchor. 사용자 환경설정 *기본 오픈 위치* 5종. UX-UI §4-3 단일 진실.
+    /// `popoverRememberLastPosition == false` 시 매 오픈마다 본 anchor 진입. `== true` 시 저장 좌표 우선 + 화면 밖 fallback 시 본 anchor.
+    var popoverDefaultAnchor: PopoverAnchor = .default
+    /// TASK-054 — 방식 2 popover *이전 위치 기억하기* 토글. default OFF. ON 시 `panel.hide()` 시점 `frame.origin` UserDefaults 영속 → 다음 오픈 시 복원.
+    var popoverRememberLastPosition: Bool = false
 
     /// TASK-033 — 환경설정 윈도우 내부 토스트 큐 (popover 토스트와 별개 시스템). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
     let settingsToast: ToastQueue = ToastQueue()
@@ -49,6 +54,7 @@ final class SettingsViewModel {
                 lastValidPopoverShortcuts[id] = shortcut
             }
         }
+        // TASK-054 fix-1 — `clipsPerPageDeltaRequest` notification 구독 폐기. PopoverWindow 가 SettingsViewModel.setClipsPerPage 직접 호출 (시스템 표준 NSWindow resize 위임).
     }
 
     /// TASK-033 — 권한 변동 감지 (Composition Root가 `PermissionService.statusPublisher` 구독해 호출).
@@ -154,6 +160,27 @@ final class SettingsViewModel {
         Logger.ui.info("accentColorMode set: \(mode.rawValue, privacy: .public)")
     }
 
+    /// TASK-054 — 방식 2 popover 진입 anchor 설정. UserDefaults raw 직렬화 + state 갱신.
+    /// NotificationCenter post X — *다음 오픈 시 적용* 정책 (이미 떠 있는 popover frame 즉시 갱신 불필요).
+    func setPopoverDefaultAnchor(_ anchor: PopoverAnchor) {
+        popoverDefaultAnchor = anchor
+        UserDefaults.standard.set(anchor.rawValue, forKey: Constants.popoverDefaultAnchorKey)
+        Logger.ui.info("popoverDefaultAnchor set: \(anchor.rawValue, privacy: .public)")
+    }
+
+    /// TASK-054 — *이전 위치 기억하기* 토글. UserDefaults bool + state 갱신.
+    /// OFF→ON 직후 저장값 없음 → 다음 오픈은 기본 anchor 진입, 닫힐 때 저장. ON→OFF 시 UserDefaults 저장 좌표 키 제거 (영구 좌표 정합 — 다시 ON 시점에 stale 좌표 진입 차단).
+    func setPopoverRememberLastPosition(_ value: Bool) {
+        popoverRememberLastPosition = value
+        UserDefaults.standard.set(value, forKey: Constants.popoverRememberLastPositionKey)
+        if !value {
+            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionXKey)
+            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionYKey)
+            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionScreenIdKey)
+        }
+        Logger.ui.info("popoverRememberLastPosition set: \(value, privacy: .public)")
+    }
+
     private func loadDisplayPreferences() {
         // register defaults 가 StashApp 진입점에서 박혔으므로 integer/bool 조회 시 default 값 (6 / false / true) 자연 반환.
         // 단, 사용자가 잘못된 값 (음수 / 30 초과) 박은 케이스 방어 — clamp.
@@ -166,7 +193,13 @@ final class SettingsViewModel {
         }
         // TASK-053 — 콘텐츠 색상 모드. `AccentColorMode.current` 가 키 없음/잘못된 값 자연 `.default` 반환.
         accentColorMode = AccentColorMode.current
-        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public)")
+        // TASK-054 — popover 진입 위치 (보관함 오픈 위치). raw 잘못된 값 / 미설정 → `.default` (.bottomRight) fallback.
+        if let raw = UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey),
+           let anchor = PopoverAnchor(rawValue: raw) {
+            popoverDefaultAnchor = anchor
+        }
+        popoverRememberLastPosition = UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey)
+        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public) popoverAnchor=\(self.popoverDefaultAnchor.rawValue, privacy: .public) rememberLast=\(self.popoverRememberLastPosition, privacy: .public)")
     }
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.
