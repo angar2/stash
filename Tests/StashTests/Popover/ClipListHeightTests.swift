@@ -146,7 +146,7 @@ struct ClipListHeightTests {
         let hOn = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: true)
         let hOff = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: false)
         // TASK-054 fix-2 — cap 이 정수 행 단위 floor 박혀 차이가 hintBarOverhead 정확값 아님.
-        // OFF 시 hintBarOverhead (42pt) 만큼 screenAvailable 가 증가 → cappedRows 가 1 행 더 들어갈 수도 / 동일할 수도.
+        // OFF 시 hintBarOverhead (실측 34pt) 만큼 screenAvailable 가 증가 → cappedRows 가 1 행 더 들어갈 수도 / 동일할 수도.
         // 차이 = 0 (cappedRows 동일) 또는 rowHeight + rowGap (cappedRows + 1 행). 음수 X (단조 증가 확인).
         let snap = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap
         let diff = hOff - hOn
@@ -157,6 +157,7 @@ struct ClipListHeightTests {
     @Test("TASK-052 — hintBarVisible 무관 raw < cap 케이스 (N=3, 작은 N) 동일 height")
     func hintBarVisible_smallNDoesNotChange() {
         // N=3 이면 raw(3) = 3 × rowHeight + 2 × rowGap — 일반 모니터 가용 높이 미만. 둘 다 raw 반환 → 동일.
+        // TASK-056 — cliplist 강제 차감 시도 폐기 (사용자 의도 부합: popover 가 위로 확장, cliplist 영역 raw 그대로).
         let hOn = ClipsViewModel.effectiveClipListHeight(visibleCount: 3, clipsPerPage: 3, autoFit: false, hasPinned: false, hintBarVisible: true)
         let hOff = ClipsViewModel.effectiveClipListHeight(visibleCount: 3, clipsPerPage: 3, autoFit: false, hasPinned: false, hintBarVisible: false)
         #expect(hOn == hOff)
