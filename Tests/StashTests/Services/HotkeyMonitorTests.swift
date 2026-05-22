@@ -31,17 +31,13 @@ struct HotkeyMonitorTests {
         let monitor = HotkeyMonitor(permissionService: permSvc)
         var holdStartCount = 0
         var holdEndCount = 0
-        var doubleTapCount = 0
         monitor.onHoldStart = { holdStartCount += 1 }
         monitor.onHoldEnd = { holdEndCount += 1 }
-        monitor.onDoubleTap = { doubleTapCount += 1 }
         #expect(monitor.onHoldStart != nil)
         #expect(monitor.onHoldEnd != nil)
-        #expect(monitor.onDoubleTap != nil)
         // 카운터는 실제 NSEvent 시뮬레이션 없이 0 유지가 정상 — 단위 테스트로는 callback 변수 할당만 검증
         #expect(holdStartCount == 0)
         #expect(holdEndCount == 0)
-        #expect(doubleTapCount == 0)
         monitor.stop()
     }
 
