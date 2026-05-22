@@ -312,7 +312,8 @@ final class ClipsViewModel {
     /// 공식: autoFit ON → `rows = max(min(visibleCount, N), min(N, 3))` / OFF → `rows = N`.
     /// floor=3 룰: autoFit ON 시 컨테이너 최소 3행 보장. 단 N<3 시 N 우선.
     /// 화면 cap: popover 가 화면 visible 영역 초과 시 cap 적용 (popover top = visible.maxY 까지 박혀 menu bar 바로 아래에 붙음).
-    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool) -> CGFloat {
+    /// TASK-052 — `hintBarVisible` 인자 추가. OFF 시 totalOverhead 에서 `hintBarOverhead` (실측 42pt) 차감 → clipList cap 확장 → 한 행 더 표시 + popover total ON/OFF 동일 (method2 우하단 anchor 시 상단 공백 잔존 차단).
+    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool) -> CGFloat {
         let n = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, clipsPerPage))
         let rowHeight = DesignTokens.Spacing.rowMinHeight
         let rowGap = DesignTokens.Spacing.rowGap
@@ -326,19 +327,23 @@ final class ClipsViewModel {
         let raw = CGFloat(rows) * rowHeight + CGFloat(max(0, rows - 1)) * rowGap
         // 화면 cap — clipList 외 SwiftUI body overhead (검색바 / 환설정행 / 힌트바 / popoverPadding × 2) 차감.
         // hasPinned 시 pinRow + margin 추가.
+        // TASK-052 — hintBarVisible == false 시 baseOverhead 에서 hintBarOverhead 차감 (clipList cap 확장).
         let baseOverhead = DesignTokens.Spacing.clipListOverheadBase
         let pinRowOverhead: CGFloat = hasPinned ? (DesignTokens.Spacing.pinRowHeight + DesignTokens.Spacing.pinRowMarginVert * 2) : 0
-        let totalOverhead = baseOverhead + pinRowOverhead
+        let hintBarAdjust: CGFloat = hintBarVisible ? 0 : DesignTokens.Spacing.hintBarOverhead
+        let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust
         let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
         let cap = max(rowHeight, screenAvailable)  // 최소 1행 보장
         return min(raw, cap)
     }
 
     /// TASK-037 — UserDefaults 직접 조회 wrapper. SwiftUI 외부 호출용.
+    /// TASK-052 — `hintBarVisible` UserDefaults 조회 추가 (default true — 사용자 미설정 시 시각 ON 유지).
     static func effectiveClipListHeightFromUserDefaults(visibleCount: Int, hasPinned: Bool) -> CGFloat {
         let n = UserDefaults.standard.integer(forKey: "clipsPerPage")
         let autoFit = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
-        return effectiveClipListHeight(visibleCount: visibleCount, clipsPerPage: n, autoFit: autoFit, hasPinned: hasPinned)
+        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: "hintBarVisible") as? Bool) ?? true
+        return effectiveClipListHeight(visibleCount: visibleCount, clipsPerPage: n, autoFit: autoFit, hasPinned: hasPinned, hintBarVisible: hintBarVisible)
     }
 
     /// Pin 사이드바 안 hover — pinSelectedIdx 갱신 (TASK-019 fix 2차).

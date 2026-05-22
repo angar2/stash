@@ -65,6 +65,8 @@
     "settings.display.autoFit.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "높이 자동 조정" } } } },
     "settings.display.clipsPerPage.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "화면 높이 초과 시 자동으로 줄어듭니다." } } } },
     "settings.display.clipsPerPage.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "한 번에 보이는 클립 수" } } } },
+    "settings.display.hintBar.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "체크를 해제하면 보관함 하단 단축키 설명 표시가 숨겨집니다." } } } },
+    "settings.display.hintBar.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키 설명 표시" } } } },
     "settings.tab.about" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "정보" } } } },
     "settings.tab.display" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "디스플레이" } } } },
     "settings.tab.general" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "일반" } } } },

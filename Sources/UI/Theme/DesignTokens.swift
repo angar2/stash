@@ -459,6 +459,8 @@ enum DesignTokens {
         // clipListOverheadBase = clipList 외 SwiftUI body 영역 (검색바 + 환설정 행 + 힌트바 + popoverPadding × 2) 측정값.
         // hasPinned 시 pinRow + margin 추가됨 (ClipsViewModel.effectiveClipListHeight 안 동적 합산).
         static let clipListOverheadBase:   CGFloat = 164
+        // TASK-052 — 힌트바 영역 (Divider + FlowLayout + padding) 동적 가감 토큰. 실측 42pt (ON 1410 - OFF 1368). hintBar OFF 시 totalOverhead 에서 차감해 clipList cap 확장 → clipList 가 한 행 더 표시 + popover total height ON/OFF 동일 유지 (method2 우하단 anchor 시 상단 공백 잔존 차단).
+        static let hintBarOverhead:        CGFloat = 42
         // 디스플레이 탭 슬라이더 최대 너비.
         static let displaySliderMaxWidth:  CGFloat = 240
 
