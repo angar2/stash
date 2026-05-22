@@ -194,16 +194,11 @@ final class PopoverWindow: NSObject {
 
     }
 
-    /// TASK-037 fix-13 (fix-15 폐기 후 복원): refreshFrame 본문을 DispatchQueue.main.async 안에 박음.
-    /// 사유: @AppStorage / NotificationCenter 동기 호출 시점에는 SwiftUI body 가 *아직 재계산 안 됨* → fittingSize 옛 값 → 영구 mismatch.
-    /// async tick = SwiftUI render 완료 후 fittingSize 측정. 매 호출마다 큐 박힘 → 순차 처리 (Task cancel 패턴 폐기 — 드래그 중간 변경 skip 인식 차단).
+    /// TASK-037 fix-13 → TASK-056 정정: 기존 `DispatchQueue.main.async` 1 tick 대기가 사용자 *한 템포 늦음* 인지 원인 → 동기 호출로 전환.
+    /// `_performRefreshFrame` 안 `hosting.layoutSubtreeIfNeeded()` 가 SwiftUI body 강제 재계산 + 별도 `NSHostingController` 인스턴스의 `sizeThatFits(in:)` 가 *현재 state 기반* 정확 측정 → async 박지 않아도 fittingSize 정확.
     private func refreshFrame() {
         guard panel.isVisible else { return }
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated {
-                self?._performRefreshFrame()
-            }
-        }
+        _performRefreshFrame()
     }
 
     private func _performRefreshFrame() {
@@ -213,7 +208,7 @@ final class PopoverWindow: NSObject {
         hosting.invalidateIntrinsicContentSize()
         hosting.layoutSubtreeIfNeeded()
         hosting.displayIfNeeded()
-        let fitting = hosting.fittingSize
+        let fitting = NSSize(width: panel.frame.size.width, height: measuredFittingHeight(width: panel.frame.size.width, hosting: hosting))
 
         // TASK-054 fix-2 — width 는 사용자 박은 값 (또는 default `popoverWidth=380`) 보존. fitting.width 는 SwiftUI body `maxWidth: .infinity` 박힌 후 *content intrinsic 최소값* 반환이라 NSPanel width 가 축소됨. 시스템 표준 NSWindow resize 가 width 자체 변경 책임. origin 계산도 본 width 기준.
         let preservedWidth = panel.frame.size.width
@@ -270,6 +265,12 @@ final class PopoverWindow: NSObject {
             attemptSearchFirstResponder(mode: mode, reason: "refreshFrame")
         }
         Logger.ui.info("PopoverWindow.refreshFrame — fitting=\(Int(fitting.width), privacy: .public)x\(Int(fitting.height), privacy: .public)")
+    }
+
+    /// TASK-056 — SwiftUI body 의 *constrained* fitting height 측정. `hosting.fittingSize` 는 unconstrained proposal (width=∞) 로 측정되어 `FlowLayout` 등 wrap 가능 자식이 1줄 intrinsic 으로 박혀 실제 panel.width 좁을 때 body bottom clipping 발생. 별도 `NSHostingController` 인스턴스 + `sizeThatFits(in:)` 로 panel.width 제약 박은 정확한 측정. (두 호출처 공통 — `_performRefreshFrame` / `windowWillResize`.)
+    private func measuredFittingHeight(width: CGFloat, hosting: NSHostingView<AnyView>) -> CGFloat {
+        let controller = NSHostingController(rootView: hosting.rootView)
+        return controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height
     }
 
     /// TASK-055 — 핀 사이드바 origin + 방향 산출 헬퍼. `showPinSidebar` / `resizePinSidebarPanel` 두 호출처 공통 흐름.
@@ -820,20 +821,22 @@ extension PopoverWindow: NSWindowDelegate {
         let visibleHeight = (panel.screen ?? NSScreen.main)?.visibleFrame.height ?? 1080
         let cappedFrameHeight = min(frameSize.height, visibleHeight)
         // height snap — 현재 frame.height 와 cap 적용 제안 frame.height 의 차이를 1행 단위 round 후 setClipsPerPage 호출.
+        let snap = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap  // 46pt
+        let dy = cappedFrameHeight - panel.frame.size.height
+        let absSteps = Int(abs(dy) / snap)
+
+        // TASK-056 — width drag (dy < snap) 시 hintBar FlowLayout wrap 1~3 줄 동적 → fitting.height 변동. snap 단위 무시 시 wrap 변동 미반영. `measuredFittingHeight` 헬퍼 (NSHostingController.sizeThatFits) 로 clampedWidth 제약 박은 정확한 fitting 측정 → live resize 중 popover height 즉시 정합.
+        if absSteps == 0, let hosting = currentHosting {
+            return NSSize(width: clampedWidth, height: measuredFittingHeight(width: clampedWidth, hosting: hosting))
+        }
+
         guard let settingsViewModel else {
             // settingsViewModel 미주입 시 height freeform 으로 통과 (안전망).
             return NSSize(width: clampedWidth, height: cappedFrameHeight)
         }
-        let snap = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap  // 46pt
-        let dy = cappedFrameHeight - panel.frame.size.height
         let current = settingsViewModel.clipsPerPage
         // 시스템 resize 컨벤션 — proposed height 증가 (dy > 0) = clipsPerPage 증가. dy < 0 = 감소.
         // computeSnapDelta 의 *isTop=true + accumulated < 0 → +1* 컨벤션과 부호 반대 — 직접 계산.
-        let absSteps = Int(abs(dy) / snap)
-        if absSteps == 0 {
-            // snap 미달 또는 cap 도달 — 시스템에 *기존 height 그대로* 반환 (height freeform 무시, snap 단위로만 변경).
-            return NSSize(width: clampedWidth, height: panel.frame.size.height)
-        }
         let signDelta = dy > 0 ? absSteps : -absSteps
         let clampedDelta = max(Constants.clipsPerPageMin - current, min(Constants.clipsPerPageMax - current, signDelta))
         if clampedDelta != 0 {
@@ -862,5 +865,7 @@ extension PopoverWindow: NSWindowDelegate {
                 showClipDetailPanel(last)
             }
         }
+        // TASK-056 — width 변경 후 hintBar FlowLayout wrap 1~3 줄 동적 → SwiftUI body fittingSize.height 동적. `windowWillResize` 는 snap 단위 height 만 갱신해 wrap 변동 미반영 → SwiftUI body 가 NSPanel 안 못 들어가 시각 잘림 (상단 padding 좁아 보임 인지). resize 종료 시점 fittingSize 재측정 + NSPanel.height 자동 정합.
+        refreshFrame()
     }
 }
