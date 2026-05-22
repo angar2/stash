@@ -162,9 +162,10 @@ struct CopyLocationLine: View {
 /// 클립 상세 sub-window 본문 공급자. `canProvide` 매칭 시 `makeContent` 가 SwiftUI 본문 트리 반환 + `preferredHeight` 가 panel size 결정.
 /// AnyView return — protocol existential + ViewBuilder `some View` 호환 단순화 (API-SPEC §11-2 / *AnyView type erasure* 참조).
 /// Sendable 부합 — Registry static let 저장 + Swift 6 strict concurrency 정합. makeContent / onFileTap 은 UI 영역이라 @MainActor 한정.
+/// TASK-049 — `searchQuery` 인자 추가. Text/MultiFile/SingleFile Provider 본문 텍스트에 검색어 매칭 시각 강조 적용 (UX-UI §7-3 정합). Image Provider 는 본문 텍스트 X → 인자 무시.
 protocol ClipDetailProvider: Sendable {
     func canProvide(for clip: Clip) -> Bool
-    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void) -> AnyView
+    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String) -> AnyView
     func preferredHeight(for clip: Clip) -> CGFloat
 }
 
@@ -195,8 +196,8 @@ struct MultiFileClipDetailProvider: ClipDetailProvider {
         clip.isMultiFile && (clip.fileEntries?.isEmpty == false)
     }
 
-    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void) -> AnyView {
-        AnyView(MultiFileDetailContentView(entries: clip.fileEntries ?? [], onFileTap: onFileTap))
+    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String) -> AnyView {
+        AnyView(MultiFileDetailContentView(entries: clip.fileEntries ?? [], onFileTap: onFileTap, searchQuery: searchQuery))
     }
 
     /// 본문 자체 height raw 추정 — padding 가산 X (PanelView 가 padding + ScrollView 클램프 책임, TASK-039).
@@ -210,9 +211,11 @@ struct MultiFileClipDetailProvider: ClipDetailProvider {
 
 /// 다중파일 상세 sub-window 본문 — 파일명 목록 (raw content, 자체 ScrollView X — TASK-039 정합, PanelView 가 wrapping).
 /// 각 행 클릭 → `originalPath ?? filePath` URL 로 `onFileTap` 발화. 복사 위치 라인은 PanelView 가 처리.
+/// TASK-049 — 파일명 displayName 의 검색어 매칭 구간을 `ClipRowView.highlightedAttributedString` 으로 시각 강조.
 private struct MultiFileDetailContentView: View {
     let entries: [ClipFileEntry]
     let onFileTap: @MainActor (URL) -> Void
+    let searchQuery: String
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -231,9 +234,11 @@ private struct MultiFileDetailContentView: View {
             Image(systemName: "doc")
                 .font(.system(size: DesignTokens.Spacing.clipDetailRowIconSize, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
-            Text(displayName)
-                .font(DesignTokens.Typography.clipBody)
-                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+            Text(ClipRowView.highlightedAttributedString(
+                displayName,
+                query: searchQuery,
+                baseFont: DesignTokens.Typography.clipBody
+            ))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -259,9 +264,9 @@ struct TextClipDetailProvider: ClipDetailProvider {
         clip.type == .text && (clip.body?.isEmpty == false)
     }
 
-    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void) -> AnyView {
+    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String) -> AnyView {
         // onFileTap 미사용 — 텍스트는 파일 클릭 동작 없음. PanelView 가 호출자.
-        AnyView(TextDetailContentView(body: clip.body ?? ""))
+        AnyView(TextDetailContentView(body: clip.body ?? "", searchQuery: searchQuery))
     }
 
     /// 본문 자체 height raw 추정 — `NSAttributedString.boundingRect` 로 *실제 wrap 후 height* 측정 (TASK-039 fix).
@@ -286,15 +291,22 @@ struct TextClipDetailProvider: ClipDetailProvider {
 
 /// 텍스트 클립 본문 SwiftUI — raw content (자체 ScrollView·외부 padding 박지 X, PanelView 가 책임).
 /// `.textSelection(.enabled)` 로 SwiftUI 시스템 텍스트 선택·복사 활성 (NSTextField 활성화 X — 본체 popover ⌘C/⌘V 동작 영향 X).
+/// TASK-049 — 본문 전체 텍스트의 검색어 매칭 구간을 `ClipRowView.highlightedAttributedString` 으로 시각 강조.
 private struct TextDetailContentView: View {
     let body_: String
+    let searchQuery: String
 
-    init(body: String) { self.body_ = body }
+    init(body: String, searchQuery: String) {
+        self.body_ = body
+        self.searchQuery = searchQuery
+    }
 
     var body: some View {
-        Text(body_)
-            .font(DesignTokens.Typography.clipBody)
-            .foregroundStyle(DesignTokens.Colors.labelPrimary)
+        Text(ClipRowView.highlightedAttributedString(
+            body_,
+            query: searchQuery,
+            baseFont: DesignTokens.Typography.clipBody
+        ))
             .frame(maxWidth: .infinity, alignment: .leading)
             .textSelection(.enabled)
     }
@@ -309,8 +321,10 @@ struct ImageClipDetailProvider: ClipDetailProvider {
         clip.type == .image && (clip.filePath?.isEmpty == false)
     }
 
-    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void) -> AnyView {
-        AnyView(ImageDetailContentView(clip: clip, onTap: onFileTap))
+    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String) -> AnyView {
+        // searchQuery 미사용 — 이미지 본문은 텍스트 X (UX-UI §7-3 적용 범위 제외).
+        _ = searchQuery
+        return AnyView(ImageDetailContentView(clip: clip, onTap: onFileTap))
     }
 
     /// 본문 자체 height raw 추정 — NSImage 로드 후 aspectRatio. 로드 실패 시 16:10 fallback. padding 가산 X (PanelView 책임).
@@ -388,8 +402,8 @@ struct SingleFileClipDetailProvider: ClipDetailProvider {
         clip.type == .file && !clip.isMultiFile && (clip.filePath?.isEmpty == false)
     }
 
-    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void) -> AnyView {
-        AnyView(SingleFileDetailContentView(clip: clip, onTap: onFileTap))
+    @MainActor func makeContent(for clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String) -> AnyView {
+        AnyView(SingleFileDetailContentView(clip: clip, onTap: onFileTap, searchQuery: searchQuery))
     }
 
     /// 본문 자체 height raw 추정 = `clipDetailRowHeight` (단일 행 only). padding / 복사 위치 가산 X (PanelView 책임).
@@ -400,9 +414,11 @@ struct SingleFileClipDetailProvider: ClipDetailProvider {
 
 /// 단일 파일 본문 SwiftUI — SF Symbol (`doc` / `folder` `isDirectory` 검사 분기) + 파일명 1줄.
 /// 파일명 행 클릭 → `onTap(URL(fileURLWithPath: fileOriginalPath ?? filePath))` 발화.
+/// TASK-049 — 파일명 displayName 의 검색어 매칭 구간을 `ClipRowView.highlightedAttributedString` 으로 시각 강조.
 private struct SingleFileDetailContentView: View {
     let clip: Clip
     let onTap: @MainActor (URL) -> Void
+    let searchQuery: String
 
     private var pathString: String {
         clip.fileLocationPath ?? ""
@@ -425,9 +441,11 @@ private struct SingleFileDetailContentView: View {
             Image(systemName: isDirectory ? "folder" : "doc")
                 .font(.system(size: DesignTokens.Spacing.clipDetailRowIconSize, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
-            Text(displayName)
-                .font(DesignTokens.Typography.clipBody)
-                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+            Text(ClipRowView.highlightedAttributedString(
+                displayName,
+                query: searchQuery,
+                baseFont: DesignTokens.Typography.clipBody
+            ))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(maxWidth: .infinity, alignment: .leading)

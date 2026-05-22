@@ -376,7 +376,8 @@ final class PopoverWindow {
                 clip: request.clip,
                 onFileTap: { [weak self] url in
                     self?.handleFileTap(url)
-                }
+                },
+                searchQuery: viewModel.searchQuery
             ),
             in: detailVisualEffect
         )
