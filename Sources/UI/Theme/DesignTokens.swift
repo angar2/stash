@@ -439,10 +439,10 @@ enum DesignTokens {
         static let pinSidebarItemHeight:   CGFloat = 36
         static let pinSidebarItemPadH:     CGFloat = 10
         static let pinSidebarItemGap:      CGFloat = 8
-        // Pin sidebar 동적 height 계산 상수 (TASK-019 fix 2차 ~ 6차 — `PopoverWindow.computePinSidebarHeight`)
+        // Pin sidebar 동적 height 계산 상수 (TASK-019 fix 2차 ~ 6차 / TASK-048 정정 — `PopoverWindow.computePinSidebarHeight`)
+        // maxPinnedClips=10 하드 캡 전제. 10 pins exact fit (popoverHeight=520 - bottomMargin=18 = 502 = header+padding+rows+gaps).
         static let pinSidebarHeaderHeight: CGFloat = 32  // 헤더 ("핀 목록 · N") 영역 height
-        static let pinSidebarHeightSafety: CGFloat = 20  // outer padding 위에 추가 안전 여유
-        static let pinSidebarHeightBottomMargin: CGFloat = 40  // popoverHeight 와의 최소 간격 (사이드바가 본체보다 항상 작게)
+        static let pinSidebarHeightBottomMargin: CGFloat = 18  // popoverHeight 와의 상단 갭 (사이드바 top 가 popover top 보다 18px 아래)
 
         // 단축키 키캡 (Pin Row 우측 `⌘B` 안내 등 — TASK-019)
         static let keycapPaddingHorz:      CGFloat = 5
