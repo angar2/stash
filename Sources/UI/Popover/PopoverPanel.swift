@@ -22,6 +22,7 @@ enum PopoverHotkey: CaseIterable {
     case paste                  // ⌘+V default (TASK-033 fix-2 — .paste. Accessibility 권한 게이트 조건부 활성)
     case confirm                // Enter 단독 (TASK-051, 변경 불가 — 일반 Return keyCode 36 + Numpad Enter keyCode 76 동시 매칭. autoPasteEnabled 분기 paste/copy 라우팅. IME marked text 시 monitor 가 forward)
     case escape                 // ESC 단독 (변경 불가 — macOS 표준 닫기/취소)
+    case toggleClipDetail       // ⌘+D (TASK-055, 변경 불가 — 활성 클립 상세 sub-window toggle. NSTextField field editor 기본 키바인딩 충돌 X. PopoverShortcut defaults 비충돌)
 
     /// TASK-033 fix-2 — 변경 가능 단축키의 PopoverShortcutStore ID 매핑. 변경 불가 (방향키/ESC/⌘+방향키/⌘+⇧+방향키) 는 nil 반환 (hardcoded keyCode/modifiers 사용).
     var popoverShortcutID: PopoverShortcutID? {
@@ -32,7 +33,7 @@ enum PopoverHotkey: CaseIterable {
         case .togglePinSidebar: return .pinSidebarToggle
         case .deleteOne: return .deleteOne
         case .deleteAll: return .deleteAll
-        case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .confirm, .escape: return nil
+        case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .confirm, .escape, .toggleClipDetail: return nil
         }
     }
 
@@ -44,6 +45,7 @@ enum PopoverHotkey: CaseIterable {
         case .moveSelectionDown, .pageDown, .moveSelectionToLast: return 125     // ↓ (단독 / ⌘+↓ / ⌘+⇧+↓)
         case .confirm: return 36                                                 // Return (primary — matches(event:) 가 Numpad 76 도 함께 검사)
         case .escape: return 53                                                  // ESC
+        case .toggleClipDetail: return 2                                         // D (TASK-055 — ⌘+D)
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0  // PopoverShortcutStore 동적 조회
         }
     }
@@ -54,6 +56,7 @@ enum PopoverHotkey: CaseIterable {
         case .moveSelectionUp, .moveSelectionDown, .confirm, .escape: return []
         case .pageUp, .pageDown: return [.command]                              // TASK-036 — ⌘+↑/⌘+↓ 페이지 점프
         case .moveSelectionToFirst, .moveSelectionToLast: return [.command, .shift]  // TASK-036 — ⌘+⇧+↑/⌘+⇧+↓ 양 끝 점프
+        case .toggleClipDetail: return [.command]                               // TASK-055 — ⌘+D
         case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return []  // PopoverShortcutStore 동적 조회
         }
     }
@@ -352,6 +355,12 @@ enum PopoverPanel {
                 return true
             }
             Task { @MainActor in onDismiss() }
+            return true
+        case .toggleClipDetail:
+            // TASK-055 — 활성 클립 상세 sub-window toggle. clipDetailVisible 분기로 close / 활성 행 Provider 매칭 검증 후 emit.
+            // 방식 3 (보류) 차단 — detail sub-window 자체가 method3 에서 진입 X (PopoverWindow.showClipDetailPanel 가드).
+            guard mode != .method3 else { return false }
+            viewModel.triggerClipDetail()
             return true
         }
     }
