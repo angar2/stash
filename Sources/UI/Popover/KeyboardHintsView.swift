@@ -43,6 +43,8 @@ struct KeyboardHintsView: View {
             Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: String(localized: "hint.copy"), enabled: true),
             Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
             Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: String(localized: "hint.pin"), enabled: true),
+            // TASK-055 — 활성 클립 상세 sub-window toggle. 변경 불가 hardcoded ⌘D (PopoverShortcutStore 미등록).
+            Hint(id: "clipDetail", parts: [.keys(["⌘D"])], label: String(localized: "hint.clipDetail"), enabled: true),
             Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: String(localized: "hint.delete"), enabled: true),
             Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: String(localized: "hint.deleteAll"), enabled: true)
         ]
