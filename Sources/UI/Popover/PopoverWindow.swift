@@ -272,21 +272,38 @@ final class PopoverWindow: NSObject {
         Logger.ui.info("PopoverWindow.refreshFrame — fitting=\(Int(fitting.width), privacy: .public)x\(Int(fitting.height), privacy: .public)")
     }
 
+    /// TASK-055 — 핀 사이드바 origin + 방향 산출 헬퍼. `showPinSidebar` / `resizePinSidebarPanel` 두 호출처 공통 흐름.
+    /// 본체 popover screen 의 visibleFrame 기준 (`panel.screen ?? NSScreen.main`) 으로 `ClipDetailDirection.resolve` 호출 + originX 계산. 사이드바 자체 screen 참조 X (fix-2 정합 — 사이드바가 이전 위치 잔존 screen 반환 차단).
+    private func computePinSidebarOrigin(popoverFrame: NSRect, sidebarWidth: CGFloat, gap: CGFloat) -> (originX: CGFloat, direction: ClipDetailDirection) {
+        let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        let direction = ClipDetailDirection.resolve(
+            anchorFrame: popoverFrame,
+            totalWidth: sidebarWidth,
+            gap: gap,
+            safe: DesignTokens.Spacing.clipDetailEdgeSafety,
+            visibleFrame: visibleFrame
+        )
+        let originX = direction.originX(anchorFrame: popoverFrame, totalWidth: sidebarWidth, gap: gap)
+        return (originX, direction)
+    }
+
     /// TASK-019 fix 2차 — pinnedClips count 변화 시 panel size 재조정 (bottom-aligned 유지).
     /// TASK-027 — Pin 사이드바 사이즈 변동 후 detail panel 활성이면 anchor 재계산 (200ms debounce 없이 즉시).
+    /// TASK-055 — 사이드바 좌/우 fallback. `computePinSidebarOrigin` 헬퍼로 단일화 (showPinSidebar 정합).
     private func resizePinSidebarPanel() {
         guard pinSidebarPanel.isVisible else { return }
         let popoverFrame = panel.frame
         let gap = DesignTokens.Spacing.pinSidebarGap
         let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
         let sidebarHeight = computePinSidebarHeight()
-        let originX = popoverFrame.origin.x - gap - sidebarWidth
+        let (originX, direction) = computePinSidebarOrigin(popoverFrame: popoverFrame, sidebarWidth: sidebarWidth, gap: gap)
         let originY = popoverFrame.origin.y  // bottom-aligned
         pinSidebarPanel.setFrame(
             NSRect(x: originX, y: originY, width: sidebarWidth, height: sidebarHeight),
             display: true,
             animate: false
         )
+        Logger.ui.debug("Pin sidebar resize — direction=\(direction.rawValue, privacy: .public) originX=\(originX, privacy: .public)")
         // TASK-027 — detail panel 활성이고 zone == .pin 이면 PinSidebar 새 anchor 로 setFrame 재계산.
         if let last = lastShownDetailRequest, last.zone == .pin, detailPanel.isVisible {
             showClipDetailPanel(last)
@@ -361,7 +378,8 @@ final class PopoverWindow: NSObject {
         let gap = DesignTokens.Spacing.pinSidebarGap
         let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
         let sidebarHeight = computePinSidebarHeight()
-        let originX = popoverFrame.origin.x - gap - sidebarWidth
+        // TASK-055 — 좌/우 fallback + 본체 popover screen 기준 visibleFrame 흐름은 computePinSidebarOrigin 헬퍼 단일화.
+        let (originX, direction) = computePinSidebarOrigin(popoverFrame: popoverFrame, sidebarWidth: sidebarWidth, gap: gap)
         // bottom-aligned — popover 바닥과 사이드바 바닥 일치.
         let originY = popoverFrame.origin.y
         // TASK-019 fix 3차 — display:true + animate:false 박아 panel size 즉시 redraw (B6 — 첫 show 옛 size 잔존 차단).
@@ -371,7 +389,7 @@ final class PopoverWindow: NSObject {
             animate: false
         )
         pinSidebarPanel.orderFrontRegardless()
-        Logger.ui.info("Pin sidebar panel shown — origin=(\(originX, privacy: .public),\(originY, privacy: .public)) h=\(sidebarHeight, privacy: .public)")
+        Logger.ui.info("Pin sidebar panel shown — direction=\(direction.rawValue, privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) h=\(sidebarHeight, privacy: .public)")
     }
 
     /// TASK-019 / TASK-048 — Pin 사이드바 동적 height 계산. pinnedClips count 기반 + 본체 popoverHeight 미만 상한.
@@ -443,11 +461,26 @@ final class PopoverWindow: NSObject {
         let totalW = Self.clipDetailTotalWidth
         let gap = DesignTokens.Spacing.clipDetailGap
         let safe = DesignTokens.Spacing.clipDetailEdgeSafety
-
-        // originX 계산 + 화면 좌측 클램프 — totalW (본문+꼭지) 사용.
-        var originX = anchorFrame.origin.x - gap - totalW
         let screenVisible = panel.screen?.visibleFrame ?? .zero
-        originX = max(screenVisible.minX + safe, originX)
+
+        // TASK-055 — 방향 결정.
+        // zone == .pin && pinSidebar 가시 시 — 사이드바 *바깥쪽* (본체와 반대편) 으로 강제. 사이드바가 본체 좌측이면 detail 더 좌측 / 사이드바가 본체 우측 fallback 진입 상태면 detail 더 우측.
+        // 그 외 (zone == .clip) — `ClipDetailDirection.resolve` 좌측 default + 좌측 막힘 시 우측 fallback.
+        let direction: ClipDetailDirection
+        if request.zone == .pin && pinSidebarPanel.isVisible {
+            direction = (pinSidebarPanel.frame.minX < panel.frame.minX) ? .left : .right
+        } else {
+            direction = ClipDetailDirection.resolve(
+                anchorFrame: anchorFrame,
+                totalWidth: totalW,
+                gap: gap,
+                safe: safe,
+                visibleFrame: screenVisible
+            )
+        }
+        // originX 계산 + 화면 가장자리 클램프 (양쪽 막힘 케이스 안전망).
+        var originX = direction.originX(anchorFrame: anchorFrame, totalWidth: totalW, gap: gap)
+        originX = max(screenVisible.minX + safe, min(originX, screenVisible.maxX - totalW - safe))
 
         // SwiftUI top-down ↔ NSPanel bottom-up 좌표 변환:
         // 행 center Y (SwiftUI, popoverBody 안 좌표계, top-down) = rowFrameInPopover.midY
@@ -487,7 +520,8 @@ final class PopoverWindow: NSObject {
                 onFileTap: { [weak self] url in
                     self?.handleFileTap(url)
                 },
-                searchQuery: viewModel.searchQuery
+                searchQuery: viewModel.searchQuery,
+                direction: direction
             ),
             in: detailVisualEffect
         )
@@ -496,18 +530,18 @@ final class PopoverWindow: NSObject {
             display: true,
             animate: false
         )
-        // TASK-027 fix — NSVisualEffectView.maskImage 박아 panel 자체를 말풍선 모양으로 잘라냄 (좌측 본문 직사각형 + 우측 꼭지 삼각형).
-        detailVisualEffect.maskImage = makeBubbleMaskImage(detailH: detailH, arrowOffsetY: arrowOffsetY)
+        // TASK-027 fix / TASK-055 — NSVisualEffectView.maskImage 박아 panel 자체를 말풍선 모양으로 잘라냄. direction 분기로 좌/우 flip.
+        detailVisualEffect.maskImage = makeBubbleMaskImage(detailH: detailH, arrowOffsetY: arrowOffsetY, direction: direction)
         detailPanel.orderFrontRegardless()
         lastShownDetailRequest = request
         // TASK-030 — ViewModel isDetailPanelOpen 갱신. pinSidebarHoverExit 가드에서 사용 — 자식 sub-panel 떠 있는 동안 사이드바 자동 닫힘 차단.
         viewModel.isDetailPanelOpen = true
-        Logger.ui.info("ClipDetailPanel shown — clipId=\(request.clip.id.uuidString, privacy: .public) zone=\(String(describing: request.zone), privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) totalW=\(totalW, privacy: .public) h=\(detailH, privacy: .public) arrowY=\(arrowOffsetY, privacy: .public)")
+        Logger.ui.info("ClipDetailPanel shown — clipId=\(request.clip.id.uuidString, privacy: .public) zone=\(String(describing: request.zone), privacy: .public) direction=\(direction.rawValue, privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) totalW=\(totalW, privacy: .public) h=\(detailH, privacy: .public) arrowY=\(arrowOffsetY, privacy: .public)")
     }
 
-    /// TASK-027 fix — 말풍선 mask 이미지. 좌측 본문 직사각형 (rounded) + 우측 꼭지 삼각형. NSVisualEffectView.maskImage 로 박아 panel 자체가 말풍선 모양으로 잘림.
+    /// TASK-027 fix / TASK-055 — 말풍선 mask 이미지. `direction == .left` 시 본문 좌측 + 꼭지 우측 / `direction == .right` 시 본문 우측 + 꼭지 좌측 (flip). NSVisualEffectView.maskImage 로 박아 panel 자체가 말풍선 모양으로 잘림.
     /// `arrowOffsetY` 는 SwiftUI top-down 좌표 (panel top 기준 Y). NSImage flipped:false 는 bottom-up 좌표라 변환.
-    private func makeBubbleMaskImage(detailH: CGFloat, arrowOffsetY: CGFloat) -> NSImage {
+    private func makeBubbleMaskImage(detailH: CGFloat, arrowOffsetY: CGFloat, direction: ClipDetailDirection) -> NSImage {
         let contentW = DesignTokens.WindowSize.clipDetailWidth
         let arrowW = DesignTokens.Spacing.clipDetailArrowWidth
         let arrowH = DesignTokens.Spacing.clipDetailArrowHeight
@@ -517,16 +551,21 @@ final class PopoverWindow: NSObject {
 
         let image = NSImage(size: size, flipped: false) { _ in
             let path = NSBezierPath()
-            // 좌측 본문 직사각형 (rounded corner).
-            let bodyRect = NSRect(x: 0, y: 0, width: contentW, height: detailH)
+            // 본문 직사각형 — direction 분기.
+            // .left : 본문 좌측 [0, contentW] / 꼭지 우측 [contentW, contentW + arrowW]
+            // .right: 꼭지 좌측 [0, arrowW] / 본문 우측 [arrowW, arrowW + contentW]
+            let bodyOriginX: CGFloat = (direction == .left) ? 0 : arrowW
+            let arrowBaseX: CGFloat = (direction == .left) ? contentW : arrowW
+            let arrowTipX: CGFloat = (direction == .left) ? contentW + arrowW : 0
+            let bodyRect = NSRect(x: bodyOriginX, y: 0, width: contentW, height: detailH)
             path.append(NSBezierPath(roundedRect: bodyRect, xRadius: cornerR, yRadius: cornerR))
 
             // 꼭지 삼각형 — arrowOffsetY 는 SwiftUI top-down. NSImage bottom-up 으로 변환.
             let arrowY_bottomUp = detailH - arrowOffsetY
             let arrow = NSBezierPath()
-            arrow.move(to: NSPoint(x: contentW, y: arrowY_bottomUp - arrowH / 2))
-            arrow.line(to: NSPoint(x: contentW + arrowW, y: arrowY_bottomUp))
-            arrow.line(to: NSPoint(x: contentW, y: arrowY_bottomUp + arrowH / 2))
+            arrow.move(to: NSPoint(x: arrowBaseX, y: arrowY_bottomUp - arrowH / 2))
+            arrow.line(to: NSPoint(x: arrowTipX, y: arrowY_bottomUp))
+            arrow.line(to: NSPoint(x: arrowBaseX, y: arrowY_bottomUp + arrowH / 2))
             arrow.close()
             path.append(arrow)
 

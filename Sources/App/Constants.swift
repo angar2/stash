@@ -74,4 +74,11 @@ enum Constants {
     static let popoverWidthKey: String = "popoverWidth"
     static let popoverWidthMin: CGFloat = 280
     static let popoverWidthMax: CGFloat = 600
+
+    // TASK-055 클립 상세 sub-window hover 트리거 임계.
+    // 클립 행 위에 마우스 커서 본 시간 이상 머무름 → ClipsViewModel.triggerClipDetail() 자동 발화.
+    // 같은 행 안 미세 움직임은 누적 보존 (hoverEnterRow 가 같은 row.id 추적 중이면 task 유지). 다른 행 이탈 시 cancel + 새 행 재시작.
+    // UserDefaults 노출 X — 사용자 환경설정 영역 비공개. 향후 필요 시 코드 한 줄 수정으로 조정. FEATURES §3-8 단일 진실.
+    // 2026-05-23 — 2.0 → 0.6 단축 (TASK-055 fix-3, 사용자 결정).
+    static let clipDetailHoverDelaySeconds: TimeInterval = 0.6
 }

@@ -14,21 +14,16 @@ final class ClipsViewModel {
         didSet {
             guard oldValue != focusZone else { return }
             // TASK-039 — zone 변경 = anchor 변경 = 이전 row frame 무효 (본체 popover ↔ PinSidebar 좌표계 불일치).
-            // activeRowFrameInPopover reset (.zero) → 다음 schedule 매칭 X → 즉시 nil emit. 새 zone 행 frame 게시 시 정확 좌표 emit.
+            // activeRowFrameInPopover reset (.zero) → 새 zone 행 frame 게시 시 정확 좌표 emit (트리거 발화 후).
             activeRowFrameInPopover = .zero
-            // `.pin && !pinSidebarOpen` (Pin 행 막 hover, PinSidebar 펼침 대기) — 즉시 nil emit + task skip. pinSidebarOpen didSet 의 schedule 가 처리.
-            if focusZone == .pin && !pinSidebarOpen {
-                onShowClipDetailChange?(nil)
-                lastEmittedClipId = nil
-                return
-            }
-            scheduleClipDetailUpdate()
+            // TASK-055 — zone 변경 = 클립 커서 이동의 일종 → 즉시 close (단일 룰).
+            dismissClipDetail()
         }
     }
     var selectedIdx: Int = 0 {
         didSet {
-            // TASK-027 — selectedIdx 변경 시 detail panel 재평가.
-            if oldValue != selectedIdx { scheduleClipDetailUpdate() }
+            // TASK-055 — 행 변경 = 즉시 close (단일 룰). 새 행에서 sub-window 보려면 재트리거 필요.
+            if oldValue != selectedIdx { dismissClipDetail() }
         }
     }
     // TASK-025 — `searchInputActive` 폐기. 검색바 always-active 정책으로 활성 단계 개념 제거.
@@ -40,8 +35,8 @@ final class ClipsViewModel {
             // TASK-019 — `PopoverWindow`가 별도 NSPanel 호스팅 토글. @Observable stored property 의 didSet 정상 동작.
             if oldValue != pinSidebarOpen {
                 onPinSidebarOpenChange?(pinSidebarOpen)
-                // TASK-039 — PinSidebar 가시 상태 변경은 detail anchor 분기 결정 변수. race 차단 위해 명시 re-schedule.
-                scheduleClipDetailUpdate()
+                // TASK-055 — 사이드바 상태 변경 = 클립 커서 컨텍스트 변경 → close 단일 룰.
+                dismissClipDetail()
             }
         }
     }
@@ -52,8 +47,8 @@ final class ClipsViewModel {
     var pinHoverActive: Bool = false      // Pin 행 hover 상태
     var pinSelectedIdx: Int = 0 {         // Pin 사이드바 안 선택 idx
         didSet {
-            // TASK-027 — Pin 사이드바 안 선택 변경 시 detail panel 재평가.
-            if oldValue != pinSelectedIdx { scheduleClipDetailUpdate() }
+            // TASK-055 — Pin 사이드바 안 행 변경 = 즉시 close (단일 룰).
+            if oldValue != pinSelectedIdx { dismissClipDetail() }
         }
     }
     /// 키보드 nav 시 set — ScrollView가 `proxy.scrollTo(id)` (anchor:nil) 로 *id 가 가시 안이면 무동작, 밖이면 가장 가까운 위치로 자동 스크롤* (TASK-019 fix 6차).
@@ -74,13 +69,18 @@ final class ClipsViewModel {
         didSet {
             // frame 미세 변화는 무시 (`clipDetailFrameDeltaThreshold` 미만 변동은 Geometry update 폭주 차단).
             let threshold = DesignTokens.Spacing.clipDetailFrameDeltaThreshold
-            if abs(oldValue.midY - activeRowFrameInPopover.midY) > threshold
-                || abs(oldValue.minX - activeRowFrameInPopover.minX) > threshold {
-                scheduleClipDetailUpdate()
-            }
+            guard abs(oldValue.midY - activeRowFrameInPopover.midY) > threshold
+                || abs(oldValue.minX - activeRowFrameInPopover.minX) > threshold else { return }
+            // TASK-055 — 같은 행 frame 미세 변경 (popover 드래그 / resize / 검색 결과 재배치 등) → 표시 중일 때만 anchor 재계산 (panel 위치 따라감). 미표시 시 no-op.
+            guard clipDetailVisible else { return }
+            emitClipDetailRequestIfMatching()
         }
     }
-    private var clipDetailTask: Task<Void, Never>?
+    /// TASK-055 — 클립 상세 sub-window 표시 상태. toggle close 분기 + close 단일 룰 진입 가드.
+    private(set) var clipDetailVisible: Bool = false
+    /// TASK-055 — hover 임계 timer + 현재 추적 row.id. `hoverEnterRow(id:)` 가 같은 row.id 진입 시 task 보존 (미세 움직임 누적). 다른 row.id 시 cancel + 재시작.
+    private var hoverDetailTask: Task<Void, Never>?
+    private var hoverDetailTaskRowId: UUID?
     /// 마지막 emit 한 clip.id 추적 (TASK-039 fix) — schedule 진입 시 clip 변경 검출 → 다른 clip 으로 변경되면 즉시 nil emit (panel hide). 같은 clip frame 변경 만 잔존 정책 적용.
     private var lastEmittedClipId: UUID?
 
@@ -199,8 +199,8 @@ final class ClipsViewModel {
             let fetched = try await repository.fetchAll()
             clips = fetched
             clampSelection()
-            // TASK-027 — same idx 자리 다른 clip 진입 케이스 (didSet 미발화). 명시 호출.
-            scheduleClipDetailUpdate()
+            // TASK-055 — 데이터 reload 는 *행 변경의 일종* (정렬 / 삭제 / dedup 후 idx 자리에 다른 clip 가능). close 단일 룰.
+            dismissClipDetail()
             // TASK-037 — visibleClips 변동 알림. autoFit ON 시 PopoverWindow 가 NSPanel frame 재계산.
             NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
         } catch {
@@ -213,8 +213,8 @@ final class ClipsViewModel {
             let result = try await repository.search(query: searchQuery)
             clips = result
             selectedIdx = 0
-            // TASK-027 — selectedIdx 가 이미 0 인 상태에서 = 0 박으면 didSet 미발화. 명시 호출.
-            scheduleClipDetailUpdate()
+            // TASK-055 — 검색 결과 변동 = 행 변경. selectedIdx didSet 가 이미 0 인 상태에서 = 0 박으면 didSet 미발화 → 명시 dismiss 호출.
+            dismissClipDetail()
             // TASK-037 — 검색 결과 변동도 visibleClips 변동. autoFit ON 시 컨테이너 자라남/줄어듦.
             NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
         } catch {
@@ -399,9 +399,9 @@ final class ClipsViewModel {
         pinHoverActive = false
         pendingScrollToId = nil
         ignoreHoverUntil = Date().addingTimeInterval(DesignTokens.Animation.popoverOpenHoverIgnoreDelay)
-        // TASK-027 — popover 새 호출 시 detail panel 강제 닫음. frame .zero 초기화도 함께.
+        // TASK-027 / TASK-055 — popover 새 호출 시 detail panel 강제 닫음 (default closed). frame .zero 초기화 동반.
         activeRowFrameInPopover = .zero
-        scheduleClipDetailUpdate()
+        dismissClipDetail()
     }
 
     // MARK: - Actions
@@ -651,56 +651,83 @@ final class ClipsViewModel {
         }
     }
 
-    // MARK: - Clip Detail sub-window (TASK-027)
+    // MARK: - Clip Detail sub-window (TASK-027 / TASK-055)
 
-    /// 4축 (focusZone / selectedIdx / pinSelectedIdx / activeRowFrameInPopover) 중 어느 하나 변경 시 호출.
-    /// 즉시 현재 detail 닫고 (콜백 nil) 활성 행이 다중파일이면 200ms 후 detail 재오픈 (콜백 ClipDetailRequest).
-    /// `reload` / `performSearch` 후 *같은 idx 자리 다른 clip* 진입 케이스도 명시 호출로 잡음 (didSet 미발화 케이스 대비).
-    func scheduleClipDetailUpdate() {
-        clipDetailTask?.cancel()
-        clipDetailTask = nil
-
-        // TASK-039 — emit 정책:
-        // - 매칭 X (활성 없음 / Provider nil / frame 미게시) → 즉시 nil emit (panel hide).
-        // - 매칭 O + clip 변경 (lastEmittedClipId != active.clip.id) → 즉시 nil emit (hover 이동 시 즉각 사라짐).
-        // - 매칭 O + 같은 clip → 기존 panel 잔존 + 200ms 후 갱신 (깜빡임 차단).
-        let active = activeClipForDetail()
-        let provider = active.map { ClipDetailRegistry.provider(for: $0.clip) } ?? nil
-
-        guard let active,
-              provider != nil,
-              activeRowFrameInPopover != .zero else {
-            onShowClipDetailChange?(nil)
-            lastEmittedClipId = nil
+    /// TASK-055 — 사용자 명시 트리거 (⌘+D 단축키 / hover 임계 도달) 진입점.
+    /// 이미 표시 중이면 toggle close. 아니면 활성 클립 + Provider 매칭 검증 후 ClipDetailRequest emit.
+    /// 매칭 X / frame 미게시 시 no-op.
+    func triggerClipDetail() {
+        if clipDetailVisible {
+            dismissClipDetail()
             return
         }
+        emitClipDetailRequestIfMatching()
+    }
 
-        if let lastId = lastEmittedClipId, lastId != active.clip.id {
-            onShowClipDetailChange?(nil)
-            lastEmittedClipId = nil
+    /// TASK-055 — 명시 close 진입점. detail panel hide + clipDetailVisible=false + hover task cancel.
+    /// 호출 site = popover hide / 행 변경 didSet / popover 재호출 (resetForOpen) / triggerClipDetail toggle close 분기.
+    func dismissClipDetail() {
+        hoverDetailTask?.cancel()
+        hoverDetailTask = nil
+        hoverDetailTaskRowId = nil
+        if clipDetailVisible {
+            clipDetailVisible = false
+            Logger.ui.debug("ClipDetail: dismiss")
         }
+        onShowClipDetailChange?(nil)
+        lastEmittedClipId = nil
+    }
 
-        let snapshotClipId = active.clip.id
-        let snapshotZone = active.zone
-        clipDetailTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(DesignTokens.Animation.clipDetailDebounceDelay * 1_000_000_000))
+    /// TASK-055 — 활성 클립 + Provider 매칭 + frame 게시 검증 후 ClipDetailRequest emit.
+    /// 호출 site = `triggerClipDetail` (트리거 발화) / `activeRowFrameInPopover` didSet (이미 표시 중 frame 재계산).
+    /// 매칭 실패 (활성 행 없음 / Provider 없음) → `dismissClipDetail()` 호출로 통합 (hover task cancel 동반은 의도된 부수효과 — 활성 행 없는데 hover task 잔존할 이유 X).
+    private func emitClipDetailRequestIfMatching() {
+        guard let active = activeClipForDetail(),
+              ClipDetailRegistry.provider(for: active.clip) != nil else {
+            dismissClipDetail()
+            return
+        }
+        guard activeRowFrameInPopover != .zero else {
+            // frame 미게시 — SwiftUI GeometryReader 게시 후 didSet 가 재호출.
+            return
+        }
+        let req = ClipDetailRequest(
+            clip: active.clip,
+            zone: active.zone,
+            rowFrameInPopover: activeRowFrameInPopover
+        )
+        Logger.ui.debug("ClipDetail: emit — clipId=\(active.clip.id.uuidString, privacy: .public) zone=\(String(describing: active.zone), privacy: .public)")
+        clipDetailVisible = true
+        lastEmittedClipId = active.clip.id
+        onShowClipDetailChange?(req)
+    }
+
+    /// TASK-055 — 클립 행 hover 진입. 같은 row.id 추적 중이면 task 보존 (미세 움직임 누적). 다른 row.id 시 cancel + 새 task 시작.
+    /// 임계 도달 시 `triggerClipDetail()` 자동 발화 — 활성 행이 hover 행과 일치 + Provider 매칭이면 detail emit.
+    func hoverEnterRow(id: UUID) {
+        if isHoverIgnored { return }
+        if hoverDetailTaskRowId == id, hoverDetailTask != nil {
+            return  // 미세 움직임 누적 보존
+        }
+        hoverDetailTask?.cancel()
+        hoverDetailTaskRowId = id
+        hoverDetailTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Constants.clipDetailHoverDelaySeconds * 1_000_000_000))
             guard !Task.isCancelled, let self else { return }
-
-            // 200ms 사이 활성 변경 가능 — 재검증.
-            guard let current = self.activeClipForDetail(),
-                  current.clip.id == snapshotClipId,
-                  current.zone == snapshotZone else { return }
-            guard self.activeRowFrameInPopover != .zero else { return }
-
-            let req = ClipDetailRequest(
-                clip: current.clip,
-                zone: current.zone,
-                rowFrameInPopover: self.activeRowFrameInPopover
-            )
-            Logger.ui.debug("ClipDetail: emit request — clipId=\(snapshotClipId.uuidString, privacy: .public) zone=\(String(describing: snapshotZone), privacy: .public)")
-            self.lastEmittedClipId = current.clip.id
-            self.onShowClipDetailChange?(req)
+            // 임계 도달 시 현재 추적 row.id 가 여전히 같은 id 인지 검증 후 trigger.
+            guard self.hoverDetailTaskRowId == id else { return }
+            self.hoverDetailTask = nil
+            self.hoverDetailTaskRowId = nil
+            self.triggerClipDetail()
         }
+    }
+
+    /// TASK-055 — 같은 row.id exit 시 task cancel. 다른 row.id exit 은 hoverEnterRow 안에서 이미 cancel 처리되므로 no-op.
+    func hoverExitRow(id: UUID) {
+        guard hoverDetailTaskRowId == id else { return }
+        hoverDetailTask?.cancel()
+        hoverDetailTask = nil
+        hoverDetailTaskRowId = nil
     }
 
     /// 현재 활성 클립 (focusZone 분기). 경계 검사 — 잘못된 idx 또는 빈 리스트 시 nil.

@@ -126,11 +126,38 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.allCases.contains(.confirm))
     }
 
-    @Test("TASK-051 — PopoverHotkey.allCases.count == 14 (TASK-036 13 case 합산 + TASK-051 .confirm 신규)")
-    func allCasesCountIsFourteen() {
-        // TASK-025 시점 10 case → TASK-036 +4 (pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast) → TASK-051 +1 (.confirm).
-        // 현재 enum 14 case: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / confirm / escape.
-        #expect(PopoverHotkey.allCases.count == 14)
+    @Test("TASK-055 — PopoverHotkey.allCases.count == 15 (TASK-051 14 case + TASK-055 .toggleClipDetail 신규)")
+    func allCasesCountIsFifteen() {
+        // TASK-025 시점 10 case → TASK-036 +4 → TASK-051 +1 (.confirm) → TASK-055 +1 (.toggleClipDetail).
+        // 현재 enum 15 case: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / confirm / escape / toggleClipDetail.
+        #expect(PopoverHotkey.allCases.count == 15)
+    }
+
+    // MARK: - TASK-055: .toggleClipDetail (⌘+D) 매칭
+
+    @Test("TASK-055 — .toggleClipDetail 매칭: ⌘+D (keyCode=2, command) 매치")
+    func toggleClipDetailMatchesCommandD() {
+        let event = makeKeyEvent(keyCode: 2, modifiers: [.command])
+        #expect(PopoverHotkey.toggleClipDetail.matches(event: event) == true)
+    }
+
+    @Test("TASK-055 — .toggleClipDetail 비매칭: D 단독 (modifier 없음) — 검색바 텍스트 입력 시 d 키 정상 forward")
+    func toggleClipDetailDoesNotMatchPlainD() {
+        let event = makeKeyEvent(keyCode: 2, modifiers: [])
+        #expect(PopoverHotkey.toggleClipDetail.matches(event: event) == false)
+    }
+
+    @Test("TASK-055 — .toggleClipDetail 비매칭: ⌘+⇧+D (다른 modifier 조합) false")
+    func toggleClipDetailDoesNotMatchCommandShiftD() {
+        let event = makeKeyEvent(keyCode: 2, modifiers: [.command, .shift])
+        #expect(PopoverHotkey.toggleClipDetail.matches(event: event) == false)
+    }
+
+    @Test("TASK-055 — .toggleClipDetail 정합: popoverShortcutID nil (변경 불가) / keyCode 2 / modifiers [.command]")
+    func toggleClipDetailEnumProperties() {
+        #expect(PopoverHotkey.toggleClipDetail.popoverShortcutID == nil)
+        #expect(PopoverHotkey.toggleClipDetail.keyCode == 2)
+        #expect(PopoverHotkey.toggleClipDetail.modifiers == [.command])
     }
 
     // MARK: - TASK-025: 검색바 always-active 정책 회귀 가드
