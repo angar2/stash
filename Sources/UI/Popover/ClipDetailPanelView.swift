@@ -9,9 +9,17 @@ import AppKit
 /// - Parameters:
 ///   - clip: 활성 클립 (4 종 ClipType — text · image · single file · multi file). `ClipDetailRegistry.provider(for:)` 매칭한 Provider 로 본문 트리 생성.
 ///   - onFileTap: 파일 행 클릭 콜백. `NSWorkspace.activateFileViewerSelecting` + popover dismiss 호출자가 처리.
+///   - searchQuery: popover 검색바 현재 입력. Provider chain 으로 본문 텍스트 렌더에 전달 — 매칭 구간 시각 강조 (TASK-049 / UX-UI §7-3). default `""` (강조 미적용).
 struct ClipDetailPanelView: View {
     let clip: Clip
     let onFileTap: @MainActor (URL) -> Void
+    let searchQuery: String
+
+    init(clip: Clip, onFileTap: @escaping @MainActor (URL) -> Void, searchQuery: String = "") {
+        self.clip = clip
+        self.onFileTap = onFileTap
+        self.searchQuery = searchQuery
+    }
 
     private var provider: (any ClipDetailProvider)? {
         ClipDetailRegistry.provider(for: clip)
@@ -62,7 +70,7 @@ struct ClipDetailPanelView: View {
     @ViewBuilder
     private var content: some View {
         if let provider {
-            provider.makeContent(for: clip, onFileTap: onFileTap)
+            provider.makeContent(for: clip, onFileTap: onFileTap, searchQuery: searchQuery)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             // Provider 매칭 없음 — 정상 흐름에서는 도달 X (PopoverWindow.showClipDetailPanel 진입 시 차단됨).
