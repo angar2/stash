@@ -128,7 +128,9 @@ struct HistoryPopover: View {
                             onClick: { Task { @MainActor in await handleClipPaste(idx, .clip) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화. TASK-028 — 본체 행이라 zone=.clip 고정.
                             onHover: { viewModel.setSelectedIdx(idx) },
                             onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
-                            onDelete: { Task { await viewModel.delete(at: idx) } }
+                            onDelete: { Task { await viewModel.delete(at: idx) } },
+                            onHoverEnter: { viewModel.hoverEnterRow(id: clip.id) },  // TASK-055 — hover 임계 timer 시작.
+                            onHoverExit: { viewModel.hoverExitRow(id: clip.id) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
                         )
                         // TASK-037 fix-15b — Equatable conformance + .equatable() → SwiftUI 가 변경된 행만 re-render. 호버 응답 빠름.
                         .equatable()

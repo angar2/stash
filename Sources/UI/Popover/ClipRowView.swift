@@ -17,6 +17,10 @@ struct ClipRowView: View, Equatable {
     let onHover: () -> Void
     let onTogglePin: () -> Void
     let onDelete: () -> Void
+    /// TASK-055 — hover 임계 trigger 진입점. 부모가 clip.id capture 해 `viewModel.hoverEnterRow(id:)` / `hoverExitRow(id:)` 호출.
+    /// default no-op — 호출처 (HistoryPopover / PinSidebarView) 가 박지 않으면 hover 트리거 비활성.
+    var onHoverEnter: () -> Void = {}
+    var onHoverExit: () -> Void = {}
 
     /// TASK-037 fix-15b — Equatable conformance. closure 제외 시각 영향 prop 만 비교.
     /// `.equatable()` modifier 와 함께 사용 → SwiftUI 가 변경된 행만 re-render → 호버 응답 빠름 (selectedIdx 변경 시 다른 행 skip).
@@ -70,7 +74,12 @@ struct ClipRowView: View, Equatable {
         .pointingHandCursor(enabled: mode != .method3)
         .onHover { isHover in
             hovering = isHover
-            if isHover { onHover() }
+            if isHover {
+                onHover()
+                onHoverEnter()  // TASK-055 hover 임계 timer 시작.
+            } else {
+                onHoverExit()  // TASK-055 같은 행 이탈 시 timer cancel.
+            }
         }
         // TASK-037 fix-16 — visuallySelected animation 폐기. 호버 시 highlight 가 120ms fade 거쳐서 *마우스 지나간 후 뒤늦게 색 변경* 인식. 즉시 highlight 박힘.
         // isFlashing animation 은 paste flash 시각 효과라 유지.

@@ -50,7 +50,9 @@ struct PinSidebarView: View {
                             onDelete: {
                                 // 핀 항목 행 우측은 항상 pin.fill 아이콘 분기라 onDelete 호출 X.
                                 // (clip.isPinned == true 이므로 ClipRowView 의 X 아이콘 분기 진입 X)
-                            }
+                            },
+                            onHoverEnter: { viewModel.hoverEnterRow(id: clip.id) },  // TASK-055 — hover 임계 timer 시작.
+                            onHoverExit: { viewModel.hoverExitRow(id: clip.id) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
                         )
                         // TASK-037 fix-15b — Equatable + .equatable() → 호버 응답 빠름.
                         .equatable()
