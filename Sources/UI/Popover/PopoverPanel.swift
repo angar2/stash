@@ -81,11 +81,13 @@ enum PopoverHotkey: CaseIterable {
 @MainActor
 enum PopoverPanel {
     /// borderless KeyablePanel + contentView=NSVisualEffectView (Liquid Glass 표준 패턴)
+    /// TASK-054 fix-1 — styleMask 에 `.resizable` 추가 — macOS 시스템 표준 NSWindow resize 위임. 4 edges + 4 코너 자동 hit-test + cursor.
+    /// borderless + resizable 조합은 시각 resize 핸들 없음 (cursor 변경만). NSWindowDelegate.windowWillResize 가 width clamp + height 1행 snap 책임.
     static func make(width: CGFloat, height: CGFloat) -> (panel: KeyablePanel, visualEffectView: NSVisualEffectView) {
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         let p = KeyablePanel(
             contentRect: contentRect,
-            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -130,17 +132,42 @@ enum PopoverPanel {
         return hosting
     }
 
-    /// 화면 우하단에 panel 배치 (방식 2/3 공통)
-    static func positionAtBottomRight(_ panel: NSPanel) {
+    /// 화면 anchor 5종 + inset 박아 panel 배치 (방식 2/3 공통, TASK-054).
+    /// `PopoverAnchor` enum 5종 + visibleFrame 기준 origin 계산 (`PopoverAnchor.origin` 순수 함수 위임).
+    /// 호출처는 환경설정 *기본 오픈 위치* (UserDefaults `popoverDefaultAnchor`) 조회 결과 전달. NSScreen.main 미존재 시 no-op.
+    static func positionAtAnchor(_ panel: NSPanel, anchor: PopoverAnchor) {
         guard let screen = NSScreen.main else { return }
         let visible = screen.visibleFrame
-        let w: CGFloat = DesignTokens.WindowSize.popoverWidth
         let inset: CGFloat = DesignTokens.WindowSize.popoverInsetBottom
-        let origin = NSPoint(
-            x: visible.maxX - w - inset,
-            y: visible.minY + inset
-        )
+        let origin = anchor.origin(panelSize: panel.frame.size, visibleFrame: visible, inset: inset)
         panel.setFrameOrigin(origin)
+    }
+
+    /// TASK-054 — 저장 좌표 유효성 검증 (순수 함수, 단위 테스트 진입점).
+    /// TASK-054 fix-1 — width 도 영속이라 `validateSavedFrame` 으로 확장 (origin + size 통합 검증). 본 헬퍼는 호환 wrapper.
+    /// - Returns: `validateSavedFrame(origin:size:visibleFrame:)` 결과 (panelSize 가 size 역할).
+    static func validateSavedOrigin(origin: NSPoint, panelSize: NSSize, visibleFrame: NSRect) -> Bool {
+        validateSavedFrame(origin: origin, size: panelSize, visibleFrame: visibleFrame)
+    }
+
+    /// TASK-054 fix-1 — 저장 frame (origin + size) 유효성 검증 (순수 함수, 단위 테스트 진입점).
+    /// 유효 조건: size 가 visibleFrame 안 cap + origin 이 visibleFrame 안 + (origin + size) 가 visibleFrame 안.
+    /// 모니터 분리 / 해상도 변경 / 저장된 width 가 cap 범위 밖 (사용자 설정 변경 후 cap 축소된 경우) 시 false.
+    /// - Parameters:
+    ///   - origin: UserDefaults 에 저장된 popover frame.origin (NSPanel bottom-up 좌표).
+    ///   - size: 저장된 popover frame.size (width + height).
+    ///   - visibleFrame: 현재 screen.visibleFrame.
+    /// - Returns: 진입 가능 시 true / 화면 밖 또는 size 초과 시 false.
+    static func validateSavedFrame(origin: NSPoint, size: NSSize, visibleFrame: NSRect) -> Bool {
+        // size 가 visibleFrame 초과 (모니터 너무 작음) → fallback.
+        guard size.width <= visibleFrame.width, size.height <= visibleFrame.height else {
+            return false
+        }
+        // origin + size 가 visibleFrame 안 + panel 우/상단도 visibleFrame 안.
+        return origin.x >= visibleFrame.minX
+            && origin.y >= visibleFrame.minY
+            && origin.x + size.width <= visibleFrame.maxX
+            && origin.y + size.height <= visibleFrame.maxY
     }
 
     /// 메뉴바 button 아래 정렬 + 좌우 화면 클램프 (방식 1)

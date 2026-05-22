@@ -158,6 +158,7 @@ struct StashApp: App {
         self.preferencesController = prefsController
         let popover = PopoverWindow(
             viewModel: clipsVM,
+            settingsViewModel: settingsVM,  // TASK-054 fix-1 — windowWillResize 안에서 setClipsPerPage 직접 호출.
             onOpenSettings: { [prefsController] in prefsController.show() }
         )
         self.popoverWindow = popover

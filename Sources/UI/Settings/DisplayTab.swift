@@ -14,6 +14,7 @@ struct DisplayTab: View {
                 autoFitRow
                 hintBarVisibleRow
                 accentColorModeRow
+                popoverPositionRow
             }
         }
     }
@@ -81,10 +82,11 @@ struct DisplayTab: View {
     }
 
     /// TASK-053 — 콘텐츠 색상 라디오. 기본 색상 / 시스템 색상 2 선택지. 변경 즉시 강조 view tree 반영. hint 라인 X (사용자 결정).
+    /// TASK-054 — 디스플레이 탭 마지막 → 5번째 *보관함 오픈 위치* 추가 따라 divider 활성.
     private var accentColorModeRow: some View {
         settingsRow(
             label: String(localized: "settings.display.accentColor.label"),
-            showDivider: false
+            showDivider: true
         ) {
             Picker(
                 "",
@@ -100,6 +102,56 @@ struct DisplayTab: View {
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
+        }
+    }
+
+    /// TASK-054 — 보관함 오픈 위치. 좌측 큰 라벨 *보관함 오픈 위치* 1개 + 우측 control-col 안 sub-row 2개 세로 스택.
+    /// sub-row 1 = *기본 오픈 위치* (Picker 5종 anchor, 폭 = displaySliderMaxWidth/2 ≒ control-col 50%).
+    /// sub-row 2 = *이전 위치 기억하기* (capsule 토글, default OFF).
+    /// 부가설명 라인 X (사용자 결정 — 라벨만으로 명확). HTML 목업 [.temp/054_settings-popover-position-mockup.html] 정합.
+    /// TASK-054 fix-2 — `popoverRememberLastPosition` ON 시 *기본 오픈 위치* Picker disabled (영속 좌표 우선이라 anchor 무의미).
+    private var popoverPositionRow: some View {
+        let anchorDisabled = viewModel.popoverRememberLastPosition
+        return settingsRow(
+            label: String(localized: "settings.display.popoverPosition.label"),
+            showDivider: false  // 마지막 행
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                // sub-row 1 — 기본 오픈 위치 (Picker 드롭다운). 이전 위치 기억하기 ON 시 disabled.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "settings.display.popoverPosition.defaultAnchor"))
+                        .font(DesignTokens.Typography.settingsBody)
+                        .foregroundStyle(anchorDisabled ? DesignTokens.Colors.labelSecondary : DesignTokens.Colors.labelPrimary)
+                    Picker(
+                        "",
+                        selection: Binding(
+                            get: { viewModel.popoverDefaultAnchor },
+                            set: { viewModel.setPopoverDefaultAnchor($0) }
+                        )
+                    ) {
+                        ForEach(PopoverAnchor.allCases, id: \.self) { anchor in
+                            Text(String(localized: String.LocalizationValue(anchor.localizationKey)))
+                                .tag(anchor)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: DesignTokens.Spacing.displaySliderMaxWidth / 2)
+                    .disabled(anchorDisabled)
+                }
+                // sub-row 2 — 이전 위치 기억하기 (토글)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "settings.display.popoverPosition.rememberLast"))
+                        .font(DesignTokens.Typography.settingsBody)
+                        .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                    customSettingsToggle(
+                        isOn: Binding(
+                            get: { viewModel.popoverRememberLastPosition },
+                            set: { viewModel.setPopoverRememberLastPosition($0) }
+                        ),
+                        disabled: false
+                    )
+                }
+            }
         }
     }
 }

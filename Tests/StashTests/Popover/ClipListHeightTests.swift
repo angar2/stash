@@ -139,14 +139,19 @@ struct ClipListHeightTests {
 
     // MARK: - TASK-052 단축키 설명 표시 토글 — 화면 cap 도달 시 clipList 확장
 
-    @Test("TASK-052 — hintBarVisible OFF 시 clipList cap 이 ON 보다 hintBarOverhead 만큼 큼 (raw > cap 케이스)")
+    @Test("TASK-052 / TASK-054 fix-2 — hintBarVisible OFF 시 clipList cap 이 ON 보다 정수 행 (≥ 0 행) 만큼 큼 (raw > cap 케이스)")
     func hintBarVisible_offExpandsClipListCap() {
         // raw > cap 강제 — N=50 (max) 으로 raw 가 충분히 크게 박음 (50 × rowHeight + 49 × rowGap > 모든 모니터 가용 높이).
         let n = Constants.clipsPerPageMax
         let hOn = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: true)
         let hOff = ClipsViewModel.effectiveClipListHeight(visibleCount: n, clipsPerPage: n, autoFit: false, hasPinned: false, hintBarVisible: false)
-        // 두 값 모두 cap 적용 — 차이 = hintBarOverhead. raw 가 cap 초과 보장이라 ON/OFF 둘 다 cap 박힘.
-        #expect(hOff - hOn == DesignTokens.Spacing.hintBarOverhead)
+        // TASK-054 fix-2 — cap 이 정수 행 단위 floor 박혀 차이가 hintBarOverhead 정확값 아님.
+        // OFF 시 hintBarOverhead (42pt) 만큼 screenAvailable 가 증가 → cappedRows 가 1 행 더 들어갈 수도 / 동일할 수도.
+        // 차이 = 0 (cappedRows 동일) 또는 rowHeight + rowGap (cappedRows + 1 행). 음수 X (단조 증가 확인).
+        let snap = DesignTokens.Spacing.rowMinHeight + DesignTokens.Spacing.rowGap
+        let diff = hOff - hOn
+        #expect(diff >= 0, "OFF cap 이 ON cap 보다 작지 않아야 함 (단조)")
+        #expect(diff == 0 || diff == snap, "cap 차이는 0 (동일 cappedRows) 또는 snap 1 행 (cappedRows+1) — 정수 행 floor 정합")
     }
 
     @Test("TASK-052 — hintBarVisible 무관 raw < cap 케이스 (N=3, 작은 N) 동일 height")

@@ -333,7 +333,11 @@ final class ClipsViewModel {
         let hintBarAdjust: CGFloat = hintBarVisible ? 0 : DesignTokens.Spacing.hintBarOverhead
         let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust
         let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
-        let cap = max(rowHeight, screenAvailable)  // 최소 1행 보장
+        // TASK-054 fix-2 — cap 을 *정수 행 단위 floor* 박음. fractional 잔여 공간 차단 (사용자 환경설정에서 N+1 행 요청 시 *부분 잘린 행* 또는 *남은 잔여 공간 채움* 발생 차단).
+        // 단순 `cap = max(rowHeight, screenAvailable)` 박으면 N 행 + 잔여 공간 (1 행 미만) 까지 popover 가 늘어남 — N+1 행 요청도 채워질 수 있음.
+        // 정수 행 단위 floor 박으면 *완전한 행만* 표시. (rowHeight + rowGap) 단위 floor — gap 1 개 분량 보정 위해 (screenAvailable + rowGap) 사용.
+        let cappedRows = max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
+        let cap = CGFloat(cappedRows) * rowHeight + CGFloat(max(0, cappedRows - 1)) * rowGap
         return min(raw, cap)
     }
 
