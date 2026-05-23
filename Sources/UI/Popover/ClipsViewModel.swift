@@ -61,8 +61,8 @@ final class ClipsViewModel {
     // MARK: - Clip Detail sub-window state (TASK-027)
     /// `PopoverWindow` 가 등록 — detail panel show/hide 분기. nil = 닫음, non-nil = 표시 요청.
     var onShowClipDetailChange: (@MainActor (ClipDetailRequest?) -> Void)?
-    /// TASK-030 — 클립 상세 sub-panel 표시 상태. `PopoverWindow` 가 `showClipDetailPanel` / `hideClipDetailPanel` 에서 갱신. `pinSidebarHoverExit` 안 가드에 사용 — 자식 sub-panel 떠 있는 동안 사이드바 자동 닫힘 차단.
-    var isDetailPanelOpen: Bool = false
+    /// TASK-062 — `pinSidebarHoverExit()` 가드 closure. `PopoverWindow` 가 등록 — NSEvent.mouseLocation + 핀 사이드바 frame + 상세 sub-panel frame 합집합 검사 후 bool 반환. true = close 차단 (합집합 안), false = close 진행 (합집합 밖). 기존 TASK-030 의 `isDetailPanelOpen` boolean 가드 대체 — boolean 만 검사 + 위치 영역 검사 X 결함 정합.
+    var shouldRetainPinSidebarOnHoverExit: (@MainActor () -> Bool)?
     /// 활성 행 frame (popover 좌표계, SwiftUI top-down). `HistoryPopover` / `PinSidebarView` 의 `GeometryReader` + `PreferenceKey` 가 게시.
     /// PopoverWindow 가 detail panel anchor + 꼭지 Y 계산에 사용.
     var activeRowFrameInPopover: CGRect = .zero {
@@ -660,8 +660,8 @@ final class ClipsViewModel {
 
     /// Pin 사이드 hover 이탈 — 200ms 지연 닫힘
     func pinSidebarHoverExit() {
-        // TASK-030 — 클립 상세 sub-panel 떠 있는 동안 사이드바 닫힘 차단. 사용자가 사이드바 → 상세 sub-panel 마우스 이동 시 사이드바가 자동 닫히는 버그 회피.
-        if isDetailPanelOpen { return }
+        // TASK-062 — 영역 합집합 가드. `PopoverWindow` 가 NSEvent.mouseLocation + 핀 사이드바 frame + 상세 sub-panel frame 합집합 검사 후 bool 반환 — true 면 합집합 안 (close 차단, TASK-030 자식 sub-panel 보호 의도 보존) / false 또는 nil 면 합집합 밖 (close 진행 + `pinSidebarOpen=false` didSet 의 TASK-055 단일 룰로 상세 sub-panel 동반 close). 기존 `isDetailPanelOpen` boolean 가드 대체.
+        if shouldRetainPinSidebarOnHoverExit?() == true { return }
         pinHoverActive = false
         scheduleSidebarCloseIfNeeded()
     }
