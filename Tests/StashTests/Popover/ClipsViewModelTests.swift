@@ -61,10 +61,13 @@ struct ClipsViewModelTests {
         ]
         let (vm, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
+        // TASK-061 — `filteredClips` 클라이언트 필터 제거 (clips 그대로 반환). 검색은 `performSearch` 가 repository.search 결과로 clips 박음 → 명시 호출 후 검증.
         vm.searchQuery = "hello"
+        await vm.performSearch()
         #expect(vm.filteredClips.count == 2)
         #expect(vm.visibleClips.count == 2)
         vm.searchQuery = "FOO"
+        await vm.performSearch()
         #expect(vm.filteredClips.count == 1)
     }
 
@@ -278,25 +281,7 @@ struct ClipsViewModelTests {
         #expect(vm.pinSidebarOpen == false)
     }
 
-    @Test("isEmptyState — clips 0 + 검색어 빈 문자열")
-    func isEmptyStateLogic() async {
-        let (vm, _, _) = await makeViewModel(prefilled: [])
-        await vm.reload()
-        #expect(vm.isEmptyState == true)
-        vm.searchQuery = "abc"
-        #expect(vm.isEmptyState == false)
-        #expect(vm.isSearchEmptyResult == true)
-    }
-
-    @Test("isEmptyState — Pin이 일반 히스토리에도 자연 노출되므로 핀만 있어도 빈 상태 X (TASK-019)")
-    func isEmptyStateWithOnlyPinned() async {
-        let pinned = makeClip(body: "pinned-1", pinned: true)
-        let (vm, _, _) = await makeViewModel(prefilled: [pinned])
-        await vm.reload()
-        #expect(vm.visibleClips.count == 1)  // TASK-019 — 핀이 visibleClips에 포함
-        #expect(vm.pinnedClips.count == 1)
-        #expect(vm.isEmptyState == false)  // 일반 히스토리에 핀 있음 → 빈 상태 X
-    }
+    // TASK-061 — `isEmptyState` / `isSearchEmptyResult` computed property 폐기 + 관련 테스트 제거. clipsArea 분기 (`emptyState` / `searchEmptyResult` view) 폐기로 production 사용처 0.
 
     // MARK: - TASK-019: 핀 항목 일반 히스토리 자연 노출 + Pin 사이드바 토글
 
@@ -322,7 +307,9 @@ struct ClipsViewModelTests {
         ]
         let (vm, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
+        // TASK-061 — `filteredClips` 클라이언트 필터 제거. `performSearch` 명시 호출 후 검증.
         vm.searchQuery = "common-keyword"
+        await vm.performSearch()
         #expect(vm.visibleClips.count == 2)
         #expect(vm.visibleClips.contains(where: { $0.isPinned }))
     }
@@ -1029,5 +1016,126 @@ struct ClipsViewModelTests {
         vm.toggleKeepOpenAfterAction()
         vm.toggleKeepOpenAfterAction()
         #expect(vm.keepOpenAfterAction == false)
+    }
+
+    // MARK: - TASK-061 — 검색 디바운스 + 이전 Task cancel (plan F-009 정합)
+
+    @Test("scheduleSearch — 디바운스 임계 이내 빠른 다중 호출 시 마지막 호출 1회만 repository.search 발화")
+    func scheduleSearch_debouncesMultipleRapidCalls() async throws {
+        let prefilled = [
+            makeClip(body: "alpha"),
+            makeClip(body: "alphabet"),
+            makeClip(body: "alphanumeric")
+        ]
+        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        repo.searchCallCount = 0  // reload 는 fetchAll 만 호출이라 counter 영향 X 인데 명시 reset
+
+        // 디바운스 임계 미만 간격으로 3회 호출.
+        vm.searchQuery = "a"
+        vm.scheduleSearch()
+        try await Task.sleep(for: .milliseconds(30))
+        vm.searchQuery = "al"
+        vm.scheduleSearch()
+        try await Task.sleep(for: .milliseconds(30))
+        vm.searchQuery = "alp"
+        vm.scheduleSearch()
+
+        // 디바운스 완료 대기 — Constants.searchDebounce + buffer.
+        try await Task.sleep(for: Constants.searchDebounce + .milliseconds(150))
+
+        #expect(repo.searchCallCount == 1)  // 마지막 1회만
+        #expect(vm.clips.count == 3)  // "alp" 매칭 = 3 건 (alpha / alphabet / alphanumeric 모두 "alp" 시작)
+    }
+
+    @Test("scheduleSearch — 디바운스 진행 중 새 호출 시 이전 Task cancel + 마지막 query 결과만 박힘")
+    func scheduleSearch_cancelsPreviousTask() async throws {
+        let prefilled = [
+            makeClip(body: "alpha"),
+            makeClip(body: "beta")
+        ]
+        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        repo.searchCallCount = 0
+
+        // 첫 호출 — 디바운스 시작.
+        vm.searchQuery = "a"
+        vm.scheduleSearch()
+
+        // 50ms 후 (디바운스 진행 중) 두 번째 호출. 첫 Task cancel + 새 Task 박음.
+        try await Task.sleep(for: .milliseconds(50))
+        vm.searchQuery = "b"
+        vm.scheduleSearch()
+
+        // 디바운스 완료 대기 — Constants.searchDebounce + buffer.
+        try await Task.sleep(for: Constants.searchDebounce + .milliseconds(150))
+
+        #expect(repo.searchCallCount == 1)  // 마지막 1회만 — 첫 호출은 cancel
+        #expect(vm.clips.count == 1)
+        #expect(vm.clips.first?.body == "beta")  // 마지막 query "b" 결과
+    }
+
+    @Test("resetForOpen — pending 검색 Task cancel 안전망 (popover 재진입 race 차단)")
+    func resetForOpen_cancelsPendingSearch() async throws {
+        let prefilled = [makeClip(body: "alpha")]
+        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        repo.searchCallCount = 0
+
+        // 검색 schedule → 50ms 후 resetForOpen.
+        vm.searchQuery = "a"
+        vm.scheduleSearch()
+        try await Task.sleep(for: .milliseconds(50))
+        vm.resetForOpen()  // 디바운스 진행 중 cancel
+
+        // 디바운스 완료 시간보다 길게 대기 — cancel 됐으면 performSearch 발화 X.
+        try await Task.sleep(for: Constants.searchDebounce + .milliseconds(150))
+
+        #expect(repo.searchCallCount == 0)  // pending Task cancel 정상 → 0회
+        #expect(vm.searchQuery == "")  // resetForOpen 동반 reset
+    }
+
+    @Test("scheduleSearch — max wait 도달 시 디바운스 임계 미만 연속 호출 도중에도 강제 fire (사용자 빠른 타이핑 시 결과 영원히 안 박힘 차단)")
+    func scheduleSearch_maxWaitForcesFireOnRapidContinuousCalls() async throws {
+        let prefilled = (0..<5).map { makeClip(body: "rapid-\($0)") }
+        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        repo.searchCallCount = 0
+
+        // 디바운스 임계 (200ms) 미만 간격 (50ms) 으로 연속 호출 — 디바운스 단독이면 매번 cancel + 영원히 fire X.
+        // max wait (500ms) 도달 시 강제 fire 보장.
+        // 50ms × 12 = 600ms — max wait 500ms 초과 → 그 사이 1회 강제 fire.
+        for i in 0..<12 {
+            vm.searchQuery = "rap\(i)"
+            vm.scheduleSearch()
+            try await Task.sleep(for: .milliseconds(50))
+        }
+
+        // 추가 대기 — fire 박힌 후 안정 상태 확인.
+        try await Task.sleep(for: .milliseconds(150))
+
+        // max wait 500ms 도달 → 1회 이상 fire 보장. 정확 횟수는 timing 변동 — 최소 1회 검증.
+        #expect(repo.searchCallCount >= 1)
+    }
+
+    @Test("filteredClips — searchQuery 변경 자체로는 clips 변동 X (클라이언트 필터 제거 정합)")
+    func filteredClips_searchQueryChangeAloneDoesNotMutateClips() async {
+        let prefilled = [
+            makeClip(body: "alpha"),
+            makeClip(body: "beta"),
+            makeClip(body: "gamma")
+        ]
+        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        await vm.reload()
+        let initialCount = vm.filteredClips.count
+        #expect(initialCount == 3)
+
+        // searchQuery 변경 만 — scheduleSearch / performSearch 호출 X.
+        // 이전: 클라이언트 필터 박혀있어 filteredClips 즉시 변동 (clips.filter 적용).
+        // TASK-061: 클라이언트 필터 제거 → filteredClips = clips 그대로. searchQuery 변경 영향 X.
+        vm.searchQuery = "alpha"
+        #expect(vm.filteredClips.count == initialCount)  // 변동 X
+        vm.searchQuery = "nonexistent"
+        #expect(vm.filteredClips.count == initialCount)  // 변동 X
     }
 }

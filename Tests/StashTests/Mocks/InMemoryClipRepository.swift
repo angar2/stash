@@ -5,6 +5,8 @@ import Foundation
 final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
     private var clips: [Clip] = []
     var enforceMaxHistorySizeEnabled: Bool = true
+    /// TASK-061 — `search(query:)` 진입 카운터. 디바운스 동작 단위 테스트 프록시 메트릭.
+    var searchCallCount: Int = 0
 
     func fetchAll() async throws -> [Clip] {
         // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만 (`is_pinned DESC` 제거). GRDBClipRepository 정합.
@@ -47,6 +49,7 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
     }
 
     func search(query: String) async throws -> [Clip] {
+        searchCallCount += 1
         if query.isEmpty { return try await fetchAll() }
         let matched = clips.filter { $0.body?.localizedCaseInsensitiveContains(query) == true }
         // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만 (`is_pinned DESC` 제거).

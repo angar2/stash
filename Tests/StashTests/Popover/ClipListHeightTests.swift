@@ -1,4 +1,4 @@
-// ClipsViewModel.effectiveClipListHeight 단위 테스트 — TASK-037 디스플레이 환경설정 동적 frame 매트릭스 (autoFit ON/OFF × N × visibleCount + floor=3 룰).
+// ClipsViewModel.effectiveClipListHeight 단위 테스트 — TASK-037 디스플레이 환경설정 동적 frame 매트릭스 (autoFit ON/OFF × N × visibleCount). TASK-061 — floor=3 룰 폐기 정합.
 import Testing
 import Foundation
 import AppKit
@@ -61,54 +61,54 @@ struct ClipListHeightTests {
         }
     }
 
-    @Test("autoFit ON + N=20 + visible=1 → floor=3 강제 (3행)")
-    func autoFitOn_floorAtThree_visibleOne() {
+    @Test("TASK-061 — autoFit ON + N=20 + visible=1 → 1행 (floor=3 폐기)")
+    func autoFitOn_visibleOne_noFloor() {
         withDefaults(n: 20, autoFit: true) {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 1, hasPinned: false)
-            #expect(h == raw(3))
+            #expect(h == raw(1))
         }
     }
 
-    @Test("autoFit ON + N=20 + visible=2 → floor=3 강제 (3행)")
-    func autoFitOn_floorAtThree_visibleTwo() {
+    @Test("TASK-061 — autoFit ON + N=20 + visible=2 → 2행 (floor=3 폐기)")
+    func autoFitOn_visibleTwo_noFloor() {
         withDefaults(n: 20, autoFit: true) {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 2, hasPinned: false)
-            #expect(h == raw(3))
+            #expect(h == raw(2))
         }
     }
 
-    @Test("autoFit ON + N=1 + visible=5 → N 우선 (1행, floor=N)")
-    func autoFitOn_floorRespectsN_NOne() {
+    @Test("autoFit ON + N=1 + visible=5 → N 만큼 cap (1행)")
+    func autoFitOn_capsAtN_NOne() {
         withDefaults(n: 1, autoFit: true) {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 5, hasPinned: false)
             #expect(h == raw(1))
         }
     }
 
-    @Test("autoFit ON + N=2 + visible=5 → N 우선 (2행, floor=N)")
-    func autoFitOn_floorRespectsN_NTwo() {
+    @Test("autoFit ON + N=2 + visible=5 → N 만큼 cap (2행)")
+    func autoFitOn_capsAtN_NTwo() {
         withDefaults(n: 2, autoFit: true) {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 5, hasPinned: false)
             #expect(h == raw(2))
         }
     }
 
-    @Test("autoFit ON + N=2 + visible=1 → floor=min(N,3)=2 보장 (2행, N 우선이 더 강함)")
-    func autoFitOn_NTwo_visibleOne_floorHonored() {
+    @Test("TASK-061 — autoFit ON + N=2 + visible=1 → 1행 (visibleCount 그대로, floor=3 폐기)")
+    func autoFitOn_NTwo_visibleOne_noFloor() {
         withDefaults(n: 2, autoFit: true) {
-            // max(min(1, 2), min(2, 3)) = max(1, 2) = 2 → 2행. N=2 사용자에게 *최소 2행* 보장.
+            // min(1, 2) = 1 → 1행. floor=3 룰 폐기 후 visibleCount 자연 그대로.
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 1, hasPinned: false)
-            #expect(h == raw(2))
+            #expect(h == raw(1))
         }
     }
 
-    @Test("autoFit ON + N=6 + visible=0 → floor=3 강제 (visible=0 도 본 헬퍼 호출 시 floor 적용)")
-    func autoFitOn_visibleZero_appliesFloor() {
-        // 실제 동작: visibleCount=0 인 경우 HistoryPopover.emptyState 가 표시되므로 본 헬퍼 호출 대상 X.
-        // 단 헬퍼 단독 호출 시 floor 룰 적용 일관성 검증.
+    @Test("TASK-061 — autoFit ON + N=6 + visible=0 → 0행 (floor=3 폐기)")
+    func autoFitOn_visibleZero_noFloor() {
+        // 실제 동작: visibleCount=0 인 경우 HistoryPopover.emptyState / searchEmptyResult view 자체 박힘 (본 헬퍼 호출 대상 X).
+        // 단 헬퍼 단독 호출 시 floor 폐기 정합 검증.
         withDefaults(n: 6, autoFit: true) {
             let h = ClipsViewModel.effectiveClipListHeightFromUserDefaults(visibleCount: 0, hasPinned: false)
-            #expect(h == raw(3))  // max(min(0, 6), min(6, 3)) = max(0, 3) = 3
+            #expect(h == raw(0))  // min(0, 6) = 0 — visibleCount 자연 그대로 (floor=3 폐기)
         }
     }
 

@@ -102,15 +102,11 @@ struct HistoryPopover: View {
     }
 
     // MARK: - Clips area
-    @ViewBuilder
+    // TASK-061 — 분기 폐기. 이전 isEmptyState / isSearchEmptyResult 분기 시 *별 view (emptyState / searchEmptyResult)* 가 clipsList 자리 대체 박힘 → `.frame(height: effectiveClipListHeight)` 적용 X → autoFit OFF 인데도 clipList 영역 size 변동 → 외곽 + 상단/하단 자식 위치 변동.
+    // 항상 clipsList 박음 → `.frame(height: effectiveClipListHeight)` 항상 적용 → autoFit OFF = N×rowHeight 고정 보장. 빈 영역 (visibleClips.isEmpty) 은 clipsList 안 ScrollView 가 자연 처리 (스크롤 없이 빈 영역).
+    // 검색 결과 0건 시각 안내 (점 "·") 는 clipsList 내부 overlay 로 처리.
     private var clipsArea: some View {
-        if viewModel.isEmptyState {
-            emptyState
-        } else if viewModel.isSearchEmptyResult {
-            searchEmptyResult
-        } else {
-            clipsList
-        }
+        clipsList
     }
 
     private var clipsList: some View {
@@ -164,6 +160,7 @@ struct HistoryPopover: View {
                 hasPinned: hasPinned,
                 hintBarVisible: hintBarVisible
             ))
+            // TASK-061 — 빈 영역 안내 (emptyState / searchEmptyResult) 자체 폐기 (사용자 요구). visibleClips.isEmpty 시 clipsList 영역 빈 채로 박힘.
             // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.
             .onChange(of: viewModel.pendingScrollToId) { _, newId in
                 guard let id = newId else { return }
@@ -176,34 +173,7 @@ struct HistoryPopover: View {
         }
     }
 
-    // 빈 상태 — TASK-037 단순화. 라운드 컨테이너 + 트레이 아이콘 제거. 멘트 2종 (제목 + 보조) only.
-    private var emptyState: some View {
-        VStack(spacing: 0) {
-            Text(String(localized: "empty.title"))
-                .font(DesignTokens.Typography.emptyTitle)
-                .foregroundStyle(DesignTokens.Colors.emptyTitleColor)
-                .padding(.bottom, DesignTokens.Spacing.emptyTitleToHint)
-
-            Text(String(localized: "empty.hint"))
-                .font(DesignTokens.Typography.emptyHint)
-                .foregroundStyle(DesignTokens.Colors.emptyHintColor)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DesignTokens.Spacing.emptyPaddingTop)
-        .padding(.bottom, DesignTokens.Spacing.emptyPaddingBottom)
-        .padding(.horizontal, DesignTokens.Spacing.emptyPaddingHorz)
-        .transition(.opacity)
-    }
-
-    // 검색 결과 0 — popover.jsx L382-385 (단순 "·" 점)
-    private var searchEmptyResult: some View {
-        Text("·")
-            .font(.system(size: 24, weight: .regular))
-            .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.4))
-            .frame(maxWidth: .infinity, minHeight: 80)
-            .padding(.vertical, 40)
-    }
+    // TASK-061 — emptyState / searchEmptyResult view 폐기 (사용자 요구). visibleClips.isEmpty 시 clipsList 영역 빈 채로 박힘.
 
     // Pin 행 — popover.jsx L422-467
     private var pinRow: some View {
