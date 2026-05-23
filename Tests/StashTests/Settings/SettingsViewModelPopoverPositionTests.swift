@@ -30,10 +30,10 @@ struct SettingsViewModelPopoverPositionTests {
         return SettingsViewModel(loginItemService: svc)
     }
 
-    @Test("TASK-054 — default 값 (UserDefaults 미설정 시) = .bottomRight + false")
+    @Test("TASK-065 — default 값 (UserDefaults 미설정 시) = .topRight + false")
     func defaultValues() {
         let vm = makeViewModel()
-        #expect(vm.popoverDefaultAnchor == .bottomRight)
+        #expect(vm.popoverDefaultAnchor == .topRight)
         #expect(vm.popoverRememberLastPosition == false)
     }
 
@@ -98,7 +98,7 @@ struct SettingsViewModelPopoverPositionTests {
         UserDefaults.standard.removeObject(forKey: Constants.popoverRememberLastPositionKey)
     }
 
-    @Test("TASK-054 — loadDisplayPreferences 잘못된 anchor raw → fallback .bottomRight")
+    @Test("TASK-065 — loadDisplayPreferences 잘못된 anchor raw → fallback .topRight (default 변경 정합)")
     func loadInvalidAnchorFallback() {
         UserDefaults.standard.set("invalid_anchor", forKey: Constants.popoverDefaultAnchorKey)
 
@@ -106,7 +106,7 @@ struct SettingsViewModelPopoverPositionTests {
         let svc = LoginItemService(registrar: reg)
         let vm = SettingsViewModel(loginItemService: svc)
 
-        #expect(vm.popoverDefaultAnchor == .bottomRight, "잘못된 raw → default fallback")
+        #expect(vm.popoverDefaultAnchor == .topRight, "잘못된 raw → default fallback")
 
         UserDefaults.standard.removeObject(forKey: Constants.popoverDefaultAnchorKey)
     }

@@ -60,14 +60,15 @@ struct PopoverAnchorTests {
         #expect(o.y == 100, "다중 디스플레이 우하단 y = visibleMinY")
     }
 
-    @Test("TASK-054 — `default` static = .bottomRight")
+    @Test("TASK-065 — `default` static = .topRight")
     func defaultAnchor() {
-        #expect(PopoverAnchor.default == .bottomRight)
+        #expect(PopoverAnchor.default == .topRight)
     }
 
-    @Test("TASK-054 — CaseIterable allCases 5종 + rawValue 일관성")
+    @Test("TASK-065 — CaseIterable allCases 순서 = 우상단/우하단/좌상단/좌하단/중앙 (Picker 노출 순서)")
     func allCases() {
-        #expect(PopoverAnchor.allCases.count == 5)
+        #expect(PopoverAnchor.allCases == [.topRight, .bottomRight, .topLeft, .bottomLeft, .center])
+        #expect(PopoverAnchor(rawValue: "topRight") == .topRight)
         #expect(PopoverAnchor(rawValue: "bottomRight") == .bottomRight)
         #expect(PopoverAnchor(rawValue: "center") == .center)
         #expect(PopoverAnchor(rawValue: "invalid") == nil)

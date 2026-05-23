@@ -64,7 +64,7 @@ final class PopoverWindow: NSObject {
         clip.clipDetailCopyLocationState != nil
     }
 
-    /// TASK-054 — 환경설정 *기본 오픈 위치* 조회. UserDefaults raw → PopoverAnchor. 잘못된 값 / 미설정 → `.default` (.bottomRight) fallback.
+    /// TASK-054 — 설정 *기본 오픈 위치* 조회. UserDefaults raw → PopoverAnchor. 잘못된 값 / 미설정 → `.default` (.topRight, TASK-065) fallback.
     /// 매 popover 오픈 시점 호출 — SettingsViewModel 의존 차단 (PopoverWindow 가 SettingsViewModel 직접 참조 X, UserDefaults 단일 진실 소스).
     static func currentDefaultAnchor() -> PopoverAnchor {
         guard let raw = UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey),
