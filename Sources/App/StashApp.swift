@@ -104,9 +104,10 @@ struct StashApp: App {
             fileClipService: fcs,
             repository: grdbRepo,
             // TASK-026 — 임계 초과 / 부분 실패 시 인앱 토스트 dispatch.
-            onUserMessage: { msg in
+            // TASK-066 — 시그니처 (String) → (ToastKind, String) 확장 (warn 한도 초과 / error 저장 실패 분기).
+            onUserMessage: { kind, msg in
                 await MainActor.run {
-                    toastQ.enqueue(.warn, msg)
+                    toastQ.enqueue(kind, msg)
                 }
             },
             frontmostTracker: frontmostTracker,

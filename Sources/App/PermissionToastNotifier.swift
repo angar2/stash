@@ -27,7 +27,8 @@ final class PermissionToastNotifier {
     private func handle(status: PermissionStatus) {
         defer { lastStatus = status }
         guard status == .granted && lastStatus != .granted else { return }
-        toastQueue.enqueue(.success, String(localized: "toast.permissionGranted"), ttl: DesignTokens.Animation.toastTTLLong)
+        // TASK-066 — i18n 키 dotted rename (toast.permissionGranted → toast.permission.granted) + ttl 자동 추종.
+        toastQueue.enqueue(.success, String(localized: "toast.permission.granted"))
         let notified = UserDefaults.standard.bool(forKey: "permissionGrantedNotified")
         if !notified {
             UserDefaults.standard.set(true, forKey: "permissionGrantedNotified")

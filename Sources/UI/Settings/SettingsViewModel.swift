@@ -66,19 +66,19 @@ final class SettingsViewModel {
         Logger.ui.info("SettingsViewModel.accessibilityGranted → \(granted, privacy: .public)")
         if !prev && granted {
             // TASK-047 — 회수 분기 `if autoPasteEnabled` 가드와 대칭. 이미 true 면 UserDefaults 쓰기 + 로그 skip (멱등 가드).
+            // TASK-066 — 설정 윈도우 토스트 발화 제거. autoPasteEnabled 자동 ON 흐름은 보존 (popover 토스트는 PermissionToastNotifier 가 별도 발화).
             if !autoPasteEnabled {
                 autoPasteEnabled = true
                 UserDefaults.standard.set(true, forKey: "autoPasteEnabled")
                 Logger.ui.info("Permission granted — autoPasteEnabled auto-ON")
             }
-            settingsToast.enqueue(.success, String(localized: "toast.permission.granted"), ttl: 2.5)
         } else if prev && !granted {
+            // TASK-066 — 설정 윈도우 토스트 발화 제거. autoPasteEnabled 자동 OFF 흐름은 보존.
             if autoPasteEnabled {
                 autoPasteEnabled = false
                 UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
                 Logger.ui.info("Permission revoked — autoPasteEnabled forced OFF")
             }
-            settingsToast.enqueue(.warn, String(localized: "toast.permission.revoked"), ttl: 2.5)
         }
     }
 
@@ -92,7 +92,7 @@ final class SettingsViewModel {
             Logger.ui.error("LoginItem toggle failed: \(error.localizedDescription, privacy: .public)")
             // TASK-033 — 실패 토스트 + OFF 원복 (스위치 자동 OFF)
             loginItemEnabled = false
-            settingsToast.enqueue(.error, String(localized: "toast.loginItem.failed"), ttl: 3.0)
+            settingsToast.enqueue(.error, String(localized: "toast.loginItem.failed"))
         }
     }
 
@@ -227,7 +227,7 @@ final class SettingsViewModel {
         // modifier 검증 — Recorder 에서 modifier 없는 입력 시 rawValue 0 placeholder 박혀서 호출됨.
         if newShortcut.modifiersRawValue == 0 {
             revertPopoverShortcut(id: id)
-            settingsToast.enqueue(.warn, String(localized: "toast.shortcut.modifierRequired"), ttl: 3.0)
+            settingsToast.enqueue(.warn, String(localized: "toast.shortcut.modifierRequired"))
             return
         }
 
@@ -238,7 +238,7 @@ final class SettingsViewModel {
                 revertPopoverShortcut(id: id)
                 let otherLabel = String(localized: String.LocalizationValue(otherId.labelKey))
                 let format = String(localized: "toast.shortcut.conflict")
-                settingsToast.enqueue(.warn, String(format: format, otherLabel), ttl: 3.0)
+                settingsToast.enqueue(.warn, String(format: format, otherLabel))
                 return
             }
         }

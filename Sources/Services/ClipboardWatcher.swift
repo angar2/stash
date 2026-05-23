@@ -8,8 +8,9 @@ actor ClipboardWatcher {
     private let fileClipService: FileClipService
     private let repository: ClipRepository
     /// TASK-026 — 다중 파일 임계 초과 / 부분 실패 시 사용자 인지용 메시지 dispatch.
-    /// Composition Root가 `{ msg in await MainActor.run { toastQueue.enqueue(.warn, msg) } }` 박음.
-    private let onUserMessage: (@Sendable (String) async -> Void)?
+    /// TASK-066 — 시그니처 (String) → (ToastKind, String) 확장. kind .warn / .error 분기 (한도 초과 = warn, 저장 실패 = error).
+    /// Composition Root가 `{ kind, msg in await MainActor.run { toastQueue.enqueue(kind, msg) } }` 박음.
+    private let onUserMessage: (@Sendable (ToastKind, String) async -> Void)?
     /// TASK-033 — *저장하지 않을 앱* 매칭 + TASK-040 클립 출처 박음 백엔드. frontmost 앱 번들 ID 노출. nil 가능 (테스트 환경 등).
     private let frontmostTracker: FrontmostAppTracking?
 
@@ -26,7 +27,7 @@ actor ClipboardWatcher {
         pasteboard: Pasteboard = SystemPasteboard.shared,
         fileClipService: FileClipService,
         repository: ClipRepository,
-        onUserMessage: (@Sendable (String) async -> Void)? = nil,
+        onUserMessage: (@Sendable (ToastKind, String) async -> Void)? = nil,
         frontmostTracker: FrontmostAppTracking? = nil,
         enabled: Bool = true
     ) {
@@ -129,8 +130,10 @@ actor ClipboardWatcher {
         if let urls = pasteboard.readFileURLs(), !urls.isEmpty {
             // 임계 N > 100 → 토스트 + SKIP
             if urls.count > Constants.maxMultiFileEntries {
-                Logger.clipboard.info("buildClip: multi-file limit exceeded — count=\(urls.count) skipped")
-                await onUserMessage?(String(localized: "toast.multiFileLimitExceeded"))
+                Logger.clipboard.info("buildClip: multi-file limit exceeded — count=\(urls.count) skipped max=\(Constants.maxMultiFileEntries)")
+                // TASK-066 — 키 dotted rename + Constants 동적 + kind .warn 분기.
+                let body = String(format: String(localized: "toast.multiFile.limitExceeded"), Constants.maxMultiFileEntries)
+                await onUserMessage?(.warn, body)
                 return nil
             }
             // N=1 → 기존 단일 파일 분기 (확장자 화이트리스트로 .image / .file 판별, case C/D 정합).
@@ -211,8 +214,9 @@ actor ClipboardWatcher {
             )
         } catch {
             // saveFiles 가 이미 *부분 카피본 cleanup* 수행 — 본 catch 는 토스트 + SKIP 만.
+            // TASK-066 — 키 dotted rename + kind .warn → .error 분기.
             Logger.clipboard.error("buildClip: multi-file save failed — \(error)")
-            await onUserMessage?(String(localized: "toast.multiFileSaveFailed"))
+            await onUserMessage?(.error, String(localized: "toast.multiFile.saveFailed"))
             return nil
         }
     }

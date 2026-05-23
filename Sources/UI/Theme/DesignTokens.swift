@@ -528,7 +528,8 @@ enum DesignTokens {
         static let toastPaddingHorz:       CGFloat = 14
         static let toastPaddingVert:       CGFloat = 10
         static let toastGap:               CGFloat = 10
-        static let toastBadgeSize:         CGFloat = 18
+        static let toastBadgeSize:         CGFloat = 18  // X 닫기 버튼 사이즈 (TASK-066 — 로고와 분리)
+        static let toastLogoSize:          CGFloat = 18  // TASK-066 — 좌측 stash 적층 카드 로고 사이즈 (TrayIconView size 인자, X 닫기와 통일)
         static let toastStackGap:          CGFloat = 8
         static let toastWindowPadding:     CGFloat = 8
 
@@ -702,13 +703,11 @@ enum DesignTokens {
         // popover 열림 직후 짧은 시간 hover 무시 — 마우스가 검색바/클립 위에 이미 있어도 자동 활성 차단 (TASK-016 D-3).
         static let popoverOpenHoverIgnoreDelay: TimeInterval = 0.2  // 200ms
 
-        // Toast TTL
-        static let toastTTLDefault: TimeInterval = 3.0
-        static let toastTTLShort:   TimeInterval = 1.8   // paste 확정
-        static let toastTTLMid:     TimeInterval = 2.2   // 전체 삭제 / 단축키 충돌
-        static let toastTTLPermission: TimeInterval = 2.5  // 권한 부여 / Pin 한도
-        static let toastTTLLong:    TimeInterval = 3.5   // onboarding 완료
-        static let toastTTLCaptureToggle: TimeInterval = 2.0   // TASK-043 — 수집 토글 (UX-UI §6 알림 표 정합)
+        // Toast TTL (TASK-066 — kind별 통일, ToastKind.defaultTTL 단일 진실)
+        static let toastTTLSuccess: TimeInterval = 2.0  // 붙여넣기/복사/수집 토글/권한 부여/전체 삭제
+        static let toastTTLInfo:    TimeInterval = 2.5  // 현재 사용처 X, 미래 추가용
+        static let toastTTLWarn:    TimeInterval = 3.0  // 핀 한도/다중 파일 한도/단축키 검증
+        static let toastTTLError:   TimeInterval = 4.0  // 시스템 로그인 실패/다중 파일 저장 실패
 
         // Onboarding modal fade-in — HTML L34-37
         static let onboardingFadeIn: TimeInterval = 0.2
