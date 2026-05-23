@@ -115,6 +115,8 @@
     "toast.multiFileSaveFailed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "다중 파일 저장 실패 — 클립으로 추가되지 않았어요" } } } },
     "tooltip.capture.disable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집 일시정지" } } } },
     "tooltip.capture.enable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집 재개" } } } },
+    "tooltip.keepOpen.enable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "유지 모드 켜기" } } } },
+    "tooltip.keepOpen.disable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "유지 모드 끄기" } } } },
     "clip.row.multiFile.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "여러 파일" } } } }
   },
   "version" : "1.0"

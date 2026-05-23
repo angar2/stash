@@ -98,6 +98,14 @@ final class ClipsViewModel {
     /// 클립보드 수집 활성/비활성 상태. UserDefaults `Constants.clipboardCaptureEnabledKey` 진실 소스. init 시 UserDefaults 읽어 초기화. `toggleCapture()` 가 갱신.
     var captureEnabled: Bool
 
+    // MARK: - Keep open toggle (TASK-058)
+
+    /// TASK-058 — popover 유지 모드 토글 상태. ON 시 paste/copy 후 popover `hide()` 호출 skip → 연속 paste/copy 가능. *세션 한정 영속성* — UserDefaults 미저장. popover 명시적 dismiss (`PopoverWindow.hide()`) 시점에 false 리셋.
+    var keepOpenAfterAction: Bool = false
+
+    /// TASK-058 fix-1 — `clipboardDidInsertClip` 알림 옵저버. ClipsViewModel lifetime 동안 유지 (Singleton 패턴 — 앱 quit 까지). deinit 정리는 @MainActor isolation 한계로 생략 (앱 quit 시 자연 회수).
+    private var clipboardInsertObserver: NSObjectProtocol?
+
     init(
         repository: any ClipRepository,
         pasteService: PasteService,
@@ -115,6 +123,16 @@ final class ClipsViewModel {
         } else {
             self.captureEnabled = defaults.bool(forKey: Constants.clipboardCaptureEnabledKey)
         }
+        // TASK-058 fix-1 — ClipboardWatcher insert 알림 구독. popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload — 사용자가 popover 열어둔 채 다른 앱에서 클립 복사 시 popover 안 즉시 새 클립 반영.
+        self.clipboardInsertObserver = NotificationCenter.default.addObserver(
+            forName: Constants.clipboardDidInsertClipNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.reload()
+            }
+        }
     }
 
     func setToastQueue(_ queue: ToastQueue) {
@@ -124,6 +142,13 @@ final class ClipsViewModel {
     /// TASK-043 — Composition Root 가 ClipboardWatcher 인스턴스 주입. toggleCapture 호출 시 actor setEnabled 호출 대상.
     func setClipboardWatcher(_ watcher: ClipboardWatcher) {
         self.clipboardWatcher = watcher
+    }
+
+    /// TASK-058 — popover 유지 모드 토글 단일 진실 진입점. popover 상단 자물쇠 아이콘 버튼이 호출.
+    /// 흐름: `keepOpenAfterAction` 상태 반전 단일 라인. UserDefaults persist X (세션 한정), 토스트 X (아이콘 fill 변화 자체 피드백 — FEATURES F-011 정합).
+    func toggleKeepOpenAfterAction() {
+        keepOpenAfterAction.toggle()
+        Logger.ui.info("ClipsViewModel.toggleKeepOpenAfterAction: enabled=\(self.keepOpenAfterAction, privacy: .public)")
     }
 
     /// TASK-043 — 클립보드 수집 토글 단일 진실 진입점. popover 상단 일시정지/재개 버튼이 호출.

@@ -10,6 +10,8 @@ struct PopoverHeaderView: View {
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
     /// TASK-043 — 일시정지/재개 버튼 hover state.
     @State private var captureToggleHovered: Bool = false
+    /// TASK-058 — popover 유지 모드 토글 버튼 hover state.
+    @State private var keepOpenToggleHovered: Bool = false
 
     /// 방식 2일 때 true — 검색바·"전체 삭제" 등 인터랙션 일체 차단.
     private var isInteractionDisabled: Bool { mode == .method3 }
@@ -53,6 +55,8 @@ struct PopoverHeaderView: View {
             }
             // TASK-043 — 클립보드 수집 일시정지/재개 버튼. clips.count 무관 항상 표시. 아이콘만 분기 (pause ↔ play), 색상은 *전체 삭제* 텍스트와 동일 회색 흐름 정합.
             captureToggleButton
+            // TASK-058 — popover 유지 모드 토글 버튼. 일시정지 버튼 오른쪽. ON 시 paste/copy 후 popover close skip (F-011).
+            keepOpenToggleButton
         }
         .padding(.horizontal, DesignTokens.Spacing.wordmarkPaddingHorz)
         .padding(.top, DesignTokens.Spacing.wordmarkPaddingTop)
@@ -82,6 +86,33 @@ struct PopoverHeaderView: View {
             .help(viewModel.captureEnabled ? String(localized: "tooltip.capture.disable") : String(localized: "tooltip.capture.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: captureToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.captureEnabled)
+            .allowsHitTesting(!isInteractionDisabled)
+            .padding(.leading, 4)
+    }
+
+    /// TASK-058 — popover 유지 모드 토글 버튼. 일시정지 버튼 옆 (간격 4pt). *action-icon 패턴* (pause/play 정합) — OFF=`lock.fill` (지금 누르면 잠금 액션) / ON=`lock.open` (지금 누르면 잠금 해제 액션). fill 분기 만 (회색 단일 톤 + hover 4pt 라운드). 영속성 = 세션 한정 — `PopoverWindow.hide()` 시 OFF 리셋. ON 시 외부 클릭 / ESC / 트레이 재클릭 / ⌘⇧V 재호출 모두 차단 — 본 버튼 클릭만 잠금 해제 진입점. FEATURES F-011 단일 진실.
+    private var keepOpenToggleButton: some View {
+        Image(systemName: viewModel.keepOpenAfterAction ? "lock.open" : "lock.fill")
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(keepOpenToggleHovered ? DesignTokens.Colors.searchDeleteAllLabelHover : DesignTokens.Colors.searchDeleteAllLabel)
+            .frame(width: 16, height: 16)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(keepOpenToggleHovered ? Color.white.opacity(0.05) : Color.clear)
+            )
+            .contentShape(Rectangle())
+            .onHover { isHover in
+                guard !isInteractionDisabled else { return }
+                keepOpenToggleHovered = isHover
+            }
+            .onTapGesture {
+                guard !isInteractionDisabled else { return }
+                viewModel.toggleKeepOpenAfterAction()
+            }
+            .pointingHandCursor(enabled: !isInteractionDisabled)
+            .help(viewModel.keepOpenAfterAction ? String(localized: "tooltip.keepOpen.disable") : String(localized: "tooltip.keepOpen.enable"))
+            .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: keepOpenToggleHovered)
+            .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.keepOpenAfterAction)
             .allowsHitTesting(!isInteractionDisabled)
             .padding(.leading, 4)
     }
