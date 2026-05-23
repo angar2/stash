@@ -838,13 +838,19 @@ extension PopoverWindow: NSWindowDelegate {
         // 시스템 resize 컨벤션 — proposed height 증가 (dy > 0) = clipsPerPage 증가. dy < 0 = 감소.
         // computeSnapDelta 의 *isTop=true + accumulated < 0 → +1* 컨벤션과 부호 반대 — 직접 계산.
         let signDelta = dy > 0 ? absSteps : -absSteps
-        let clampedDelta = max(Constants.clipsPerPageMin - current, min(Constants.clipsPerPageMax - current, signDelta))
-        if clampedDelta != 0 {
-            settingsViewModel.setClipsPerPage(current + clampedDelta)
+        // TASK-057 — raw `clipsPerPage` 가 화면 cap 초과 상태 (예: raw=50 + cap=27) 에서 축소 드래그 시
+        // 기존 `setClipsPerPage(current + signDelta)` 박으면 raw 50→49 만 변동 + clipList 영역은 cap 도달 상태 그대로 (effectiveClipListHeight cap 적용) → NSPanel.frame.height 1행 축소 박혔는데 SwiftUI body fittingSize 불변 → 46pt squeeze → 헤더/preferencesRow 잘림.
+        // 해결: 분기 결정을 `ClipsViewModel.resolveNewClipsPerPageForResize` 위임. raw>cap 축소 케이스에서는 raw 를 capRows 로 jump 동기화 후 ±1 진행.
+        let hasPinned = !viewModel.pinnedClips.isEmpty
+        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: "hintBarVisible") as? Bool) ?? true
+        let capRows = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible)
+        let newRaw = ClipsViewModel.resolveNewClipsPerPageForResize(current: current, signDelta: signDelta, capRows: capRows)
+        if newRaw != current {
+            Logger.ui.info("PopoverWindow.windowWillResize — clipsPerPage resize sync current=\(current, privacy: .public) signDelta=\(signDelta, privacy: .public) capRows=\(capRows, privacy: .public) newRaw=\(newRaw, privacy: .public)")
+            settingsViewModel.setClipsPerPage(newRaw)
         }
-        // 시스템에 반환할 height — height 재계산은 displayLayoutDidChange notification → refreshFrame 흐름이 비동기 처리.
-        // 즉 본 시점에는 *현재 height + delta × snap* 정도로 estimate. 실제 fittingSize 는 다음 _performRefreshFrame 에서 박힘.
-        let estimatedHeight = panel.frame.size.height + CGFloat(clampedDelta) * snap
+        // 시스템에 반환할 height — 사용자 인식 ±signDelta 행 단위 (raw 변동값 무관). 실제 fittingSize 는 다음 _performRefreshFrame 에서 박힘.
+        let estimatedHeight = panel.frame.size.height + CGFloat(signDelta) * snap
         return NSSize(width: clampedWidth, height: estimatedHeight)
     }
 
