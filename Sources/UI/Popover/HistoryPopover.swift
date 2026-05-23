@@ -317,8 +317,6 @@ struct HistoryPopover: View {
             guard !isInteractionDisabled else { return }
             onOpenSettings()
         }
-        // TASK-030 — 환경설정 행에 손가락 cursor. method3 비활성 분기 정합.
-        .pointingHandCursor(enabled: !isInteractionDisabled)
         .onHover { isHover in
             guard !isInteractionDisabled else { return }
             if isHover {

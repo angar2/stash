@@ -253,8 +253,6 @@ private struct MultiFileDetailContentView: View {
             Logger.ui.info("ClipDetailPanel: file row tap → \(displayName, privacy: .public)")
             onFileTap(url)
         }
-        // TASK-030 — 다중파일 sub-panel 안 파일 행에 손가락 cursor. method3 분기 없음 (sub-panel 자체가 본체 popover 와 별도 윈도우).
-        .pointingHandCursor()
     }
 }
 
@@ -394,7 +392,6 @@ private struct ImageDetailContentView: View {
             Logger.ui.info("ClipDetailPanel: image tap → Finder reveal")
             onTap(tapURL)
         }
-        .pointingHandCursor() // TASK-030 정합
     }
 }
 
@@ -465,6 +462,5 @@ private struct SingleFileDetailContentView: View {
             Logger.ui.info("ClipDetailPanel: single file tap → Finder reveal — \(displayName, privacy: .public)")
             onTap(URL(fileURLWithPath: pathString))
         }
-        .pointingHandCursor() // TASK-030 정합
     }
 }
