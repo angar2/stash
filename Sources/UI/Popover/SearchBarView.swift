@@ -137,8 +137,9 @@ struct PopoverHeaderView: View {
                 },
                 isEnabled: !isInteractionDisabled
             )
+            // TASK-061 — 디바운스 적용 (`Constants.searchDebounce = 100ms`, plan F-009). 이전 `Task { await viewModel.performSearch() }` 즉시 호출이 매 키 입력마다 notification 다중 발행 → setFrame race → popover height oscillation.
             .onChange(of: viewModel.searchQuery) { _, _ in
-                Task { await viewModel.performSearch() }
+                viewModel.scheduleSearch()
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.searchBoxPaddingHorz)

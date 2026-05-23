@@ -84,6 +84,14 @@ final class ClipsViewModel {
     /// 마지막 emit 한 clip.id 추적 (TASK-039 fix) — schedule 진입 시 clip 변경 검출 → 다른 clip 으로 변경되면 즉시 nil emit (panel hide). 같은 clip frame 변경 만 잔존 정책 적용.
     private var lastEmittedClipId: UUID?
 
+    /// TASK-061 — 검색 디바운스 in-flight Task. `scheduleSearch()` 가 매 호출 시 이전 task cancel 후 새 task 박음. plan F-009 `Constants.searchDebounce` 정합.
+    /// 사유: 키 입력마다 `performSearch` 즉시 호출 시 (a) 여러 in-flight Task race + (b) 매 호출 끝 `displayLayoutDidChange` notification → `PopoverWindow.refreshFrame` → setFrame 다중 발화 → height oscillation.
+    private var pendingSearchTask: Task<Void, Never>?
+
+    /// TASK-061 — max wait 패턴. 첫 `scheduleSearch()` 호출 시점에 `Constants.searchMaxWait` 더한 deadline 박음. 후속 호출 시 deadline 유지 → 디바운스 vs maxWait 중 *먼저 도달* 시 fire. fire 후 nil reset (다음 사이클 새 deadline).
+    /// 효과: 사용자 200ms 미만 간격 연속 타이핑 (예: ㅂ→보→복→...) 시도 500ms 마다 강제 fire → *완전히 다 작성할 때까지 결과 안 박힘* 차단.
+    private var searchMaxWaitDeadline: ContinuousClock.Instant?
+
     // MARK: - Dependencies
     private let repository: any ClipRepository
     private let pasteService: PasteService
@@ -180,11 +188,11 @@ final class ClipsViewModel {
     }
 
     // MARK: - Derived
+    // TASK-061 — `clips.filter(searchQuery contains)` 클라이언트 필터 제거. searchQuery 의존 → SwiftUI body 가 매 키 입력마다 즉시 재계산 → visibleClips 변동 시각 (디바운스 무용지물).
+    // 검색은 디바운스 후 `performSearch` 가 DB 검색 결과로 `clips` 박음 → 그때만 SwiftUI body 재계산 → 사용자 키 입력 ~ 디바운스 임계 사이 *완전 무변동* 보장.
+    // DB 검색 (`repository.search`) 결과 = `body contains query` 동일 의미 → 클라이언트 필터 제거 후에도 결과 일치.
     var filteredClips: [Clip] {
-        if searchQuery.isEmpty { return clips }
-        return clips.filter {
-            ($0.body ?? "").localizedCaseInsensitiveContains(searchQuery)
-        }
+        clips
     }
 
     /// popover 본문 — 일반 히스토리에 *Pin 항목도 시간순 자연 노출* (FEATURES §3-4 / F-004 정합, TASK-019 fix).
@@ -202,20 +210,10 @@ final class ClipsViewModel {
         }
     }
 
-    /// 일반 히스토리 영역이 비어 있는 상태 — 검색어 없고 모든 클립(핀 포함) 0건.
-    /// TASK-019 이후: 핀이 일반 히스토리에 포함 노출되므로 핀만 있을 때 isEmptyState=false (자연스러움).
-    var isEmptyState: Bool {
-        visibleClips.isEmpty && searchQuery.isEmpty
-    }
-
     /// `focusZone` 기반 현재 활성 idx — `.pin` 이면 `pinSelectedIdx`, 그 외는 `selectedIdx`.
     /// dispatch site 의 반복 패턴 (`focusZone == .pin ? pinSelectedIdx : selectedIdx`) 정리 (TASK-019 리팩토링).
     var activeIdx: Int {
         focusZone == .pin ? pinSelectedIdx : selectedIdx
-    }
-
-    var isSearchEmptyResult: Bool {
-        !searchQuery.isEmpty && visibleClips.isEmpty
     }
 
     // MARK: - Reload / Search
@@ -244,6 +242,32 @@ final class ClipsViewModel {
             NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
         } catch {
             Logger.ui.error("ClipsViewModel.performSearch error: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// TASK-061 — 검색 디바운스 진입점. plan F-009 `Constants.searchDebounce` (100ms) 정합 구현.
+    /// 흐름: 이전 `pendingSearchTask` cancel → 새 Task 박음 → `searchDebounce` 만큼 sleep → cancel 검증 → `performSearch()`.
+    /// 호출 site = `SearchBarView.onChange(of: viewModel.searchQuery)` (`.onChange` 매 키 입력마다 발화).
+    /// 빠른 타이핑 시 매 호출이 이전 Task cancel → 마지막 호출만 100ms 디바운스 후 실제 DB 검색 → notification 1회 발행 → setFrame 1회.
+    func scheduleSearch() {
+        pendingSearchTask?.cancel()
+
+        let clock = ContinuousClock()
+        let now = clock.now
+
+        // 첫 schedule 시점에 max wait deadline 박음. 이후 호출 시 유지 (사용자 빠른 타이핑 사이클 동안 deadline 보존).
+        if searchMaxWaitDeadline == nil {
+            searchMaxWaitDeadline = now.advanced(by: Constants.searchMaxWait)
+        }
+        let debounceDeadline = now.advanced(by: Constants.searchDebounce)
+        // debounce vs maxWait 중 *먼저 도달* deadline 박음.
+        let effectiveDeadline = min(debounceDeadline, searchMaxWaitDeadline!)
+
+        pendingSearchTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(until: effectiveDeadline, clock: clock)
+            guard !Task.isCancelled, let self else { return }
+            self.searchMaxWaitDeadline = nil  // 다음 사이클 새 deadline 박힘.
+            await self.performSearch()
         }
     }
 
@@ -334,8 +358,8 @@ final class ClipsViewModel {
 
     /// TASK-037 — 클립 리스트 영역 동적 높이 계산 (순수 함수, 인자 명시).
     /// SwiftUI 가 `@AppStorage` 등으로 추적한 값을 호출처에서 전달해야 body 재계산이 트리거됨.
-    /// 공식: autoFit ON → `rows = max(min(visibleCount, N), min(N, 3))` / OFF → `rows = N`.
-    /// floor=3 룰: autoFit ON 시 컨테이너 최소 3행 보장. 단 N<3 시 N 우선.
+    /// 공식: autoFit ON → `rows = min(visibleCount, N)` / OFF → `rows = N`.
+    /// TASK-061 — floor=3 룰 폐기 (사용자 요구). 이전 `rows = max(min(visibleCount, N), min(N, 3))` 가 visibleCount 1-2 케이스에 *3행 강제* → 검색 진행 중 결과 변동 시 사용자 인지 *3행 사이즈로 왔다갔다* oscillation. visibleCount 자연 그대로 변동으로 단순화.
     /// 화면 cap: popover 가 화면 visible 영역 초과 시 cap 적용 (popover top = visible.maxY 까지 박혀 menu bar 바로 아래에 붙음).
     /// TASK-052 — `hintBarVisible` 인자 추가. OFF 시 totalOverhead 에서 `hintBarOverhead` (실측 42pt) 차감 → clipList cap 확장 → 한 행 더 표시 + popover total ON/OFF 동일 (method2 우하단 anchor 시 상단 공백 잔존 차단).
     static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool) -> CGFloat {
@@ -344,8 +368,8 @@ final class ClipsViewModel {
         let rowGap = DesignTokens.Spacing.rowGap
         let rows: Int
         if autoFit {
-            // floor=3 룰: 최소 3행 보장 (단, N<3 인 경우 N 우선)
-            rows = max(min(visibleCount, n), min(n, Constants.clipListAutoFitFloor))
+            // TASK-061 — visibleCount 자연 그대로 (floor=3 폐기 — 사용자 요구). 1-2 케이스도 자연 변동.
+            rows = min(visibleCount, n)
         } else {
             rows = n
         }
@@ -445,6 +469,10 @@ final class ClipsViewModel {
         // TASK-027 / TASK-055 — popover 새 호출 시 detail panel 강제 닫음 (default closed). frame .zero 초기화 동반.
         activeRowFrameInPopover = .zero
         dismissClipDetail()
+        // TASK-061 — popover 재진입 시 이전 검색 디바운스 잔존 Task cancel + max wait deadline reset 안전망. 잔존 시 새 popover 진입 후 이전 검색 결과로 clips 덮어쓰기 race 차단.
+        pendingSearchTask?.cancel()
+        pendingSearchTask = nil
+        searchMaxWaitDeadline = nil
     }
 
     // MARK: - Actions

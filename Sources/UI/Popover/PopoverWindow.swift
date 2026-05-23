@@ -49,6 +49,10 @@ final class PopoverWindow: NSObject {
     /// `false` (default) — anchor 별 origin 재계산. `showInternal` 진입 마다 reset.
     private var panelMovedByUser: Bool = false
 
+    /// TASK-061 — popover 진입 후 첫 refreshFrame 인지 추적. 사용자 요구 정합 — *첫 anchor 진입* 은 기존 anchor 결과 origin (.bottomRight bottom 고정 등) 보존 / *후속 refresh* 는 anchor 무관 top 고정 + bottom 변동.
+    /// `showInternal` 진입 시 reset = false. 첫 `_performRefreshFrame` 호출 시 anchor 결과 origin 박은 후 true.
+    private var hasAnchoredOnce: Bool = false
+
     /// detail panel 총 width — 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). NSPanel make / setFrame / originX 계산 모두 본 값 사용 (TASK-027 refactor — 3 곳 중복 계산 통합).
     static var clipDetailTotalWidth: CGFloat {
         DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
@@ -221,31 +225,46 @@ final class PopoverWindow: NSObject {
             newOriginX = panel.frame.origin.x
             newOriginY = prevTop - fitting.height
         case .method2, .method3, .none:
-            // TASK-054 — 사용자가 드래그로 옮긴 흔적이 있거나 저장 좌표 진입한 케이스는 현재 origin 유지 (anchor 무시). 화면 밖 clamp.
-            // 그 외 (최초 anchor 진입 + 후속 displayLayoutDidChange) 는 anchor 별 origin 재계산 — bottom 계열 (bottomLeft/bottomRight) = origin.y 그대로, top 계열 (topLeft/topRight) = prevTop 고정, center = prevMidY 고정.
+            // TASK-054 — 사용자 드래그 / 저장 좌표 진입 케이스. 현재 origin 유지 + 화면 밖 clamp.
+            // TASK-061 — 사용자 드래그 후 height 변동도 top 고정 (사용자 요구 정합). 기존 `y = panel.frame.origin.y` (= bottom 고정) → `y = prevTop - h` (= top 고정).
             if panelMovedByUser, let screen = panel.screen ?? NSScreen.main {
                 let visible = screen.visibleFrame
                 let h = fitting.height
                 var x = panel.frame.origin.x
-                var y = panel.frame.origin.y
+                var y = prevTop - h
                 x = max(visible.minX, min(x, visible.maxX - preservedWidth))
                 y = max(visible.minY, min(y, visible.maxY - h))
                 newOriginX = x
                 newOriginY = y
             } else if let screen = panel.screen ?? NSScreen.main {
-                let visible = screen.visibleFrame
-                let anchor = Self.currentDefaultAnchor()
-                let inset = DesignTokens.WindowSize.popoverInsetBottom
-                let panelSize = NSSize(width: preservedWidth, height: fitting.height)
-                let o = anchor.origin(panelSize: panelSize, visibleFrame: visible, inset: inset)
-                newOriginX = o.x
-                switch anchor {
-                case .bottomRight, .bottomLeft:
-                    newOriginY = o.y  // bottom 고정
-                case .topLeft, .topRight:
-                    newOriginY = prevTop - fitting.height  // top 고정 — height 변경 시 origin.y 보정
-                case .center:
-                    newOriginY = prevMidY - fitting.height / 2  // center 고정
+                // TASK-061 — 첫 anchor 진입 (`!hasAnchoredOnce`) 은 기존 anchor 결과 origin 박음 (시각 진입 anchor 정합 보존).
+                // 후속 refresh (검색 결과 변동 / 환경설정 변경 등) 는 anchor 무관 top 고정 + bottom 변동 (사용자 요구 정합 — autoFit ON 시 상단 고정 + 하단부 변동).
+                if !hasAnchoredOnce {
+                    let visible = screen.visibleFrame
+                    let anchor = Self.currentDefaultAnchor()
+                    let inset = DesignTokens.WindowSize.popoverInsetBottom
+                    let panelSize = NSSize(width: preservedWidth, height: fitting.height)
+                    let o = anchor.origin(panelSize: panelSize, visibleFrame: visible, inset: inset)
+                    newOriginX = o.x
+                    switch anchor {
+                    case .bottomRight, .bottomLeft:
+                        newOriginY = o.y  // bottom 고정
+                    case .topLeft, .topRight:
+                        newOriginY = prevTop - fitting.height  // top 고정 — height 변경 시 origin.y 보정
+                    case .center:
+                        newOriginY = prevMidY - fitting.height / 2  // center 고정
+                    }
+                    hasAnchoredOnce = true
+                } else {
+                    // TASK-061 — 후속 refresh: anchor 무관 top 고정 + bottom 변동. panel.frame.origin.x 유지 (첫 진입 시 anchor 결과 origin 보존).
+                    let visible = screen.visibleFrame
+                    let h = fitting.height
+                    var x = panel.frame.origin.x
+                    var y = prevTop - h
+                    x = max(visible.minX, min(x, visible.maxX - preservedWidth))
+                    y = max(visible.minY, min(y, visible.maxY - h))
+                    newOriginX = x
+                    newOriginY = y
                 }
             } else {
                 newOriginX = panel.frame.origin.x
@@ -254,6 +273,10 @@ final class PopoverWindow: NSObject {
         }
 
         let newFrame = NSRect(x: newOriginX, y: newOriginY, width: preservedWidth, height: fitting.height)
+        // TASK-061 — 동일 frame setFrame 호출 skip. setFrame → windowDidResize 발화 → refreshFrame 재호출 → loop / measurement race 차단.
+        if newFrame == panel.frame {
+            return
+        }
         // animate:false + display:false → displayIfNeeded — SwiftUI body 재계산 + NSPanel frame transition 충돌 차단.
         panel.setFrame(newFrame, display: false, animate: false)
         panel.displayIfNeeded()
@@ -627,6 +650,8 @@ final class PopoverWindow: NSObject {
         currentMode = mode
         // TASK-054 — 사용자 드래그 흔적 리셋. applyRememberedOrigin 또는 본체 드래그 진입 시 다시 true.
         panelMovedByUser = false
+        // TASK-061 — 새 popover 진입 — 첫 refreshFrame 가 anchor 결과 origin 박도록 reset. 후속 refresh 는 top 고정.
+        hasAnchoredOnce = false
         // TASK-054 fix-1 — macOS 표준 *background 클릭 → 윈도우 이동* 활성 (방식 2·3 만). NSVisualEffectView background 영역 드래그 자동 인식.
         // 방식 1 (메뉴바 anchor) 은 보호. 시스템 표준 NSWindow resize (.resizable styleMask) 는 모든 mode 활성 (사용자 답 *방식 1·2 모두 허용*).
         panel.isMovableByWindowBackground = (mode == .method2 || mode == .method3)
@@ -875,6 +900,7 @@ extension PopoverWindow: NSWindowDelegate {
 
     /// TASK-054 fix-1 — 시스템 resize 종료 시점. 사이드바·상세 sub-window 동반 추종 + 방식 1 width 변경 시 button 중심 anchor 보정.
     /// `windowDidMove` 와 같은 흐름 (멱등 호출 안전).
+    /// TASK-061 — `_performRefreshFrame` 의 내부 `setFrame` 도 `windowDidResize` 발화 → 재진입 loop / measurement race 유발. `_performRefreshFrame` 안 newFrame guard 로 동일 frame skip 박혔지만 *측정 결과 미세 변동* 시 loop 가능. 본 함수 자체에서 `panel.inLiveResize` 검사 — 사용자 라이브 resize 종료 시점만 fitting 보정. 내부 setFrame trigger 는 skip.
     func windowDidResize(_ notification: Notification) {
         guard let window = notification.object as? NSWindow, window === panel else { return }
         // 방식 1 — width 변경 시 button 중심 origin.x 자동 보정.
@@ -891,6 +917,9 @@ extension PopoverWindow: NSWindowDelegate {
             }
         }
         // TASK-056 — width 변경 후 hintBar FlowLayout wrap 1~3 줄 동적 → SwiftUI body fittingSize.height 동적. `windowWillResize` 는 snap 단위 height 만 갱신해 wrap 변동 미반영 → SwiftUI body 가 NSPanel 안 못 들어가 시각 잘림 (상단 padding 좁아 보임 인지). resize 종료 시점 fittingSize 재측정 + NSPanel.height 자동 정합.
-        refreshFrame()
+        // TASK-061 — *사용자 라이브 resize 종료* 흐름만 발화 (또는 종료 직후). 내부 setFrame trigger windowDidResize 는 skip — loop / measurement race 차단.
+        // (panel.inLiveResize 는 라이브 resize 진행 중 true, 종료 직후 false. 종료 직후 발화 1회 정도는 통과.)
+        // 휴리스틱: panel.styleMask 가 .resizable 이고 *최근 windowWillResize 발화* 박혔는지 추적 필요. 단순화 — 그냥 refreshFrame 호출 제거. windowWillResize 흐름이 setClipsPerPage 호출 + displayLayoutDidChange notification 발행 → refreshFrame 자체 호출됨.
+        // refreshFrame()  // TASK-061 제거 — windowWillResize → displayLayoutDidChange → refreshFrame 경로로 자연 호출.
     }
 }

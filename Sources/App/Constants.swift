@@ -31,7 +31,11 @@ enum Constants {
     static let permissionPollingIntervalOnboarding: Duration = .milliseconds(1000)
 
     // F-009 검색 debounce
-    static let searchDebounce: Duration = .milliseconds(100)
+    // TASK-061 — 100ms → 200ms 조정. 100ms 는 사용자 평균 타이핑 간격보다 짧아 *타이핑 도중* 매번 발화. 200ms 는 타이핑 정지 0.2초 후 1회 발화 — 빠른 결과 박힘 + 타이핑 중 외곽 변동 차단 균형.
+    static let searchDebounce: Duration = .milliseconds(200)
+
+    // TASK-061 — 검색 max wait. 디바운스 단독 시 사용자 200ms 미만 간격 연속 타이핑 시 *완전히 다 작성할 때까지* 결과 안 박힘. max wait 박으면 첫 schedule 후 500ms 도달 시 강제 fire → 사용자 빠른 타이핑 중에도 *500ms 마다 결과 박힘*. RxJS/Lodash `debounce({ maxWait: ... })` 표준 패턴.
+    static let searchMaxWait: Duration = .milliseconds(500)
 
     // F-004 Pin 사이드 메뉴 펼침 지연
     static let pinSideMenuExpandDelay: Duration = .milliseconds(200)
@@ -45,11 +49,10 @@ enum Constants {
     // TASK-037 디스플레이 탭 — 한 번에 보이는 클립 수 N (사용자 환경설정).
     // default 6 = TASK-036 토큰 추정값 (clipListMaxHeight 276 ÷ rowMinHeight 44) 인계.
     // 범위 1~50. 화면 높이 초과 시 effectiveClipListHeight 가 자동 cap.
-    // floor=3 (autoFit ON 시 최소 컨테이너 행 수). 단 N<3 시 floor=N.
+    // TASK-061 — `clipListAutoFitFloor` (floor=3) 폐기. autoFit ON 시 visibleCount 자연 그대로 변동 — 검색 진행 중 결과 변동 시 사용자 인지 *3행 사이즈 고정 oscillation* 차단.
     static let clipsPerPageDefault: Int = 6
     static let clipsPerPageMin: Int = 1
     static let clipsPerPageMax: Int = 50
-    static let clipListAutoFitFloor: Int = 3
 
     // TASK-043 클립보드 수집 토글 — UserDefaults 키. ClipboardWatcher.enabled 초기값 + StatusItemController red dot indicator 추적.
     static let clipboardCaptureEnabledKey: String = "clipboardCaptureEnabled"
