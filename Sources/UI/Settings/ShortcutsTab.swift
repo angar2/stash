@@ -9,7 +9,8 @@ import OSLog
 // MARK: - SPM Name (.popoverOpen 전용 — TASK-032 글로벌 진입)
 
 extension KeyboardShortcuts.Name {
-    // TASK-032 — popover 진입용 글로벌 단축키 (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관). default ⌘⇧V.
+    // TASK-032 — popover 진입용 글로벌 단축키 (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관).
+    // TASK-065 — default ⌘⇧V → ⌘⇧C (사용자 혼동 회피, PopoverShortcutStore.defaults 진실 소스).
     static let popoverOpen = Self("stash.popoverOpen")
 }
 
@@ -149,8 +150,9 @@ enum PopoverShortcutStore {
     }
 
     /// default 단축키 매핑 (단일 진실 소스). 사용자 변경 없을 시 fallback.
+    /// TASK-065 — `.popoverOpen` default `⌘⇧V` (keyCode 9) → `⌘⇧C` (keyCode 8). 시스템 paste 키와 modifier 겹쳐 사용자 혼동 회피 + 시스템 copy `⌘C` 에 ⇧ 1 modifier 추가가 학습 부담 최소.
     static let defaults: [PopoverShortcutID: PopoverShortcut] = [
-        .popoverOpen:      PopoverShortcut(keyCode: 9, modifiers: [.command, .shift]),       // ⌘⇧V
+        .popoverOpen:      PopoverShortcut(keyCode: 8, modifiers: [.command, .shift]),       // ⌘⇧C (TASK-065)
         .copy:             PopoverShortcut(keyCode: 8, modifiers: [.command]),               // ⌘C
         .paste:            PopoverShortcut(keyCode: 9, modifiers: [.command]),               // ⌘V
         .pinToggle:        PopoverShortcut(keyCode: 35, modifiers: [.command]),              // ⌘P
@@ -224,6 +226,9 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     private var monitor: Any?
     private var isRecording: Bool = false
     private var observer: NSObjectProtocol?
+    /// TASK-065 — hover state. NSTrackingArea 로 mouseEntered/exited 감지 → borderColor + bg 색 분기.
+    private var isHovered: Bool = false
+    private var trackingArea: NSTrackingArea?
 
     init(id: PopoverShortcutID, onChange: @escaping (PopoverShortcut?) -> Void) {
         self.id = id
@@ -275,6 +280,32 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
         }
     }
 
+    // TASK-065 — NSTrackingArea hover 감지 (Recorder 보더/배경 색 분기).
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.activeInActiveApp, .mouseEnteredAndExited, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        isHovered = true
+        updateLabel()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        isHovered = false
+        updateLabel()
+    }
+
     private func startRecording() {
         isRecording = true
         updateLabel()
@@ -319,11 +350,14 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
             label.stringValue = "단축키 입력..."
             label.textColor = .secondaryLabelColor
             self.layer?.borderColor = NSColor.controlAccentColor.cgColor
+            self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
         } else {
             let shortcut = PopoverShortcutStore.get(id)
             label.stringValue = shortcut?.displayText ?? "변경"
             label.textColor = .labelColor
-            self.layer?.borderColor = NSColor.separatorColor.cgColor
+            // TASK-065 — hover 시 보더 진하게 + bg opacity 증가 (시각 피드백).
+            self.layer?.borderColor = (isHovered ? NSColor.labelColor.withAlphaComponent(0.35) : NSColor.separatorColor).cgColor
+            self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(isHovered ? 0.85 : 0.5).cgColor
         }
     }
 }
@@ -363,22 +397,18 @@ struct ShortcutsTab: View {
 
             HStack {
                 Spacer()
-                Button(action: { viewModel.resetAllShortcuts() }) {
+                // TASK-065 — *전체 되돌리기* 카드형 버튼. hover 시 배경 톤.
+                HoverFillCardButton(
+                    action: { viewModel.resetAllShortcuts() },
+                    fill: DesignTokens.Colors.settingsCardBg,
+                    fillHover: DesignTokens.Colors.settingsCardBgHover
+                ) {
                     Text(String(localized: "shortcuts.resetAll"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                                .fill(DesignTokens.Colors.settingsCardBg)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                                        .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
-                                )
-                        )
                 }
-                .buttonStyle(.plain)
             }
 
             Text(String(localized: "shortcuts.note"))
@@ -394,19 +424,40 @@ struct ShortcutsTab: View {
             Text(String(localized: String.LocalizationValue(id.labelKey)))
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
+            // TASK-065 — 전체 삭제 항목 라벨 우측에 secondary 컬러 부가 설명. 라벨 자체를 단순화(*전체 삭제*) 하고 핀 제외 정책은 부가 라인으로 분리.
+            if id == .deleteAll {
+                Text(String(localized: "shortcuts.deleteAll.note"))
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            }
             Spacer()
             PopoverShortcutRecorder(id: id) { newShortcut in
                 viewModel.handlePopoverShortcutChange(id: id, newShortcut: newShortcut, allIds: PopoverShortcutID.allCases)
             }
             .frame(width: 100, height: 22)
-            Button(action: { viewModel.resetPopoverShortcut(id: id) }) {
-                Text(String(localized: "shortcuts.resetItem"))
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(DesignTokens.Colors.accent)
-            }
-            .buttonStyle(.plain)
+            // TASK-065 — 항목별 *되돌리기* 텍스트 hover 시 accent 진하게.
+            _ResetShortcutItemButton(action: { viewModel.resetPopoverShortcut(id: id) })
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
+    }
+}
+
+// MARK: - TASK-065 hover-aware sub-views
+
+@MainActor
+private struct _ResetShortcutItemButton: View {
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(String(localized: "shortcuts.resetItem"))
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(DesignTokens.Colors.accent.opacity(isHovered ? 1.0 : 0.70))
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
     }
 }

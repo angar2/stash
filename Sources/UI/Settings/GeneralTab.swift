@@ -63,13 +63,8 @@ struct GeneralTab: View {
             Image(systemName: granted ? "checkmark.circle" : "xmark.circle")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(granted ? DesignTokens.Colors.toastSuccess : DesignTokens.Colors.toastError)
-            Button(action: { viewModel.openSystemSettingsForAccessibility() }) {
-                Text(String(localized: "settings.general.paste.permission.linkText"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(DesignTokens.Colors.accent)
-                    .underline()
-            }
-            .buttonStyle(.plain)
+            // TASK-065 — 링크 hover 시 텍스트 opacity 증가 (시각 피드백). 링크 버튼은 underline + 색상 변화만으로 충분.
+            _PermissionLink(action: { viewModel.openSystemSettingsForAccessibility() })
             Text(granted
                  ? String(localized: "settings.general.paste.permission.granted.suffix")
                  : String(localized: "settings.general.paste.permission.denied.suffix"))
@@ -90,32 +85,73 @@ struct GeneralTab: View {
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
         }
     }
+}
 
+@MainActor
+private struct _PermissionLink: View {
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(String(localized: "settings.general.paste.permission.linkText"))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(DesignTokens.Colors.accent.opacity(isHovered ? 1.0 : 0.75))
+                .underline()
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
+    }
 }
 
 // MARK: - Shared toggle helpers (TASK-037 fix-refactor — DisplayTab 등 다른 탭 공유 위해 file-level 박음. settingsCard / settingsRow 동일 패턴.)
 
 @MainActor
 func customSettingsToggle(isOn: Binding<Bool>, disabled: Bool) -> some View {
-    Button(action: {
-        guard !disabled else { return }
-        isOn.wrappedValue.toggle()
-    }) {
-        ZStack(alignment: isOn.wrappedValue ? .trailing : .leading) {
-            Capsule()
-                .fill(settingsToggleFillColor(isOn: isOn.wrappedValue, disabled: disabled))
-                .frame(width: 36, height: 22)
-            Circle()
-                .fill(disabled ? Color.white.opacity(0.5) : Color.white)
-                .frame(width: 18, height: 18)
-                .shadow(color: Color.black.opacity(0.25), radius: 1, y: 1)
-                .padding(.horizontal, 2)
+    // TASK-065 — hover state 가져야 해서 sub-View struct 로 추출. 외부 호출 시그니처 유지.
+    _SettingsCapsuleToggle(isOn: isOn, disabled: disabled)
+}
+
+@MainActor
+private struct _SettingsCapsuleToggle: View {
+    @Binding var isOn: Bool
+    let disabled: Bool
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: {
+            guard !disabled else { return }
+            isOn.toggle()
+        }) {
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                Capsule()
+                    .fill(settingsToggleFillColor(isOn: isOn, disabled: disabled))
+                    .frame(width: 36, height: 22)
+                    // TASK-065 — hover 시 트랙 위에 흰색 옅은 overlay (off/on 모두 약간 밝아짐 — macOS NSSwitch hover 패턴 정합).
+                    .overlay(
+                        Capsule()
+                            .fill(Color.white.opacity(isHovered && !disabled ? 0.14 : 0))
+                            .frame(width: 36, height: 22)
+                    )
+                Circle()
+                    .fill(disabled ? Color.white.opacity(0.5) : Color.white)
+                    .frame(width: 18, height: 18)
+                    // TASK-065 — hover 시 knob 그림자 강화 (clickable 시각 피드백).
+                    .shadow(color: Color.black.opacity(isHovered && !disabled ? 0.45 : 0.25), radius: isHovered ? 2.5 : 1, y: 1)
+                    .padding(.horizontal, 2)
+            }
+            .animation(.easeInOut(duration: 0.15), value: isOn)
+            .animation(.easeInOut(duration: 0.12), value: isHovered)
         }
-        .animation(.easeInOut(duration: 0.15), value: isOn.wrappedValue)
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1.0)
+        .onHover { hovering in
+            guard !disabled else { return }
+            isHovered = hovering
+        }
     }
-    .buttonStyle(.plain)
-    .disabled(disabled)
-    .opacity(disabled ? 0.6 : 1.0)
 }
 
 @MainActor
