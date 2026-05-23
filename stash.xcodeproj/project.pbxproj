@@ -89,6 +89,7 @@
 		939CE1B07346CA8E792FE14A /* KeyboardHintsViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E22A3012CBFDCAB4A1325B /* KeyboardHintsViewTests.swift */; };
 		9BF65CD5AA23A4DC31E850C2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 44BCFC059BCC9584CB16A6FF /* Localizable.xcstrings */; };
 		9D50F84A474877E53EE26A1D /* FileClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D48CC145A382F6D5F7FAD1 /* FileClipService.swift */; };
+		9FD5A881D41B4EC189D370AE /* ToastKindTTLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B606A223524B64CD1CDC0002 /* ToastKindTTLTests.swift */; };
 		A17D47FD5990831B39B0D417 /* AboutTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE472B0FB7855E82A42A7F44 /* AboutTab.swift */; };
 		A52D8A0683470D93662E68E7 /* DirectFileClipServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908867B33C3EF7F04CA80A32 /* DirectFileClipServiceTests.swift */; };
 		A87CA74854FDFC9DA007C3C9 /* MockNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19923362833B37310A4C6F15 /* MockNotificationCenter.swift */; };
@@ -265,6 +266,7 @@
 		B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardError.swift; sourceTree = "<group>"; };
 		B51675DBE82CD8A70455CBC7 /* StashApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashApp.swift; sourceTree = "<group>"; };
 		B5A52843E961156954C45322 /* PopoverPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanel.swift; sourceTree = "<group>"; };
+		B606A223524B64CD1CDC0002 /* ToastKindTTLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastKindTTLTests.swift; sourceTree = "<group>"; };
 		B923EDBE5786A27FC11377E1 /* HotkeyMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitorTests.swift; sourceTree = "<group>"; };
 		BB0BF56AE76BBD5260707B92 /* UNNotificationCenterImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNNotificationCenterImpl.swift; sourceTree = "<group>"; };
 		BB73764772D958CF04E1CA92 /* ClipDetailPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailPanelView.swift; sourceTree = "<group>"; };
@@ -618,6 +620,14 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
+		D10231206270A57C2099DB08 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B606A223524B64CD1CDC0002 /* ToastKindTTLTests.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
 		D8DCF5061FACB3D5A33558D1 /* StashTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -628,6 +638,7 @@
 				C72C7F8A975CEF100E7CDC12 /* Popover */,
 				71A1EFE7D7769ED57F61EDC0 /* Services */,
 				8CE4937A3DC7D2852E3AC951 /* Settings */,
+				D10231206270A57C2099DB08 /* UI */,
 			);
 			path = StashTests;
 			sourceTree = "<group>";
@@ -950,6 +961,7 @@
 				BD2F77974D0E0EEB95A9F40D /* SettingsViewModelTests.swift in Sources */,
 				F799790502EC1746149B6631 /* StashTests.swift in Sources */,
 				052EDE64F4FE003F70E14BA9 /* SystemWrapperTests.swift in Sources */,
+				9FD5A881D41B4EC189D370AE /* ToastKindTTLTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

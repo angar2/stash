@@ -361,7 +361,7 @@ struct ClipboardWatcherTests {
             pasteboard: pb,
             fileClipService: fileSvc,
             repository: repo,
-            onUserMessage: { msg in await messageBox.record(msg) }
+            onUserMessage: { kind, msg in await messageBox.record(kind, msg) }
         )
 
         await watcher.tick()
@@ -370,7 +370,8 @@ struct ClipboardWatcherTests {
         #expect(fileSvc.savedFilesBatch.isEmpty)  // saveFiles 호출 X
         let recorded = await messageBox.values
         #expect(recorded.count == 1)
-        #expect(!recorded[0].isEmpty)  // i18n 메시지 박힘
+        #expect(recorded[0].kind == .warn)  // TASK-066 — 한도 초과 = warn
+        #expect(!recorded[0].msg.isEmpty)
     }
 
     /// 부분 실패 (saveFiles throw at index 1) → onUserMessage 콜백 호출 + 클립 생성 X (옵션 A).
@@ -390,7 +391,7 @@ struct ClipboardWatcherTests {
             pasteboard: pb,
             fileClipService: fileSvc,
             repository: repo,
-            onUserMessage: { msg in await messageBox.record(msg) }
+            onUserMessage: { kind, msg in await messageBox.record(kind, msg) }
         )
 
         await watcher.tick()
@@ -398,7 +399,8 @@ struct ClipboardWatcherTests {
         #expect(clips.isEmpty)
         let recorded = await messageBox.values
         #expect(recorded.count == 1)
-        #expect(!recorded[0].isEmpty)  // multiFileSaveFailed 메시지 박힘
+        #expect(recorded[0].kind == .error)  // TASK-066 — 저장 실패 = error
+        #expect(!recorded[0].msg.isEmpty)
     }
 
     /// N=0 (file URL 없음) → ⓑ 메모리 비트맵 분기로 fall-through 회귀 가드.
@@ -579,9 +581,10 @@ fileprivate struct StubFrontmostAppTracker: FrontmostAppTracking {
 }
 
 /// 다중 파일 임계/실패 테스트용 — actor 캡쳐 안전 메시지 박스. 다른 테스트 파일 노출 X (fileprivate).
+/// TASK-066 — onUserMessage 시그니처 (String) → (ToastKind, String) 확장 정합.
 fileprivate actor MessageBox {
-    private(set) var values: [String] = []
-    func record(_ msg: String) {
-        values.append(msg)
+    private(set) var values: [(kind: ToastKind, msg: String)] = []
+    func record(_ kind: ToastKind, _ msg: String) {
+        values.append((kind, msg))
     }
 }
