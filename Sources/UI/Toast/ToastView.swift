@@ -1,5 +1,5 @@
-// Toast 행 — onboarding-toast.jsx L218-271 100% 정합
-// 4 kind (success / info / warn / error) + 좌측 18×18 원형 아이콘 배지 + Liquid Glass background + 닫기 X
+// Toast 행 — UX-UI §6 알림 표 진실 소스 (TASK-066)
+// 4 kind (success / info / warn / error) + 좌측 14×14 stash 적층 카드 로고 (kind 색상 fill) + Liquid Glass background + 우측 18×18 X 닫기
 import SwiftUI
 
 enum ToastKind: Sendable {
@@ -17,21 +17,22 @@ enum ToastKind: Sendable {
         }
     }
 
-    var symbol: String {
-        switch self {
-        case .success: return "checkmark"
-        case .info:    return "info"
-        case .warn:    return "exclamationmark"
-        case .error:   return "xmark"
-        }
-    }
-
     var token: DesignTokens.ToastKindToken {
         switch self {
         case .success: return .success
         case .info:    return .info
         case .warn:    return .warn
         case .error:   return .error
+        }
+    }
+
+    // TASK-066 — kind별 TTL 단일 진실 소스 (DesignTokens.Animation 토큰 추종)
+    var defaultTTL: TimeInterval {
+        switch self {
+        case .success: return DesignTokens.Animation.toastTTLSuccess
+        case .info:    return DesignTokens.Animation.toastTTLInfo
+        case .warn:    return DesignTokens.Animation.toastTTLWarn
+        case .error:   return DesignTokens.Animation.toastTTLError
         }
     }
 }
@@ -49,15 +50,9 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.toastGap) {
-            // 좌측 18×18 원형 배지
-            ZStack {
-                Circle()
-                    .fill(item.kind.color)
-                    .frame(width: DesignTokens.Spacing.toastBadgeSize, height: DesignTokens.Spacing.toastBadgeSize)
-                Image(systemName: item.kind.symbol)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+            // 좌측 14×14 stash 적층 카드 로고 — kind 색상 fill (TASK-066)
+            TrayIconView(full: true, size: DesignTokens.Spacing.toastLogoSize)
+                .foregroundStyle(item.kind.color)
 
             Text(item.text)
                 .font(DesignTokens.Typography.toastBody)
@@ -86,7 +81,7 @@ struct ToastView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.toast, style: .continuous)
-                .stroke(item.kind.color.opacity(0.30), lineWidth: 0.5)
+                .stroke(item.kind.color.opacity(0.50), lineWidth: 0.5)
         )
         .shadow(color: DesignTokens.Shadow.toastShadow, radius: DesignTokens.Shadow.toastRadius, y: DesignTokens.Shadow.toastOffsetY)
     }
