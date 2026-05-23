@@ -325,20 +325,38 @@ final class ClipsViewModel {
             rows = n
         }
         let raw = CGFloat(rows) * rowHeight + CGFloat(max(0, rows - 1)) * rowGap
-        // 화면 cap — clipList 외 SwiftUI body overhead (검색바 / 환설정행 / 힌트바 / popoverPadding × 2) 차감.
-        // hasPinned 시 pinRow + margin 추가.
-        // TASK-052 — hintBarVisible == false 시 baseOverhead 에서 hintBarOverhead 차감 (clipList cap 확장).
+        // 화면 cap — TASK-057 cappedRowsForCurrentScreen 헬퍼 위임 (windowWillResize raw 동기화 분기와 공유).
+        let cappedRows = cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible)
+        let cap = CGFloat(cappedRows) * rowHeight + CGFloat(max(0, cappedRows - 1)) * rowGap
+        return min(raw, cap)
+    }
+
+    /// TASK-057 — 현재 화면 + UI 상태 기준 *clipList 영역에 들어갈 수 있는 최대 정수 행 수*.
+    /// `effectiveClipListHeight` 의 cap 계산 (line 339 자리) + `PopoverWindow.windowWillResize` 의 raw vs effective 동기화 분기 양쪽 공통 진입점.
+    /// TASK-054 fix-2 정합 — cap 을 *정수 행 단위 floor* 박음 (fractional 잔여 공간 차단). (rowHeight + rowGap) 단위 floor — gap 1 개 분량 보정 위해 (screenAvailable + rowGap) 사용.
+    /// TASK-052 정합 — hintBarVisible=false 시 baseOverhead 에서 hintBarOverhead 차감 (clipList cap 확장).
+    static func cappedRowsForCurrentScreen(hasPinned: Bool, hintBarVisible: Bool) -> Int {
+        let rowHeight = DesignTokens.Spacing.rowMinHeight
+        let rowGap = DesignTokens.Spacing.rowGap
         let baseOverhead = DesignTokens.Spacing.clipListOverheadBase
         let pinRowOverhead: CGFloat = hasPinned ? (DesignTokens.Spacing.pinRowHeight + DesignTokens.Spacing.pinRowMarginVert * 2) : 0
         let hintBarAdjust: CGFloat = hintBarVisible ? 0 : DesignTokens.Spacing.hintBarOverhead
         let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust
         let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
-        // TASK-054 fix-2 — cap 을 *정수 행 단위 floor* 박음. fractional 잔여 공간 차단 (사용자 환경설정에서 N+1 행 요청 시 *부분 잘린 행* 또는 *남은 잔여 공간 채움* 발생 차단).
-        // 단순 `cap = max(rowHeight, screenAvailable)` 박으면 N 행 + 잔여 공간 (1 행 미만) 까지 popover 가 늘어남 — N+1 행 요청도 채워질 수 있음.
-        // 정수 행 단위 floor 박으면 *완전한 행만* 표시. (rowHeight + rowGap) 단위 floor — gap 1 개 분량 보정 위해 (screenAvailable + rowGap) 사용.
-        let cappedRows = max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
-        let cap = CGFloat(cappedRows) * rowHeight + CGFloat(max(0, cappedRows - 1)) * rowGap
-        return min(raw, cap)
+        return max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
+    }
+
+    /// TASK-057 — `PopoverWindow.windowWillResize` 드래그 시 raw `clipsPerPage` 와 화면 cap 정합 보정.
+    /// 사용자가 환경설정에서 raw 50 같이 *화면 cap 초과* 설정한 상태에서 popover 테두리 드래그로 축소 시도 → 시각 상 보이는 클립 수 (effective = capRows) 기준 ±1 진행이 사용자 인식과 정합.
+    /// 분기:
+    /// - `signDelta < 0 && current > capRows` (raw>cap 축소): `newRaw = max(min, capRows + signDelta)` (raw jump 동기화 + 축소).
+    /// - else (cap 미달 또는 늘림): `newRaw = max(min, min(max, current + signDelta))` (정상 ±1 + clamp).
+    static func resolveNewClipsPerPageForResize(current: Int, signDelta: Int, capRows: Int) -> Int {
+        if signDelta < 0 && current > capRows {
+            return max(Constants.clipsPerPageMin, capRows + signDelta)
+        } else {
+            return max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, current + signDelta))
+        }
     }
 
     /// TASK-037 — UserDefaults 직접 조회 wrapper. SwiftUI 외부 호출용.
