@@ -1007,4 +1007,27 @@ struct ClipsViewModelTests {
 
         UserDefaults.standard.removeObject(forKey: Constants.clipboardCaptureEnabledKey)
     }
+
+    // MARK: - TASK-058 popover 유지 모드 토글
+
+    @Test("keepOpenAfterAction — 초기값 false")
+    func keepOpenAfterActionInitialValueIsFalse() async {
+        let (vm, _, _) = await makeViewModel()
+        #expect(vm.keepOpenAfterAction == false)
+    }
+
+    @Test("toggleKeepOpenAfterAction — 1회 호출 시 true 로 반전")
+    func toggleKeepOpenAfterActionInvertsToTrue() async {
+        let (vm, _, _) = await makeViewModel()
+        vm.toggleKeepOpenAfterAction()
+        #expect(vm.keepOpenAfterAction == true)
+    }
+
+    @Test("toggleKeepOpenAfterAction — 2회 호출 시 false 복귀 (idempotent toggle)")
+    func toggleKeepOpenAfterActionTwiceReturnsToFalse() async {
+        let (vm, _, _) = await makeViewModel()
+        vm.toggleKeepOpenAfterAction()
+        vm.toggleKeepOpenAfterAction()
+        #expect(vm.keepOpenAfterAction == false)
+    }
 }

@@ -94,6 +94,8 @@ actor ClipboardWatcher {
             for deleted in deletedByLRU {
                 try? await fileClipService.delete(deleted)
             }
+            // TASK-058 fix-1 — 신규 클립 insert 후 알림 post. ClipsViewModel 구독 → popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload.
+            NotificationCenter.default.post(name: Constants.clipboardDidInsertClipNotification, object: nil)
         } catch {
             Logger.clipboard.error("ClipboardWatcher tick failed: \(error)")
         }

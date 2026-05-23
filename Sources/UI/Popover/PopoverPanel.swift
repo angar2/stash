@@ -101,6 +101,8 @@ enum PopoverPanel {
         p.hasShadow = true
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.transient, .fullScreenAuxiliary, .canJoinAllSpaces]
+        // TASK-058 fix-2 — *외부 앱 활성 상태에서 popover 첫 클릭 즉시 액션* 정합. `nonactivatingPanel` 은 *앱 자체 activate 차단* 만 보장 / *panel key window 활성화 단계*는 별도 → 기본 동작에서 첫 클릭이 panel key 활성화에 흡수 + 두 번째 클릭부터 view 액션. `becomesKeyOnlyIfNeeded = true` 박으면 *first responder 필요 view (NSTextField 검색바)* 클릭 시만 panel key 활성화 + 그 외 view (버튼 / 클립 행 / 자물쇠 / 일시정지 / 핀 사이드바 등) 는 key 활성화 우회 → 첫 클릭 즉시 view 액션. `FirstMouseHostingView.acceptsFirstMouse(for:)` true 와 조합 — *not-key window view mouseDown 받음 보장* + *panel key 활성화 단계 자체 우회* 두 정책 동시 필요.
+        p.becomesKeyOnlyIfNeeded = true
 
         let ve = NSVisualEffectView(frame: contentRect)
         ve.material = .popover
@@ -120,11 +122,12 @@ enum PopoverPanel {
 
     /// SwiftUI rootView를 NSVisualEffectView 안 subview로 박음 (autoresizing — NSHostingView intrinsic 영향 차단).
     /// TASK-037 fix-10 — fix-9 의 4-edge constraint + fittingSize 조합이 *경쟁 사이클* 만듦 (NSHostingView intrinsic → NSPanel 자동 contentSize fit ↔ 우리 setFrame). autoresizing 박으면 NSHostingView 가 visualEffectView frame 단순 fill — intrinsic 가 NSPanel.frame 영향 X. PopoverWindow.refreshFrame 의 fittingSize 측정 + setFrame 으로 SwiftUI body intrinsic 과 NSPanel.frame 정확 일치 보장 (fix-7 의 mismatch 해소).
+    /// TASK-058 fix-1 — `FirstMouseHostingView` 서브클래스 사용 → popover 전체 영역 *acceptsFirstMouse* 활성. 외부 앱 활성 상태에서 popover 의 클립 행 / 검색바 / 자물쇠 / 일시정지 / 핀 사이드바 등 *모든 view 클릭* 시 첫 클릭에 즉시 액션 처리 (panel key 활성 흡수 차단). 잠금 모드 ON 시 외부 앱 작업 후 popover 복귀 시나리오 정합.
     static func mount<Root: View>(_ rootView: Root, in visualEffectView: NSVisualEffectView) -> NSHostingView<AnyView> {
         // 기존 subview 제거
         visualEffectView.subviews.forEach { $0.removeFromSuperview() }
 
-        let hosting = NSHostingView(rootView: AnyView(rootView))
+        let hosting = FirstMouseHostingView(rootView: AnyView(rootView))
         hosting.translatesAutoresizingMaskIntoConstraints = true
         hosting.frame = visualEffectView.bounds
         hosting.autoresizingMask = [.width, .height]
@@ -193,6 +196,7 @@ enum PopoverPanel {
     /// 클립 paste 흐름 (TASK-016 D-4·D-5·D-6) — popover dismiss → 이전 frontmost 앱 활성화 → 안정 대기 → viewModel.paste.
     /// Method1/2/3Window 모두 동일 흐름 — DRY로 묶음.
     /// TASK-028 — `zone` 호출 시점 snapshot 을 viewModel.paste 에 명시 전달. hide() → collapsePinSidebar() → focusZone=.clip 흐름이 paste 대상에 영향 X.
+    /// TASK-058 — `viewModel.keepOpenAfterAction` true 시 `hide()` + `sleep` skip → 바로 paste 합성 (FEATURES F-011). `nonactivatingPanel` + `NSApp.activate` 미호출 정책 정합 — popover 가 떠 있어도 외부 앱 frontmost 보존.
     static func performPasteFlow(
         viewModel: ClipsViewModel,
         idx: Int,
@@ -201,13 +205,17 @@ enum PopoverPanel {
         hide: () -> Void
     ) async {
         // TASK-020 — NSApp.activate / prev.activate 호출 모두 제거. 외부 앱이 frontmost 유지 상태라 별도 activate 단계 없이 panel hide + sleep + viewModel.paste만으로 정확 paste 보장.
-        hide()
-        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        // TASK-058 — 유지 모드 ON 시 hide() + sleep skip → 바로 paste 합성.
+        if !viewModel.keepOpenAfterAction {
+            hide()
+            try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        }
         await viewModel.paste(at: idx, zone: zone)
     }
 
     /// 클립 copy 흐름 (TASK-024) — popover dismiss → 안정 대기 → viewModel.copy. `performPasteFlow` 와 동일 패턴 (mode 만 `.copyBack` 강제). Settings `pasteMode` 라디오 무관 항상 클립보드 갱신만, ⌘V 합성 X. Accessibility 권한 무관.
     /// TASK-028 — `zone` 호출 시점 snapshot 을 viewModel.copy 에 명시 전달. performPasteFlow 와 동일 사유.
+    /// TASK-058 — `viewModel.keepOpenAfterAction` true 시 `hide()` + `sleep` skip → 바로 클립보드 갱신.
     static func performCopyFlow(
         viewModel: ClipsViewModel,
         idx: Int,
@@ -215,8 +223,10 @@ enum PopoverPanel {
         sourceLabel: String,
         hide: () -> Void
     ) async {
-        hide()
-        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        if !viewModel.keepOpenAfterAction {
+            hide()
+            try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        }
         await viewModel.copy(at: idx, zone: zone)
     }
 
@@ -354,6 +364,7 @@ enum PopoverPanel {
                 viewModel.collapsePinSidebar()
                 return true
             }
+            // TASK-058 fix-5/6 — ESC 는 잠금 ON 이어도 close 예외 진입점 (macOS 표준 dismiss 키). 외부 클릭 / 트레이 재클릭 / ⌘⇧V 재호출 차단은 유지. fix-6 정정 — 자물쇠 상태는 *유지* (앱 세션 영속) — onDismiss closure 가 `hide(force: true)` 호출로 가드 우회. ESC close 후 다음 popover 진입 시 마지막 자물쇠 상태 복원.
             Task { @MainActor in onDismiss() }
             return true
         case .toggleClipDetail:
@@ -486,4 +497,15 @@ final class OutsideClickMonitor {
     }
 
     // deinit 시점 cleanup은 nonisolated context 한계로 생략 — 호출자가 명시적으로 remove() 호출
+}
+
+/// TASK-058 fix-1 — popover NSHostingView 서브클래스. `acceptsFirstMouse(for:)` true 반환으로 popover 전체 영역 *첫 클릭 즉시 액션 처리* 활성.
+/// 배경: NSPanel `nonactivatingPanel` 패턴은 *앱 자체 activate X* 보장하지만, *panel 자체는 key window* 가 되어야 view 이벤트 받음.
+/// 외부 앱 활성 상태에서 popover view 클릭 시 기본 동작 = 첫 클릭이 panel key 활성 흡수 / 두 번째 클릭이 실제 view 액션.
+/// `acceptsFirstMouse(for:)` true 박으면 첫 클릭에 panel key 활성 + view 이벤트 *동시* 처리 — 사용자가 두 번 클릭할 필요 X.
+/// 잠금 모드 (F-011) ON 시 popover 가 외부 앱 작업 중에도 유지되므로 외부 앱 활성 후 popover 복귀 시나리오 정합 필수.
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
+    }
 }

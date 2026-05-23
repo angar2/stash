@@ -57,6 +57,9 @@ enum Constants {
     // TASK-043 — ClipboardWatcher.enabled / red dot indicator 변경 시 StatusItemController 추종용 NotificationCenter 이름.
     static let captureEnabledDidChangeNotification: Notification.Name = Notification.Name("stash.captureEnabledDidChange")
 
+    // TASK-058 fix-1 — ClipboardWatcher insert 직후 post. ClipsViewModel 구독 → popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload. 잠금 모드 도입 전에는 popover close → open 흐름으로 자연 reload 됐으나 유지 모드 ON 시 popover 미 close 라 알림 진입점 필요.
+    static let clipboardDidInsertClipNotification: Notification.Name = Notification.Name("stash.clipboardDidInsertClip")
+
     // TASK-054 popover 진입 위치 + 드래그/리사이즈 — UX-UI §4-3 *보관함 오픈 위치* 영속.
     // 5종 anchor enum raw 직렬화 + 영구 좌표 4종 (X/Y/Screen) + 토글 1종.
     static let popoverDefaultAnchorKey: String = "popoverDefaultAnchor"

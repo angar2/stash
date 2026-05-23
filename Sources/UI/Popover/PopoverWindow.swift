@@ -315,6 +315,12 @@ final class PopoverWindow: NSObject {
 
     /// 방식 1 — 메뉴바 button 아래 anchor.
     func show(below button: NSStatusBarButton) {
+        // TASK-058 fix-4 — 유지 모드 ON + 이미 visible 시 *close 차단* + *panel key 활성화 수행*. 트레이 재클릭 = (a) 일반 모드 toggle close 의도 / (b) 잠금 모드 *외부 앱 작업 후 popover 복귀 활성화* 의도 — 후자 진입점 보장 위해 panel.makeKeyAndOrderFront 호출. close 자체는 잠금 정합으로 차단 (showInternal skip).
+        if panel.isVisible && viewModel.keepOpenAfterAction {
+            Logger.ui.debug("show(below:) — keepOpenAfterAction ON + already visible → activate-only (TASK-058 fix-4)")
+            panel.makeKeyAndOrderFront(nil)
+            return
+        }
         // TASK-054 fix-1 — width 변경 시 button 중심 anchor 재계산용 reference 저장 (windowDidResize 안에서 사용).
         anchorButton = button
         showInternal(mode: .method1, below: button)
@@ -324,12 +330,24 @@ final class PopoverWindow: NSObject {
     /// - Precondition: `mode != .method1`. 방식 1은 `show(below:)` 사용.
     func show(mode: PopoverInvocationMode) {
         precondition(mode != .method1, "방식 1은 show(below:) 사용. button anchor 필수.")
+        // TASK-058 fix-4 — 유지 모드 ON + 이미 visible 시 *close 차단* + *panel key 활성화 수행*. ⌘⇧V 재호출 = (a) 일반 모드 toggle close 의도 / (b) 잠금 모드 *외부 앱에서 텍스트 입력 후 popover 단축키로 활성화* 의도 — 후자 진입점 보장 위해 panel.makeKeyAndOrderFront 호출. close 자체는 잠금 정합으로 차단 (showInternal skip).
+        if panel.isVisible && viewModel.keepOpenAfterAction {
+            Logger.ui.debug("show(mode:) — keepOpenAfterAction ON + already visible → activate-only (TASK-058 fix-4)")
+            panel.makeKeyAndOrderFront(nil)
+            return
+        }
         showInternal(mode: mode, below: nil)
     }
 
-    func hide() {
+    /// - Parameter force: true 시 유지 모드 가드 우회 + 자물쇠 상태 유지 (앱 세션 영속). ESC 키 진입점 (TASK-058 fix-6) 에서 `true` 박아 close 만 수행 / 자물쇠 토글 상태는 유지. 외부 클릭 / 트레이 재클릭 / paste·copy 후 hide 등 *간접 close* 진입점은 default `false` — 잠금 ON 시 가드 차단.
+    func hide(force: Bool = false) {
         guard let mode = currentMode else {
             // 이미 hidden 상태에서 hide() 호출 — 멱등 안전 (⌘ keyUp 등 외부 트리거 멱등).
+            return
+        }
+        // TASK-058 — 유지 모드 ON 시 *간접 close* 진입점 차단 (완전 잠금 정책 — FEATURES F-011). force=true (ESC 진입) 면 가드 우회 → close 수행하되 자물쇠 상태는 유지 (앱 세션 영속).
+        if !force && viewModel.keepOpenAfterAction {
+            Logger.ui.debug("hide() blocked — keepOpenAfterAction ON (TASK-058) mode=\(String(describing: mode), privacy: .public)")
             return
         }
         // 방식 1·2 — monitor 정리 (method3 보류는 monitor 미설치).
@@ -351,7 +369,8 @@ final class PopoverWindow: NSObject {
         panel.orderOut(nil)
         // TASK-054 — background 이동 비활성 (안전망 — 다음 showInternal 까지 보호).
         panel.isMovableByWindowBackground = false
-        Logger.ui.info("PopoverWindow hidden — mode=\(String(describing: mode), privacy: .public)")
+        // TASK-058 fix-6 — 유지 모드 *앱 세션 영속*. ESC close (force=true) 흐름이어도 자물쇠 상태 유지 → 다음 popover 진입 시 마지막 자물쇠 상태 복원. 앱 quit 시 viewModel 메모리 회수로 default false 자연 복귀. 명시적 잠금 해제 진입점은 *자물쇠 OFF 클릭* 단일.
+        Logger.ui.info("PopoverWindow hidden — mode=\(String(describing: mode), privacy: .public) force=\(force, privacy: .public)")
         currentMode = nil
     }
 
@@ -664,7 +683,7 @@ final class PopoverWindow: NSObject {
             panel: panel,
             viewModel: viewModel,
             mode: mode,
-            onDismiss: { [weak self] in self?.hide() },
+            onDismiss: { [weak self] in self?.hide(force: true) },
             handleClipPaste: { [weak self] idx, zone in
                 await self?.handleClipPaste(at: idx, zone: zone)
             },
@@ -731,7 +750,7 @@ final class PopoverWindow: NSObject {
             panel: panel,
             viewModel: viewModel,
             mode: mode,
-            onDismiss: { [weak self] in self?.hide() },
+            onDismiss: { [weak self] in self?.hide(force: true) },
             handleClipPaste: { [weak self] idx, zone in
                 await self?.handleClipPaste(at: idx, zone: zone)
             },
@@ -779,7 +798,7 @@ final class PopoverWindow: NSObject {
             viewModel: viewModel,
             mode: mode,
             onOpenSettings: onOpenSettings,
-            onDismiss: { [weak self] in self?.hide() },
+            onDismiss: { [weak self] in self?.hide(force: true) },
             handleClipPaste: { [weak self] idx, zone in
                 await self?.handleClipPaste(at: idx, zone: zone)
             },
