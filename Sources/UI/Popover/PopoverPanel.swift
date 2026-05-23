@@ -103,6 +103,8 @@ enum PopoverPanel {
         p.collectionBehavior = [.transient, .fullScreenAuxiliary, .canJoinAllSpaces]
         // TASK-058 fix-2 — *외부 앱 활성 상태에서 popover 첫 클릭 즉시 액션* 정합. `nonactivatingPanel` 은 *앱 자체 activate 차단* 만 보장 / *panel key window 활성화 단계*는 별도 → 기본 동작에서 첫 클릭이 panel key 활성화에 흡수 + 두 번째 클릭부터 view 액션. `becomesKeyOnlyIfNeeded = true` 박으면 *first responder 필요 view (NSTextField 검색바)* 클릭 시만 panel key 활성화 + 그 외 view (버튼 / 클립 행 / 자물쇠 / 일시정지 / 핀 사이드바 등) 는 key 활성화 우회 → 첫 클릭 즉시 view 액션. `FirstMouseHostingView.acceptsFirstMouse(for:)` true 와 조합 — *not-key window view mouseDown 받음 보장* + *panel key 활성화 단계 자체 우회* 두 정책 동시 필요.
         p.becomesKeyOnlyIfNeeded = true
+        // TASK-060 — not-key panel 상태에서도 mouse moved 이벤트 dispatch 받아 SwiftUI .onHover NSTrackingArea 갱신 정상화. `becomesKeyOnlyIfNeeded = true` + `nonactivatingPanel` 조합으로 panel 이 대부분 not-key 상태 → NSPanel default `acceptsMouseMovedEvents = false` 면 mouse moved 차단 → `.onHover` 의 `mouseEntered:`/`mouseExited:` 콜백 발화 누락 → 클립 행 선택 하이라이트 (`selectedIdx`) 가 *이전 hover 위치 stuck* (마우스 시각 위치와 selection 위치 어긋남). 명시적 true 박아 hover 동기화 보장.
+        p.acceptsMouseMovedEvents = true
 
         let ve = NSVisualEffectView(frame: contentRect)
         ve.material = .popover
