@@ -28,17 +28,17 @@ struct DisplayTab: View {
             showDivider: true
         ) {
             HStack(spacing: 12) {
-                // step 박지 X — SwiftUI Slider 에 step 박으면 NSSlider tick marks 자동 표시. Binding set 안 rounded Int 변환으로 정수 clamp.
-                Slider(
+                // TASK-065 — SwiftUI Slider → NSSlider wrap (HoverableSlider) 교체. knob 영역에만 hover 시각 효과 (트랙 hover 효과 X). trackFillColor = `DesignTokens.Colors.accent` (AccentColorMode 분기 추종 — 기존 `.tint` 동일).
+                // step 박지 X — Binding set 안 rounded Int 변환으로 정수 clamp.
+                HoverableSlider(
                     value: Binding(
                         get: { Double(viewModel.clipsPerPage) },
                         set: { viewModel.setClipsPerPage(Int($0.rounded())) }
                     ),
-                    in: Double(Constants.clipsPerPageMin)...Double(Constants.clipsPerPageMax)
+                    range: Double(Constants.clipsPerPageMin)...Double(Constants.clipsPerPageMax),
+                    tint: DesignTokens.Colors.accent
                 )
                 .frame(maxWidth: DesignTokens.Spacing.displaySliderMaxWidth)
-                // TASK-053 — 앱 강조 색상 추종 (UX-UI §4-3 *콘텐츠 색상* 라디오). `.default` = stash 파랑 / `.system` = macOS 시스템 강조 색상.
-                .tint(DesignTokens.Colors.accent)
                 Text("\(viewModel.clipsPerPage)")
                     .font(DesignTokens.Typography.settingsBody)
                     .monospacedDigit()
@@ -64,7 +64,9 @@ struct DisplayTab: View {
         }
     }
 
-    /// TASK-052 — 단축키 설명 표시 체크박스. default ON. OFF 시 popover 하단 `KeyboardHintsView` 비표시 + popover height 자동 축소 (`displayLayoutDidChange` notification).
+    /// TASK-052 — 단축키 가이드 표시 토글. default 가이드 표시.
+    /// TASK-065 — 라벨/의미 리버스 (*단축키 설명 표시* → *단축키 가이드 숨기기*). 시각 OFF = 가이드 표시 / 시각 ON = 가이드 숨김.
+    /// UserDefaults 키 `hintBarVisible` 유지 (default true = 가이드 표시). UI Binding 만 invert — 변수 진실 (`hintBarVisible: true = 표시`) 보존, KeyboardHintsView 등 사용처 코드 변경 X, 마이그레이션 X.
     private var hintBarVisibleRow: some View {
         settingsRow(
             label: String(localized: "settings.display.hintBar.label"),
@@ -73,8 +75,8 @@ struct DisplayTab: View {
         ) {
             customSettingsToggle(
                 isOn: Binding(
-                    get: { viewModel.hintBarVisible },
-                    set: { viewModel.setHintBarVisible($0) }
+                    get: { !viewModel.hintBarVisible },
+                    set: { viewModel.setHintBarVisible(!$0) }
                 ),
                 disabled: false
             )
@@ -102,6 +104,8 @@ struct DisplayTab: View {
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
+            // TASK-065 — *기본 색상* 모드에서도 라디오 dot 이 macOS 시스템 강조 색상으로 보이던 leak 버그 fix. SwiftUI 환경 `accentColor` 추종 차단 + `DesignTokens.Colors.accent` (AccentColorMode 분기 토큰) 강제 박음.
+            .tint(DesignTokens.Colors.accent)
         }
     }
 

@@ -23,22 +23,18 @@ struct PrivacyTab: View {
                         .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 }
                 Spacer()
-                Button(action: { viewModel.selectAppFromOpenPanel() }) {
+                // TASK-065 — *앱 추가* 카드형 버튼. hover 시 배경 톤 진하게.
+                HoverFillCardButton(
+                    action: { viewModel.selectAppFromOpenPanel() },
+                    fill: DesignTokens.Colors.settingsCardBg,
+                    fillHover: DesignTokens.Colors.settingsCardBgHover
+                ) {
                     Text(String(localized: "privacy.blocked.addApp"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                                .fill(DesignTokens.Colors.settingsCardBg)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                                        .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
-                                )
-                        )
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -73,18 +69,19 @@ struct PrivacyTab: View {
                                     .foregroundStyle(DesignTokens.Colors.labelPrimary)
                             }
                             Spacer()
-                            Button(action: { viewModel.removeBlockedApp(bundleId: bundleId) }) {
+                            // TASK-065 — *삭제* 버튼 (toastError 톤). hover 시 배경 opacity 진하게. stroke X.
+                            HoverFillCardButton(
+                                action: { viewModel.removeBlockedApp(bundleId: bundleId) },
+                                fill: DesignTokens.Colors.toastError.opacity(0.10),
+                                fillHover: DesignTokens.Colors.toastError.opacity(0.20),
+                                stroke: nil
+                            ) {
                                 Text(String(localized: "privacy.blocked.remove"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(DesignTokens.Colors.toastError)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                                            .fill(DesignTokens.Colors.toastError.opacity(0.10))
-                                    )
                             }
-                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
@@ -117,3 +114,4 @@ struct PrivacyTab: View {
         return FileManager.default.displayName(atPath: url.path)
     }
 }
+

@@ -319,6 +319,11 @@ enum DesignTokens {
             light: Color.white,
             dark:  Color(red: 20/255, green: 20/255, blue: 24/255, opacity: 0.50)
         )
+        /// TASK-065 — 설정 윈도우 카드형 버튼 hover 배경. 라이트=옅은 그레이 / 다크=더 밝게.
+        static let settingsCardBgHover = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.10)
+        )
         // 탭 selection bg
         static let settingsTabSelectedBg = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),

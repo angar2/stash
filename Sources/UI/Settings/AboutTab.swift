@@ -69,7 +69,12 @@ struct AboutTab: View {
     }
 
     private func aboutButton(label: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        // TASK-065 — hover fill 컴포넌트 (HoverFillCardButton) 정합.
+        HoverFillCardButton(
+            action: action,
+            fill: DesignTokens.Colors.settingsCardBg,
+            fillHover: DesignTokens.Colors.settingsCardBgHover
+        ) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .medium))
@@ -80,16 +85,7 @@ struct AboutTab: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                    .fill(DesignTokens.Colors.settingsCardBg)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.settingsButton, style: .continuous)
-                            .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
-                    )
-            )
             .foregroundStyle(DesignTokens.Colors.labelPrimary)
         }
-        .buttonStyle(.plain)
     }
 }
