@@ -48,8 +48,6 @@ struct PopoverHeaderView: View {
                         guard !isInteractionDisabled else { return }
                         Task { await viewModel.deleteAllExceptPinned() }
                     }
-                    // TASK-030 — "전체 삭제" 텍스트 버튼에 손가락 cursor. method3 비활성 분기 정합.
-                    .pointingHandCursor(enabled: !isInteractionDisabled)
                     .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: deleteAllHovered)
                     .allowsHitTesting(!isInteractionDisabled)
             }
@@ -82,7 +80,6 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleCapture()
             }
-            .pointingHandCursor(enabled: !isInteractionDisabled)
             .help(viewModel.captureEnabled ? String(localized: "tooltip.capture.disable") : String(localized: "tooltip.capture.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: captureToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.captureEnabled)
@@ -109,7 +106,6 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleKeepOpenAfterAction()
             }
-            .pointingHandCursor(enabled: !isInteractionDisabled)
             .help(viewModel.keepOpenAfterAction ? String(localized: "tooltip.keepOpen.disable") : String(localized: "tooltip.keepOpen.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: keepOpenToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.keepOpenAfterAction)
