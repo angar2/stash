@@ -184,6 +184,14 @@ final class PopoverWindow: NSObject {
                 self.hideClipDetailPanel()
             }
         }
+        // TASK-062 — pinSidebarHoverExit 가드 closure 등록. NSEvent.mouseLocation + 핀 사이드바 frame + 상세 sub-panel frame 합집합 검사 → true (합집합 안, close 차단) / false (합집합 밖, close 진행). 두 panel 모두 isVisible 시만 frame 포함 — invisible panel frame 검사 X.
+        viewModel.shouldRetainPinSidebarOnHoverExit = { [weak self] in
+            guard let self else { return false }
+            let mouse = NSEvent.mouseLocation
+            if self.pinSidebarPanel.isVisible && self.pinSidebarPanel.frame.contains(mouse) { return true }
+            if self.detailPanel.isVisible && self.detailPanel.frame.contains(mouse) { return true }
+            return false
+        }
 
         // TASK-037 — 디스플레이 환경설정 / visibleClips 변동 알림 구독 → NSPanel frame 동적 재계산.
         displayLayoutObserver = NotificationCenter.default.addObserver(
@@ -577,8 +585,6 @@ final class PopoverWindow: NSObject {
         detailVisualEffect.maskImage = makeBubbleMaskImage(detailH: detailH, arrowOffsetY: arrowOffsetY, direction: direction)
         detailPanel.orderFrontRegardless()
         lastShownDetailRequest = request
-        // TASK-030 — ViewModel isDetailPanelOpen 갱신. pinSidebarHoverExit 가드에서 사용 — 자식 sub-panel 떠 있는 동안 사이드바 자동 닫힘 차단.
-        viewModel.isDetailPanelOpen = true
         Logger.ui.info("ClipDetailPanel shown — clipId=\(request.clip.id.uuidString, privacy: .public) zone=\(String(describing: request.zone), privacy: .public) direction=\(direction.rawValue, privacy: .public) origin=(\(originX, privacy: .public),\(originY, privacy: .public)) totalW=\(totalW, privacy: .public) h=\(detailH, privacy: .public) arrowY=\(arrowOffsetY, privacy: .public)")
     }
 
@@ -628,8 +634,6 @@ final class PopoverWindow: NSObject {
             detailPanel.orderOut(nil)
             Logger.ui.info("ClipDetailPanel hidden")
         }
-        // TASK-030 — ViewModel isDetailPanelOpen 갱신 (사이드바 hover-exit 가드 해제).
-        viewModel.isDetailPanelOpen = false
     }
 
     /// 파일 행 클릭 → Finder reveal + popover dismiss. detailPanel 도 동반 hide (PopoverWindow.hide 안에서 처리).
