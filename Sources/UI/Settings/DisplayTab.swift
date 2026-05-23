@@ -136,6 +136,8 @@ struct DisplayTab: View {
                     }
                     .labelsHidden()
                     .frame(maxWidth: DesignTokens.Spacing.displaySliderMaxWidth / 2)
+                    // TASK-064 — NSPopUpButton 내부 leading inset 보정. control-col 좌측 시작점과 픽셀 정합. 보정값 -20pt = dev 단계 시각 실측 확정 (macOS Sonoma+ SwiftUI Picker `.menu` style 의 NSPopUpButton wrap 시각 내부 inset). SwiftUI 공식 API 미노출 영역이라 매직값 박음 — DesignTokens 토큰 미박음 (단일 사용처).
+                    .padding(.leading, -20)
                     .disabled(anchorDisabled)
                 }
                 // sub-row 2 — 이전 위치 기억하기 (토글)
