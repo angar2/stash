@@ -107,16 +107,7 @@ enum DesignTokens {
         )
         // 시간 메타 — labelSecondary 동일
 
-        // 빈 상태 큰 제목
-        static let emptyTitleColor = Color(
-            light: Color(red: 0, green: 0, blue: 0, opacity: 0.70),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.85)
-        )
-        // 빈 상태 보조
-        static let emptyHintColor = Color(
-            light: Color(red: 0, green: 0, blue: 0, opacity: 0.45),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.50)
-        )
+        // TASK-061 — 빈 상태 색 토큰 (`emptyTitleColor` / `emptyHintColor`) 폐기. emptyState view 폐기로 사용처 0.
         // TASK-037 — 빈 상태 트레이 아이콘 / 라운드 컨테이너 색 토큰 폐기 (빈 상태 UI 단순화 — 멘트 only).
 
         // ─── 구분선 ───────────────────────────────────────────────────
@@ -388,10 +379,7 @@ enum DesignTokens {
         static let pinRowKeycap    = Font.system(size: 10, weight: .semibold, design: .monospaced)
         // 힌트 라벨
         static let hintLabel       = Font.system(size: 9.5, weight: .medium)
-        // 빈 상태 큰 제목
-        static let emptyTitle      = Font.system(size: 13.5, weight: .semibold)
-        // 빈 상태 보조
-        static let emptyHint       = Font.system(size: 12, weight: .medium)
+        // TASK-061 — `emptyTitle` / `emptyHint` Font 토큰 폐기. emptyState view 폐기로 사용처 0.
 
         // Pin Sidebar 헤더 (UPPERCASE tracking 0.08em)
         static let pinSidebarHeader = Font.system(size: 10, weight: .heavy)
@@ -495,11 +483,7 @@ enum DesignTokens {
         static let keycapPaddingVert:      CGFloat = 1
         static let keycapStrokeWidth:      CGFloat = 0.5
 
-        // 빈 상태 (TASK-037 단순화 — 멘트 only. 84×84 라운드 컨테이너 + 트레이 아이콘 토큰 폐기)
-        static let emptyPaddingTop:        CGFloat = 48
-        static let emptyPaddingBottom:     CGFloat = 44
-        static let emptyPaddingHorz:       CGFloat = 20
-        static let emptyTitleToHint:       CGFloat = 3
+        // TASK-061 — 빈 상태 padding 토큰 (`emptyPaddingTop` / `emptyPaddingBottom` / `emptyPaddingHorz` / `emptyTitleToHint`) 폐기. emptyState view 폐기로 사용처 0.
 
         // TASK-037 — 디스플레이 환경설정 / popover 동적 frame 토큰.
         // clipListOverheadBase = clipList 외 SwiftUI body 영역 (검색바 + 환설정 행 + 힌트바 + popoverPadding × 2) 측정값.
