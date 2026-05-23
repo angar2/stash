@@ -26,6 +26,20 @@ final class KeyablePanel: NSPanel {
         return frameRect
     }
 
+    /// TASK-063 — `windowWillResize` autoFit 분기 결정 순수 함수 (NSWindow/NSPanel 의존 X — 단위 테스트 진입점).
+    /// 환경설정 *높이 자동 조정* (`autoFitClipListHeight`) 토글 상태에 따라 시스템 제안 height 를 어떻게 박을지 결정.
+    /// - autoFit `false`: `proposedHeight` 그대로 통과 (기존 동작 — TASK-054 height 1행 snap 흐름 진입).
+    /// - autoFit `true`: 사용자 height 드래그 시도 무시. `measuredFittingHeight` (width drag wrap 추종 fitting) 우선 → nil 시 `currentHeight` (안전망 — popover 미추종 유지).
+    static func resolveResizeHeight(
+        autoFit: Bool,
+        proposedHeight: CGFloat,
+        currentHeight: CGFloat,
+        measuredFittingHeight: CGFloat?
+    ) -> CGFloat {
+        guard autoFit else { return proposedHeight }
+        return measuredFittingHeight ?? currentHeight
+    }
+
     /// TASK-054 — edge resize 1행 snap 순수 함수 (NSEvent 의존 X — 단위 테스트 진입점).
     /// TASK-054 fix-1 — 본 헬퍼는 `PopoverWindow.windowWillResize(_:to:)` 안에서 호출. NSWindow 가 시스템 resize 흐름으로 전달한 *제안 size* 와 *기존 frame* 의 dy 를 받아 snap 정수 차이 + 잔여 dy 반환.
     /// 방향 결정: 시스템 windowWillResize 가 전달하는 size 는 시스템 표준 — *마우스 끌어당기는 방향 = size 증가* (NSWindow 표준 직관, accumulated dy = 시스템 자동 컨벤션).

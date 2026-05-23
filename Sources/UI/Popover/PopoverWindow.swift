@@ -861,10 +861,28 @@ extension PopoverWindow: NSWindowDelegate {
     /// height snap 단위 = `rowMinHeight + rowGap = 46pt`. width clamp = `[popoverWidthMin=280, popoverWidthMax=600]`.
     /// height 변경이 1행 임계 도달 시 `SettingsViewModel.setClipsPerPage` 직접 호출 → displayLayoutDidChange 흐름 자동 (TASK-037 인프라).
     /// 방식 1·2·3 모두 활성 (사용자 답 *방식 1·2 모두 허용*).
+    /// TASK-063 — 환경설정 *높이 자동 조정* (`autoFitClipListHeight`) ON 시 height 드래그 시도 무시 + `clipsPerPage` 동기화 skip. width 드래그는 정상 활성 (wrap 추종 fitting 반환).
     func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
         guard sender === panel else { return frameSize }
         // width clamp.
         let clampedWidth = max(Constants.popoverWidthMin, min(Constants.popoverWidthMax, frameSize.width))
+        // TASK-063 — autoFit ON 분기. 사용자 height 드래그 시도 무시 (popover 미추종 → macOS native maxSize/minSize 도달 패턴 정합).
+        // width 드래그는 정상 활성: clampedWidth 적용 + measuredFittingHeight 로 hintBar wrap 줄 변동 자동 추종 (autoFit 정책 정합).
+        // setClipsPerPage 호출 흐름 skip — autoFit ON 일 때 clipsPerPage 는 시각 안 보이는 raw 값이라 드래그 동기화 의미 없음.
+        let autoFit = settingsViewModel?.autoFitClipListHeight ?? false
+        if autoFit {
+            let measured: CGFloat? = currentHosting.map { hosting in
+                measuredFittingHeight(width: clampedWidth, hosting: hosting)
+            }
+            let resolvedHeight = KeyablePanel.resolveResizeHeight(
+                autoFit: true,
+                proposedHeight: frameSize.height,
+                currentHeight: panel.frame.size.height,
+                measuredFittingHeight: measured
+            )
+            Logger.ui.info("PopoverWindow.windowWillResize — autoFit ON: height drag blocked (resolved=\(resolvedHeight, privacy: .public) measured=\(String(describing: measured), privacy: .public) clampedWidth=\(clampedWidth, privacy: .public))")
+            return NSSize(width: clampedWidth, height: resolvedHeight)
+        }
         // TASK-054 fix-2 — 화면 가용 height cap. 사용자가 화면 가용 height 초과 드래그 시 *NSPanel 시스템 제안 그대로 박힘 + SwiftUI body 는 화면 cap 도달 후 더 안 자람* → 차이만큼 빈 영역 (검정 background) 발생. cap 적용해 *NSPanel height 자체* 가 화면 안으로 제한.
         let visibleHeight = (panel.screen ?? NSScreen.main)?.visibleFrame.height ?? 1080
         let cappedFrameHeight = min(frameSize.height, visibleHeight)
