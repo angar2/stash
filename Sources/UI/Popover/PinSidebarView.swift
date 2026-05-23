@@ -31,15 +31,19 @@ struct PinSidebarView: View {
                             onClick: {
                                 // 클릭 시 paste 흐름 — focusZone=.pin / pinSelectedIdx 갱신 (사이드바 nav cursor + detail panel hook 동기화).
                                 // TASK-028 — paste 대상은 zone=.pin 명시로 결정. focusZone 후속 변경 (hide → collapsePinSidebar) 영향 X.
+                                // TASK-060 — `.equatable()` view 재사용 시 closure stale idx 위험. clip.id 로 현재 pinnedClips 에서 idx 다시 찾음.
+                                guard let currentIdx = viewModel.pinnedClips.firstIndex(where: { $0.id == clip.id }) else { return }
                                 viewModel.focusZone = .pin
-                                viewModel.pinSelectedIdx = idx
+                                viewModel.pinSelectedIdx = currentIdx
                                 Task { @MainActor in
-                                    await handleClipPaste(idx, .pin)
+                                    await handleClipPaste(currentIdx, .pin)
                                 }
                             },
                             onHover: {
                                 // hover 시 pinSelectedIdx 갱신 — 키보드 nav와 동일 cursor 위치.
-                                viewModel.setPinSelectedIdx(idx)
+                                // TASK-060 — 동일 사유. clip.id 로 현재 idx.
+                                guard let currentIdx = viewModel.pinnedClips.firstIndex(where: { $0.id == clip.id }) else { return }
+                                viewModel.setPinSelectedIdx(currentIdx)
                             },
                             onTogglePin: {
                                 // 핀해제 (파란 압정 아이콘 클릭) — id 기반 unpin 호출.

@@ -118,6 +118,8 @@ struct HistoryPopover: View {
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(spacing: DesignTokens.Spacing.rowGap) {
                     ForEach(Array(visibleClips.enumerated()), id: \.element.id) { idx, clip in
+                        // TASK-060 — closure 안 capture 용 clip.id. `.equatable()` (TASK-037 fix-15b) 가 동일 clip + 동일 isSelected 시 view instance 재사용 → 기존 closure 의 stale idx 잔존. 외부 복사로 reload 시 행 순서 변동 후 *시각 위치 ≠ closure idx* misalign 발생. 호출 시점에 visibleClips 에서 clip.id 로 현재 idx 다시 찾아 정확 호출.
+                        let clipId = clip.id
                         ClipRowView(
                             clip: clip,
                             isSelected: idx == viewModel.selectedIdx,
@@ -125,12 +127,24 @@ struct HistoryPopover: View {
                             isFlashing: clip.id == viewModel.flashedClipId,
                             mode: mode,
                             searchQuery: viewModel.searchQuery,  // TASK-035 — 일반 히스토리 영역 매칭 강조 prop 전달.
-                            onClick: { Task { @MainActor in await handleClipPaste(idx, .clip) } },  // Bug 4·5 fix — Window 측에서 dismiss + 이전 앱 복원 + paste 캡슐화. TASK-028 — 본체 행이라 zone=.clip 고정.
-                            onHover: { viewModel.setSelectedIdx(idx) },
-                            onTogglePin: { Task { await viewModel.togglePin(at: idx) } },
-                            onDelete: { Task { await viewModel.delete(at: idx) } },
-                            onHoverEnter: { viewModel.hoverEnterRow(id: clip.id) },  // TASK-055 — hover 임계 timer 시작.
-                            onHoverExit: { viewModel.hoverExitRow(id: clip.id) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
+                            onClick: { Task { @MainActor in
+                                guard let currentIdx = viewModel.visibleClips.firstIndex(where: { $0.id == clipId }) else { return }
+                                await handleClipPaste(currentIdx, .clip)
+                            } },
+                            onHover: {
+                                guard let currentIdx = viewModel.visibleClips.firstIndex(where: { $0.id == clipId }) else { return }
+                                viewModel.setSelectedIdx(currentIdx)
+                            },
+                            onTogglePin: { Task { @MainActor in
+                                // TASK-060 — id 기반 메서드 직접 호출 (기존 `togglePin(id:trackSelection:)` 존재).
+                                await viewModel.togglePin(id: clipId, trackSelection: .clip)
+                            } },
+                            onDelete: { Task { @MainActor in
+                                guard let currentIdx = viewModel.visibleClips.firstIndex(where: { $0.id == clipId }) else { return }
+                                await viewModel.delete(at: currentIdx)
+                            } },
+                            onHoverEnter: { viewModel.hoverEnterRow(id: clipId) },  // TASK-055 — hover 임계 timer 시작.
+                            onHoverExit: { viewModel.hoverExitRow(id: clipId) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
                         )
                         // TASK-037 fix-15b — Equatable conformance + .equatable() → SwiftUI 가 변경된 행만 re-render. 호버 응답 빠름.
                         .equatable()
