@@ -1068,7 +1068,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.StashTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/stash.app/Contents/MacOS/stash";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Stash.app/Contents/MacOS/Stash";
 			};
 			name = Debug;
 		};
@@ -1086,6 +1086,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.stash;
+				PRODUCT_MODULE_NAME = stash;
+				PRODUCT_NAME = Stash;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
@@ -1106,7 +1108,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.StashTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/stash.app/Contents/MacOS/stash";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Stash.app/Contents/MacOS/Stash";
 			};
 			name = Release;
 		};
@@ -1188,6 +1190,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.stash;
+				PRODUCT_MODULE_NAME = stash;
+				PRODUCT_NAME = Stash;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};

@@ -13,10 +13,10 @@ actor UNNotificationCenterImpl: StashNotificationCenter {
         let content = UNMutableNotificationContent()
         switch notification {
         case .dbCorruptionRecovered:
-            content.title = "stash"
+            content.title = "Stash"
             content.body  = "클립보드 DB가 복구되었습니다."
         case .permissionGranted:
-            content.title = "stash"
+            content.title = "Stash"
             content.body  = "손쉬운 사용 권한이 허용되었습니다."
         }
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
