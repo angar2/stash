@@ -24,4 +24,12 @@ struct PopoverPanelMaskedCornersTests {
         #expect(panel.standardWindowButton(.miniaturizeButton)?.isHidden == true, "minimize 버튼 hidden")
         #expect(panel.standardWindowButton(.zoomButton)?.isHidden == true, "zoom 버튼 hidden")
     }
+
+    /// TASK-071 — `make()` 가 isMovableByWindowBackground=true 박는지 검증. PopoverWindow.showInternal 의 *방식 1·2·3 mode 가드 제거* 정합의 기반 전제 — 모든 mode 가 본체 드래그 자유 이동 활성. PopoverWindow.swift 가 이 초기값을 덮어쓰면 안 됨.
+    @Test("TASK-071 — make() 결과는 isMovableByWindowBackground=true (방식 1·2·3 본체 드래그 통일 인프라)")
+    func makeAppliesMovableByWindowBackground() {
+        let (panel, _) = PopoverPanel.make(width: 380, height: 480)
+        #expect(panel.isMovableByWindowBackground == true,
+                "PopoverPanel.make 가 isMovableByWindowBackground=true 박아야 PopoverWindow.showInternal 의 mode 가드 제거 후 방식 1·2·3 모두 본체 드래그 활성 보장")
+    }
 }
