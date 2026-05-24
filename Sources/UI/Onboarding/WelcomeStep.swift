@@ -1,4 +1,4 @@
-// Onboarding 1단계 — onboarding-toast.jsx OB_Welcome L51-71 100% 정합
+// Onboarding 1단계 — 환영 페이지. TASK-070 — 부제 2줄 (line1+line2) → 1줄 (단일 키) 정합.
 import SwiftUI
 
 struct WelcomeStep: View {
@@ -16,14 +16,11 @@ struct WelcomeStep: View {
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
                 .padding(.bottom, 8)
 
-            VStack(spacing: 4) {
-                Text(String(localized: "onboarding.welcome.subtitle.line1"))
-                Text(String(localized: "onboarding.welcome.subtitle.line2"))
-            }
-            .font(DesignTokens.Typography.onboardingBody)
-            .foregroundStyle(DesignTokens.Colors.labelSecondary)
-            .multilineTextAlignment(.center)
-            .padding(.bottom, 28)
+            Text(String(localized: "onboarding.welcome.subtitle"))
+                .font(DesignTokens.Typography.onboardingBody)
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 28)
 
             OnboardingPrimaryButton(String(localized: "onboarding.welcome.next"), action: onNext)
                 .padding(.bottom, 36)

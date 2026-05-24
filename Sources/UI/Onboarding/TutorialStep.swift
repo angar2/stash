@@ -1,6 +1,4 @@
-// Onboarding 3단계 — onboarding-toast.jsx OB_Tutorial L144-202 정합
-// 헤더 + 1 카드 (메뉴바 클릭) + 완료 버튼.
-// TASK-018 Phase 9 — 방식 3 (⌘ hold) v1.0 보류 / TASK-046 — ⌘ double-tap 트리거 폐기 (방식 2 popover 자체는 유지 — 트리거 = ⌘⇧V SPM). ⌘ double-tap 표기 카드만 삭제. 방식 2 SPM 단축키 안내 카드 신규 + 디자인 정합은 BACKLOG *온보딩 전체 개편* 별도 task 위임.
+// Onboarding 3단계 — 호출 모델 안내. TASK-070 — 카드 1개 → 카드 2개 (방식 1 메뉴바 아이콘 클릭 + 방식 2 ⇧⌘V 단축키). 카드 1 keycap = 메뉴바 아이콘 Image + 라벨 세로 배치 / 카드 2 = 기존 키캡 모노 텍스트.
 import SwiftUI
 
 struct TutorialStep: View {
@@ -14,18 +12,39 @@ struct TutorialStep: View {
                     .font(DesignTokens.Typography.onboardingTitleMid)
                     .tracking(-0.27)
                     .foregroundStyle(DesignTokens.Colors.labelPrimary)
-                Text(String(localized: "onboarding.tutorial.subtitle"))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                HStack(spacing: 0) {
+                    Text(String(localized: "onboarding.tutorial.subtitle.prefix"))
+                    Text(String(localized: "onboarding.tutorial.subtitle.code"))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(Color(
+                                    light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
+                                    dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
+                                ))
+                        )
+                    Text(String(localized: "onboarding.tutorial.subtitle.suffix"))
+                }
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
             }
             .padding(.bottom, 22)
 
-            // 1 카드 — 방식 1 (메뉴바 클릭). ⌘ double-tap 표기 카드 삭제 (TASK-046 — 방식 2 트리거가 ⌘⇧V SPM 으로 변경됨에 따라 표기 정합 필요. 카드 신규는 BACKLOG 온보딩 개편 task 위임) / 방식 3 (⌘ hold) v1.0 보류 (TASK-018 Phase 9).
+            // 2 카드 — 방식 1 (메뉴바 아이콘 클릭) + 방식 2 (⇧⌘V SPM 단축키)
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
-                    keys: String(localized: "onboarding.tutorial.method1.keys"),
+                    icon:  Image("MenuBarIcon"),
+                    keys:  String(localized: "onboarding.tutorial.method1.keys"),
                     title: String(localized: "onboarding.tutorial.method1.title"),
                     desc:  String(localized: "onboarding.tutorial.method1.detail")
+                )
+                tutorialCard(
+                    icon:  nil,
+                    keys:  String(localized: "onboarding.tutorial.method2.keys"),
+                    title: String(localized: "onboarding.tutorial.method2.title"),
+                    desc:  String(localized: "onboarding.tutorial.method2.detail")
                 )
             }
             .padding(.bottom, 22)
@@ -37,25 +56,9 @@ struct TutorialStep: View {
         .padding(.top, 24)
     }
 
-    private func tutorialCard(keys: String, title: String, desc: String) -> some View {
+    private func tutorialCard(icon: Image?, keys: String, title: String, desc: String) -> some View {
         HStack(alignment: .center, spacing: DesignTokens.Spacing.onboardingCardInnerGap) {
-            // 키캡 박스 (56×36)
-            Text(keys)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(DesignTokens.Colors.labelPrimary)
-                .multilineTextAlignment(.center)
-                .frame(width: 64, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color(
-                            light: Color.white,
-                            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
-                        ))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
-                        )
-                )
+            keycap(icon: icon, keys: keys)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -80,5 +83,45 @@ struct TutorialStep: View {
                 .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.onboardingCard, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func keycap(icon: Image?, keys: String) -> some View {
+        if let icon = icon {
+            // 메뉴바 아이콘 + 라벨 세로 배치 (방식 1)
+            VStack(spacing: 2) {
+                icon
+                    .resizable()
+                    .renderingMode(.template)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                Text(keys)
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
+            }
+            .frame(width: 64, height: 36)
+            .background(keycapBackground)
+        } else {
+            // 키캡 모노 텍스트 (방식 2 — ⇧⌘V)
+            Text(keys)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                .multilineTextAlignment(.center)
+                .frame(width: 64, height: 36)
+                .background(keycapBackground)
+        }
+    }
+
+    private var keycapBackground: some View {
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(Color(
+                light: Color.white,
+                dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
+            ))
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
+            )
     }
 }

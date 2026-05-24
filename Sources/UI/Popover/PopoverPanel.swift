@@ -90,12 +90,18 @@ enum PopoverPanel {
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         let p = KeyablePanel(
             contentRect: contentRect,
-            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView, .resizable],
+            styleMask: [.titled, .nonactivatingPanel, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
         )
-        p.isOpaque = false
-        p.backgroundColor = .clear
+        // TASK-070 — 시스템 표준 윈도우 시각 (titled + fullSizeContentView + titlebarAppearsTransparent + titleVisibility=.hidden). 시스템 자체 둥근 corner + 보더 + 그림자 박음 (corner radius 영역 밖 각진 잔존 차단). titlebar button 3종 hidden.
+        p.titlebarAppearsTransparent = true
+        p.titleVisibility = .hidden
+        p.title = ""
+        p.standardWindowButton(.closeButton)?.isHidden = true
+        p.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        p.standardWindowButton(.zoomButton)?.isHidden = true
+        p.isMovableByWindowBackground = true
         // TASK-037 fix-8 — Dock window level + 1. Dock 자동 숨김 + 마우스 호버로 Dock 등장 시 popover 가 Dock 에 가려지지 않도록 *Dock 위 level* 강제.
         p.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.dockWindow)) + 1)
         p.hasShadow = true
@@ -106,16 +112,13 @@ enum PopoverPanel {
         // TASK-060 — not-key panel 상태에서도 mouse moved 이벤트 dispatch 받아 SwiftUI .onHover NSTrackingArea 갱신 정상화. `becomesKeyOnlyIfNeeded = true` + `nonactivatingPanel` 조합으로 panel 이 대부분 not-key 상태 → NSPanel default `acceptsMouseMovedEvents = false` 면 mouse moved 차단 → `.onHover` 의 `mouseEntered:`/`mouseExited:` 콜백 발화 누락 → 클립 행 선택 하이라이트 (`selectedIdx`) 가 *이전 hover 위치 stuck* (마우스 시각 위치와 selection 위치 어긋남). 명시적 true 박아 hover 동기화 보장.
         p.acceptsMouseMovedEvents = true
 
+        // 시스템 NSWindow 자체가 외곽 corner + 보더 + 그림자 박음 — VE 자체 cornerRadius/border 박지 X.
+        // TASK-070 알려진 결함: .titled + .fullSizeContentView 조합에서 NSPanel framework 가 titlebar 영역 reserved 박아 SwiftUI body 가 titlebar 영역 만큼 아래로 박힘 (상단 padding 늘어남 / 하단 padding 줄어듦). ve.frame 강제 박음 시도 효과 X. 후속 task 에서 fix 위임.
         let ve = NSVisualEffectView(frame: contentRect)
         ve.material = .popover
         ve.blendingMode = .behindWindow
         ve.state = .active
         ve.isEmphasized = true
-        ve.wantsLayer = true
-        ve.layer?.cornerRadius = DesignTokens.Radius.popoverOuter
-        ve.layer?.masksToBounds = true
-        ve.layer?.borderWidth = 0.5
-        ve.layer?.borderColor = NSColor.black.withAlphaComponent(0.2).cgColor
         ve.autoresizingMask = [.width, .height]
         p.contentView = ve
 
