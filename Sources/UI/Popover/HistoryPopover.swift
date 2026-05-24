@@ -252,7 +252,7 @@ struct HistoryPopover: View {
             .padding(.vertical, DesignTokens.Spacing.keycapPaddingVert)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.pinRowKeycap, style: .continuous)
-                    .fill(DesignTokens.Colors.pinRowKeycapBg)
+                    .fill(DesignTokens.Colors.keycapBg)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.pinRowKeycap, style: .continuous)

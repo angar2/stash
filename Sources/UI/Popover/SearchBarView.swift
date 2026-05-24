@@ -69,7 +69,7 @@ struct PopoverHeaderView: View {
             .frame(width: 16, height: 16)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(captureToggleHovered ? Color.white.opacity(0.05) : Color.clear)
+                    .fill(captureToggleHovered ? DesignTokens.Colors.popoverActionButtonHoverBg : Color.clear)
             )
             .contentShape(Rectangle())
             .onHover { isHover in
@@ -95,7 +95,7 @@ struct PopoverHeaderView: View {
             .frame(width: 16, height: 16)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(keepOpenToggleHovered ? Color.white.opacity(0.05) : Color.clear)
+                    .fill(keepOpenToggleHovered ? DesignTokens.Colors.popoverActionButtonHoverBg : Color.clear)
             )
             .contentShape(Rectangle())
             .onHover { isHover in

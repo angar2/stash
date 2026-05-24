@@ -138,6 +138,12 @@ enum DesignTokens {
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.50)
         )
 
+        // TASK-068 — popover 상단 액션 버튼 (일시정지·잠금 토글 등) hover bg. 라이트=어두운 hover (`keycapBg` 라이트 톤 정합) / 다크=밝은 hover (기존 hard-code 톤 유지). 라이트 모드 검색바 위 흰색 hover 가 시각 피드백 실종되던 회귀 fix.
+        static let popoverActionButtonHoverBg = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.05)
+        )
+
         // ─── Pin 행 헤더 색 ───────────────────────────────────────────
         static let pinRowHeader = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.75),
@@ -147,11 +153,7 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
         )
-        // Pin Row 우측 단축키 안내 키캡 배경 — TASK-019
-        static let pinRowKeycapBg = Color(
-            light: Color.white.opacity(0.6),
-            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.06)
-        )
+        // TASK-068 — pinRowKeycapBg 토큰 폐기. 핀 행 ⌘B / 환경설정 행 ⌘, 키캡 배경을 표준 힌트바 키캡 `keycapBg` 와 통합 (라이트 모드 시각 정합).
 
         // ─── 환경설정 행 색 ──────────────────────────────────────────
         static let preferencesRow = Color(
@@ -642,18 +644,8 @@ enum DesignTokens {
 
     // MARK: - Shadow
     enum Shadow {
-        // popover (라이트·다크 페어)
-        static let popoverColor    = Color(red: 0, green: 0, blue: 0, opacity: 0.30)
-        static let popoverColorDark = Color(red: 0, green: 0, blue: 0, opacity: 0.55)
-        static let popoverRadius:  CGFloat = 35   // CSS 70px blur → SwiftUI radius 절반 근사
-        static let popoverOffsetY: CGFloat = 22
-
-        // popover inset 보더 highlight
-        static let popoverInsetHighlight     = Color(red: 1, green: 1, blue: 1, opacity: 0.60)
-        static let popoverInsetHighlightDark = Color(red: 1, green: 1, blue: 1, opacity: 0.08)
-        // popover outer stroke
-        static let popoverOuterStroke     = Color(red: 0, green: 0, blue: 0, opacity: 0.10)
-        static let popoverOuterStrokeDark = Color(red: 0, green: 0, blue: 0, opacity: 0.50)
+        // TASK-068 — popover 그림자는 `PopoverPanel.swift:101` `p.hasShadow = true` NSPanel OS 기본 그림자 사용. 색·수치 토큰 7종 (`popoverColor`/`popoverColorDark`/`popoverRadius`/`popoverOffsetY`/`popoverInsetHighlight`/`popoverInsetHighlightDark`/`popoverOuterStrokeDark`) 호출처 0건 dead code → 폐기. `popoverOuterStroke` 만 유지 (라이트용, `HistoryPopover.swift:95` 호출 1건. 다크 모드 시각 위화감 검수 결과 = 없음 → 다크용 별도 토큰 불필요).
+        static let popoverOuterStroke = Color(red: 0, green: 0, blue: 0, opacity: 0.10)
 
         // Toast
         static let toastShadow: Color = Color(red: 0, green: 0, blue: 0, opacity: 0.25)
