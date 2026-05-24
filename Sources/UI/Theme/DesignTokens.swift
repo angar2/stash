@@ -369,7 +369,7 @@ enum DesignTokens {
 
     // MARK: - Typography (popover.jsx + settings.jsx + onboarding-toast.jsx 정합)
     enum Typography {
-        // 워드마크 "stash" — popover.jsx L321-326
+        // 워드마크 "Stash" — popover.jsx L321-326
         static let brandWordmark   = Font.system(size: 13, weight: .heavy).leading(.tight)
         // 클립 본문 (text)
         static let clipBody        = Font.system(size: 13, weight: .medium)

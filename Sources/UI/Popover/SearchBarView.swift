@@ -34,7 +34,7 @@ struct PopoverHeaderView: View {
                 .resizable()
                 .frame(width: 14, height: 14)
                 .foregroundStyle(DesignTokens.Colors.accent)
-            Text("stash")
+            Text("Stash")
                 .font(DesignTokens.Typography.brandWordmark)
                 .foregroundStyle(DesignTokens.Colors.labelWordmark)
                 .tracking(-0.25)
