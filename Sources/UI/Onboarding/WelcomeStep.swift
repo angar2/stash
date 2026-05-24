@@ -33,18 +33,8 @@ struct WelcomeStep: View {
     }
 
     private var largeAppIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [DesignTokens.Colors.accent, DesignTokens.Colors.appIconAccent],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 104, height: 104)
-                .shadow(color: DesignTokens.Colors.accent.opacity(0.40), radius: 20, y: 8)
-            TrayIconView(full: true, size: 56)
-                .foregroundStyle(.white)
-        }
+        Image.stashAppIcon
+            .resizable()
+            .frame(width: 104, height: 104)
     }
 }

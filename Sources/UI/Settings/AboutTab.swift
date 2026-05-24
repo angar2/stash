@@ -14,24 +14,11 @@ struct AboutTab: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            // 큰 적층 카드 컬러 아이콘 (variant 1)
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 13/255, green: 111/255, blue: 255/255),
-                                Color(red: 100/255, green: 50/255, blue: 200/255)
-                            ],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 88, height: 88)
-                    .shadow(color: DesignTokens.Colors.accent.opacity(0.35), radius: 14, y: 6)
-                TrayIconView(full: true, size: 48)
-                    .foregroundStyle(.white)
-            }
-            .padding(.top, 18)
+            // TASK-069 — 큰 앱 아이콘 (NSWorkspace 로 .app bundle 아이콘 추출 — DesignTokens stashAppIcon helper)
+            Image.stashAppIcon
+                .resizable()
+                .frame(width: 88, height: 88)
+                .padding(.top, 18)
 
             Text("Stash")
                 .font(.system(size: 22, weight: .bold))

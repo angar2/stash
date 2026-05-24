@@ -44,7 +44,7 @@ enum DesignTokens {
         static let accentForeground = Color.white
         // TASK-035 — 검색 매칭 텍스트 전경 (UX-UI §7-3). accent 별칭으로 의미 분리 — 향후 매칭 색상만 별도 조정 가능.
         static var searchMatchForeground: Color { accent }
-        // 앱 아이콘 그라데이션 보조 (적층 카드 보라 톤) — TASK-053 비대상 (로고 디자인 결로 고정).
+        // 보라 톤 보조 색상 (TASK-069 이전 적층 카드 + WelcomeStep 그라데이션 보조 — 폐기 후 ClipDetailProvider.swift:380 이미지 fallback 톤만 잔존). TASK-053 비대상. 후속 task 에서 imagePlaceholderAccent 등으로 리네임 검토.
         static let appIconAccent = Color(red: 100/255, green: 50/255, blue: 200/255)
         static let primaryButtonStart = Color(red: 45/255, green: 134/255, blue: 245/255)  // 그라데이션 상단
 
@@ -531,7 +531,7 @@ enum DesignTokens {
         static let toastPaddingVert:       CGFloat = 10
         static let toastGap:               CGFloat = 10
         static let toastBadgeSize:         CGFloat = 18  // X 닫기 버튼 사이즈 (TASK-066 — 로고와 분리)
-        static let toastLogoSize:          CGFloat = 18  // TASK-066 — 좌측 stash 적층 카드 로고 사이즈 (TrayIconView size 인자, X 닫기와 통일)
+        static let toastLogoSize:          CGFloat = 18  // TASK-066 — 좌측 stash 로고 사이즈 (X 닫기와 통일). TASK-069 — MenuBarIcon template 사용 + kind 색상 fill.
         static let toastStackGap:          CGFloat = 8
         static let toastWindowPadding:     CGFloat = 8
 
@@ -719,5 +719,13 @@ extension Color {
                 return NSColor(light)
             }
         })
+    }
+}
+
+// TASK-069 — AppIcon.appiconset 은 Asset Catalog *specialized slot* (Finder/Dock 용 .icns 박힘) 이라 SwiftUI `Image("AppIcon")` 으로 로드 X. NSWorkspace 로 *.app bundle 의 아이콘 추출* 후 SwiftUI 래핑. 4 곳 (WelcomeStep/AboutTab/ToastView/SearchBarView) 에서 호출.
+extension Image {
+    /// stash 앱 아이콘 — Finder/Dock 표시되는 AppIcon.appiconset PNG 와 동일 시각.
+    static var stashAppIcon: Image {
+        Image(nsImage: NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath))
     }
 }
