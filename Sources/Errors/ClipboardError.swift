@@ -12,13 +12,13 @@ extension ClipboardError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .pasteboardUnavailable:
-            return String(localized: "error.clipboard.pasteboard_unavailable")
+            return L10n("error.clipboard.pasteboard_unavailable")
         case .typeNotSupported:
-            return String(localized: "error.clipboard.type_not_supported")
+            return L10n("error.clipboard.type_not_supported")
         case .fileTooLarge:
-            return String(localized: "error.clipboard.file_too_large")
+            return L10n("error.clipboard.file_too_large")
         case .ignoredByPolicy:
-            return String(localized: "error.clipboard.ignored_by_policy")
+            return L10n("error.clipboard.ignored_by_policy")
         }
     }
 }

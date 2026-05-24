@@ -10,9 +10,9 @@ extension PermissionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessibilityNotGranted:
-            return String(localized: "error.permission.accessibility_not_granted")
+            return L10n("error.permission.accessibility_not_granted")
         case .userDeniedRecovery:
-            return String(localized: "error.permission.user_denied_recovery")
+            return L10n("error.permission.user_denied_recovery")
         }
     }
 }

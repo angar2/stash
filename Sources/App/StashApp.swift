@@ -55,6 +55,10 @@ struct StashApp: App {
             "hintBarVisible": true
         ])
 
+        // TASK-073 — 앱 사용자 표시 언어 적용. UserDefaults `appLanguage` 키 부재 시 systemDefault (한국어 OS → .korean / 그 외 → .english) 박음 + AppleLanguages override.
+        // 본 호출은 SwiftUI / AppKit 모든 view 생성 *전* 실행되어야 첫 lookup 부터 정확한 언어 적용.
+        AppLanguageService.applyOnLaunch()
+
         // ① Persistence — 가장 안쪽부터 (ARCHITECTURE §9-4 step 2-3)
         let dataFolder = AppDataPath.dataFolder()
         let dbPath = AppDataPath.databaseFile()
@@ -346,7 +350,7 @@ struct StashApp: App {
         }
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button(String(localized: "preferences.row") + "...") {
+                Button(L10n("preferences.row") + "...") {
                     preferencesController.show()
                 }
                 .keyboardShortcut(",", modifiers: .command)

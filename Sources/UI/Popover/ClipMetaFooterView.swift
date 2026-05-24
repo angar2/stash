@@ -10,6 +10,8 @@ import OSLog
 /// - 출처 앱 nil / 미설치 → 회색 fallback 아이콘 + i18n `clipDetail.meta.unknownApp` ("알 수 없음").
 struct ClipMetaFooterView: View {
     let clip: Clip
+    /// TASK-073 — 언어 변경 시 body 재평가 → "알 수 없음" / Unknown 등 즉시 갱신.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     /// 시간 포맷 정확성 단일 진실. static let 1회 생성 (Foundation DateFormatter 이 macOS 15+ 부터 Sendable 부합).
     /// `Locale(identifier: "en_US_POSIX")` + `TimeZone.current` 로 로케일 무관 절대 형식 보장.
@@ -27,7 +29,8 @@ struct ClipMetaFooterView: View {
     }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.clipMetaHGap) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return HStack(spacing: DesignTokens.Spacing.clipMetaHGap) {
             // 출처 앱 아이콘 (14×14)
             appIconView
                 .frame(width: DesignTokens.Spacing.clipMetaIconSize,
@@ -86,7 +89,7 @@ struct ClipMetaFooterView: View {
     static func appDisplayName(for bundleId: String?) -> String {
         guard let bundleId, !bundleId.isEmpty,
               let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
-            return String(localized: "clipDetail.meta.unknownApp")
+            return L10n("clipDetail.meta.unknownApp")
         }
         return FileManager.default.displayName(atPath: url.path)
     }

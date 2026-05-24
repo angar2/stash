@@ -40,7 +40,7 @@ final class PreferencesWindowController {
             backing: .buffered,
             defer: false
         )
-        newWindow.title = String(localized: "preferences.row")
+        newWindow.title = L10n("preferences.row")
         newWindow.contentViewController = hosting
         newWindow.isReleasedWhenClosed = false
         self.window = newWindow

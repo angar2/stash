@@ -44,10 +44,13 @@ struct HistoryPopover: View {
 
     // TASK-053 — 콘텐츠 색상 모드 변경 시 popover body 재평가 트리거. 자식 view (ClipRowView / SearchBarView 등) 도 각자 @AppStorage 박아 자체 추적.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 앱 언어 변경 시 popover body 재평가 → 모든 자식 view 의 `String(localized:)` 호출이 새 언어로 lookup.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
         // arrow tail은 다음 fix 사이클에서 panel 외부 별도 NSView로 박음 (NSVisualEffectView cornerRadius 안에서 잘리는 문제 회피)
         let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return popoverBody
     }
 
@@ -184,7 +187,7 @@ struct HistoryPopover: View {
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.accent)
                 .rotationEffect(.degrees(45))
-            Text(String(localized: "pin.row.title"))
+            Text(L10n("pin.row.title"))
                 .font(DesignTokens.Typography.rowHeaderBold)
                 .foregroundStyle(DesignTokens.Colors.pinRowHeader)
             Text("\(viewModel.pinnedClips.count)")
@@ -268,7 +271,7 @@ struct HistoryPopover: View {
             Image(systemName: "gearshape")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.preferencesRow)
-            Text(String(localized: "preferences.row"))
+            Text(L10n("preferences.row"))
                 .font(DesignTokens.Typography.rowHeader)
                 .foregroundStyle(DesignTokens.Colors.preferencesRow)
             Spacer()

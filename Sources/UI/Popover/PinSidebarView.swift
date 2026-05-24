@@ -10,9 +10,12 @@ struct PinSidebarView: View {
     let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 핀 행 body 재평가 트리거 (`.equatable()` 박힌 상태에서 모드 변경 회피 X).
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 언어 변경 시 body 재평가 → 헤더 "핀 목록" 라벨 등 새 언어 lookup.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
         let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(alignment: .leading, spacing: 0) {
             header
             ScrollView {
@@ -62,7 +65,7 @@ struct PinSidebarView: View {
                         .equatable()
                     }
                     if viewModel.pinnedClips.isEmpty {
-                        Text(String(localized: "pin.sidebar.empty"))
+                        Text(L10n("pin.sidebar.empty"))
                             .font(.system(size: 11, weight: .regular))
                             .foregroundStyle(DesignTokens.Colors.labelSecondary)
                             .frame(maxWidth: .infinity)
@@ -88,7 +91,7 @@ struct PinSidebarView: View {
 
     private var header: some View {
         // TASK-019 fix 3차 — `textCase(.uppercase)` 제거 (B9). "핀 목록 · N" 원형 표시.
-        Text(String(localized: "pin.sidebar.title") + " · \(viewModel.pinnedClips.count)")
+        Text(L10n("pin.sidebar.title") + " · \(viewModel.pinnedClips.count)")
             .font(DesignTokens.Typography.pinSidebarHeader)
             .tracking(0.4)
             .foregroundStyle(DesignTokens.Colors.pinSidebarHeader)

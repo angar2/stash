@@ -7,13 +7,18 @@ struct GeneralTab: View {
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 Toggle ON 배경 / 강조 텍스트 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
+    /// TASK-073 — 언어 변경 시 GeneralTab 본문 즉시 재평가 (라디오 선택 표시 정합 + 모든 i18n 키 lookup 새 언어).
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
+
     var body: some View {
         let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(spacing: 0) {
             settingsCard {
                 loginItemRow
                 autoPasteRow
                 historyLimitRow
+                languageRow
             }
         }
     }
@@ -22,7 +27,7 @@ struct GeneralTab: View {
 
     private var loginItemRow: some View {
         settingsRow(
-            label: String(localized: "settings.general.loginItem"),
+            label: L10n("settings.general.loginItem"),
             hint: nil,
             showDivider: true
         ) {
@@ -38,8 +43,8 @@ struct GeneralTab: View {
 
     private var autoPasteRow: some View {
         settingsRow(
-            label: String(localized: "settings.general.paste.label"),
-            hint: String(localized: "settings.general.paste.hint"),
+            label: L10n("settings.general.paste.label"),
+            hint: L10n("settings.general.paste.hint"),
             showDivider: true
         ) {
             VStack(alignment: .leading, spacing: 8) {
@@ -66,8 +71,8 @@ struct GeneralTab: View {
             // TASK-065 — 링크 hover 시 텍스트 opacity 증가 (시각 피드백). 링크 버튼은 underline + 색상 변화만으로 충분.
             _PermissionLink(action: { viewModel.openSystemSettingsForAccessibility() })
             Text(granted
-                 ? String(localized: "settings.general.paste.permission.granted.suffix")
-                 : String(localized: "settings.general.paste.permission.denied.suffix"))
+                 ? L10n("settings.general.paste.permission.granted.suffix")
+                 : L10n("settings.general.paste.permission.denied.suffix"))
                 .font(.system(size: 11))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
         }
@@ -76,13 +81,38 @@ struct GeneralTab: View {
     /// TASK-033 — 히스토리 한도 정보 라인. 사용자 변경 X (정보 노출만). 값은 `Constants.maxUnpinnedClips` 동적 바인딩.
     private var historyLimitRow: some View {
         settingsRow(
-            label: String(localized: "settings.general.historyLimit"),
+            label: L10n("settings.general.historyLimit"),
+            hint: nil,
+            showDivider: true
+        ) {
+            Text("\(viewModel.maxUnpinnedClips)\(L10n("settings.general.historyLimit.unit"))")
+                .font(DesignTokens.Typography.settingsBody)
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+        }
+    }
+
+    /// TASK-073 — 앱 사용자 표시 언어 라디오 (한국어 / 영어). 변경 즉시 popover / 환경설정 / 메뉴바 우클릭 메뉴 새 언어 전환. TASK-053 *콘텐츠 색상* 라디오 패턴 정합.
+    private var languageRow: some View {
+        settingsRow(
+            label: L10n("settings.general.language.label"),
             hint: nil,
             showDivider: false
         ) {
-            Text("\(viewModel.maxUnpinnedClips)\(String(localized: "settings.general.historyLimit.unit"))")
-                .font(DesignTokens.Typography.settingsBody)
-                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            Picker(
+                "",
+                selection: Binding(
+                    get: { viewModel.appLanguage },
+                    set: { viewModel.setAppLanguage($0) }
+                )
+            ) {
+                Text(L10n("settings.general.language.korean"))
+                    .tag(AppLanguage.korean)
+                Text(L10n("settings.general.language.english"))
+                    .tag(AppLanguage.english)
+            }
+            // TASK-073 Phase 7 — 사용자 피드백 fix: 라디오 → 드롭다운.
+            .pickerStyle(.menu)
+            .labelsHidden()
         }
     }
 }
@@ -94,7 +124,7 @@ private struct _PermissionLink: View {
 
     var body: some View {
         Button(action: action) {
-            Text(String(localized: "settings.general.paste.permission.linkText"))
+            Text(L10n("settings.general.paste.permission.linkText"))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.accent.opacity(isHovered ? 1.0 : 0.75))
                 .underline()

@@ -3,18 +3,21 @@ import SwiftUI
 
 struct TutorialStep: View {
     let onComplete: () -> Void
+    /// TASK-073 — 언어 변경 시 body 재평가.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(spacing: 0) {
             // 헤더
             VStack(spacing: 6) {
-                Text(String(localized: "onboarding.tutorial.title"))
+                Text(L10n("onboarding.tutorial.title"))
                     .font(DesignTokens.Typography.onboardingTitleMid)
                     .tracking(-0.27)
                     .foregroundStyle(DesignTokens.Colors.labelPrimary)
                 HStack(spacing: 0) {
-                    Text(String(localized: "onboarding.tutorial.subtitle.prefix"))
-                    Text(String(localized: "onboarding.tutorial.subtitle.code"))
+                    Text(L10n("onboarding.tutorial.subtitle.prefix"))
+                    Text(L10n("onboarding.tutorial.subtitle.code"))
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
@@ -25,7 +28,7 @@ struct TutorialStep: View {
                                     dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
                                 ))
                         )
-                    Text(String(localized: "onboarding.tutorial.subtitle.suffix"))
+                    Text(L10n("onboarding.tutorial.subtitle.suffix"))
                 }
                 .font(.system(size: 12, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
@@ -36,20 +39,20 @@ struct TutorialStep: View {
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
                     icon:  Image("MenuBarIcon"),
-                    keys:  String(localized: "onboarding.tutorial.method1.keys"),
-                    title: String(localized: "onboarding.tutorial.method1.title"),
-                    desc:  String(localized: "onboarding.tutorial.method1.detail")
+                    keys:  L10n("onboarding.tutorial.method1.keys"),
+                    title: L10n("onboarding.tutorial.method1.title"),
+                    desc:  L10n("onboarding.tutorial.method1.detail")
                 )
                 tutorialCard(
                     icon:  nil,
-                    keys:  String(localized: "onboarding.tutorial.method2.keys"),
-                    title: String(localized: "onboarding.tutorial.method2.title"),
-                    desc:  String(localized: "onboarding.tutorial.method2.detail")
+                    keys:  L10n("onboarding.tutorial.method2.keys"),
+                    title: L10n("onboarding.tutorial.method2.title"),
+                    desc:  L10n("onboarding.tutorial.method2.detail")
                 )
             }
             .padding(.bottom, 22)
 
-            OnboardingPrimaryButton(String(localized: "onboarding.tutorial.complete"), horizontalPadding: 32, action: onComplete)
+            OnboardingPrimaryButton(L10n("onboarding.tutorial.complete"), horizontalPadding: 32, action: onComplete)
                 .padding(.bottom, 28)
         }
         .padding(.horizontal, 28)

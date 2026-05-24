@@ -4,9 +4,12 @@ import AppKit
 
 struct PrivacyTab: View {
     @Bindable var viewModel: SettingsViewModel
+    /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
-        VStack(spacing: 14) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(spacing: 14) {
             blockedAppsCard
         }
     }
@@ -15,10 +18,10 @@ struct PrivacyTab: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(String(localized: "privacy.blocked.title"))
+                    Text(L10n("privacy.blocked.title"))
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
-                    Text(String(localized: "privacy.blocked.subtitle"))
+                    Text(L10n("privacy.blocked.subtitle"))
                         .font(.system(size: 10.5, weight: .regular))
                         .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 }
@@ -29,7 +32,7 @@ struct PrivacyTab: View {
                     fill: DesignTokens.Colors.settingsCardBg,
                     fillHover: DesignTokens.Colors.settingsCardBgHover
                 ) {
-                    Text(String(localized: "privacy.blocked.addApp"))
+                    Text(L10n("privacy.blocked.addApp"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
                         .padding(.horizontal, 8)
@@ -41,7 +44,7 @@ struct PrivacyTab: View {
             Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
 
             if viewModel.blockedAppBundleIds.isEmpty {
-                Text(String(localized: "privacy.blocked.empty"))
+                Text(L10n("privacy.blocked.empty"))
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundStyle(DesignTokens.Colors.labelSecondary)
                     .frame(maxWidth: .infinity)
@@ -76,7 +79,7 @@ struct PrivacyTab: View {
                                 fillHover: DesignTokens.Colors.toastError.opacity(0.20),
                                 stroke: nil
                             ) {
-                                Text(String(localized: "privacy.blocked.remove"))
+                                Text(L10n("privacy.blocked.remove"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(DesignTokens.Colors.toastError)
                                     .padding(.horizontal, 8)

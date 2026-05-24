@@ -7,6 +7,8 @@ struct SettingsWindow: View {
     @State private var selectedTab: SettingsTab = .general
     // TASK-053 — 콘텐츠 색상 모드 변경 시 Settings 윈도우 body 재평가 트리거.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 언어 변경 시 body 재평가 → 탭 라벨 즉시 갱신.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     enum SettingsTab: String, CaseIterable, Identifiable {
         // TASK-037 — `.display` 신규. allCases 순서 = 일반 / 디스플레이 / 단축키 / 개인정보 / 정보 (UX-UI §4-1).
@@ -34,6 +36,7 @@ struct SettingsWindow: View {
 
     var body: some View {
         let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(spacing: 0) {
             tabBar
             Divider().foregroundStyle(DesignTokens.Colors.divider)
@@ -109,7 +112,7 @@ struct SettingsWindow: View {
                 Image(systemName: tab.icon)
                     .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(selected ? DesignTokens.Colors.accent : DesignTokens.Colors.settingsTabUnselectedIcon)
-                Text(String(localized: String.LocalizationValue(tab.titleKey)))
+                Text(L10n(tab.titleKey))
                     .font(DesignTokens.Typography.settingsTabLabel)
                     .foregroundStyle(selected ? DesignTokens.Colors.accent : DesignTokens.Colors.labelPrimary)
             }

@@ -174,8 +174,8 @@ final class ClipsViewModel {
         if let clipboardWatcher {
             Task { await clipboardWatcher.setEnabled(newValue) }
         }
-        let messageKey: String.LocalizationValue = newValue ? "toast.capture.enabled" : "toast.capture.disabled"
-        toastQueue?.enqueue(.success, String(localized: messageKey))
+        let messageKey = newValue ? "toast.capture.enabled" : "toast.capture.disabled"
+        toastQueue?.enqueue(.success, L10n(messageKey))
         Logger.ui.info("ClipsViewModel.toggleCapture: enabled=\(newValue, privacy: .public)")
     }
 
@@ -517,10 +517,10 @@ final class ClipsViewModel {
         guard let toastQueue else { return }
         if mode == .autoPaste {
             // TASK-066 — snippet suffix 제거, 본문 단순화 *"붙여넣기됨"*.
-            toastQueue.enqueue(.success, String(localized: "toast.paste.done"))
+            toastQueue.enqueue(.success, L10n("toast.paste.done"))
         } else {
             // TASK-033 — *바로 붙여넣기* OFF 또는 권한 X 상태 popover 클립 선택 시 단축키 안내 없는 단순 토스트 (UX-UI §6 알림 표 정합).
-            toastQueue.enqueue(.success, String(localized: "toast.copy.done"))
+            toastQueue.enqueue(.success, L10n("toast.copy.done"))
         }
     }
 
@@ -540,7 +540,7 @@ final class ClipsViewModel {
 
     private func publishCopyToast() {
         guard let toastQueue else { return }
-        toastQueue.enqueue(.success, String(localized: "toast.copy.done"))
+        toastQueue.enqueue(.success, L10n("toast.copy.done"))
     }
 
     // TASK-020 — pop(at:) 함수 제거 (⌘⇧V 단축키·기능 일괄 폐기로 호출처 0건).
@@ -577,7 +577,7 @@ final class ClipsViewModel {
         } catch DatabaseError.pinLimitReached {
             Logger.ui.warning("핀 한도 초과 — 토스트 발행 (max=\(Constants.maxPinnedClips, privacy: .public))")
             // TASK-066 — 키 dotted rename + Constants 동적 + ttl 자동 추종.
-            let body = String(format: String(localized: "toast.pin.limit"), Constants.maxPinnedClips)
+            let body = String(format: L10n("toast.pin.limit"), Constants.maxPinnedClips)
             toastQueue?.enqueue(.warn, body)
         } catch {
             Logger.ui.error("ClipsViewModel.togglePin error: \(error.localizedDescription, privacy: .public)")
@@ -613,7 +613,7 @@ final class ClipsViewModel {
         await reload()
         selectedIdx = 0
         // TASK-066 — kind .info → .success, ttl 자동 추종.
-        toastQueue?.enqueue(.success, String(localized: "toast.deleteAll.done"))
+        toastQueue?.enqueue(.success, L10n("toast.deleteAll.done"))
     }
 
     /// TASK-034 — 클립 배열 → clips/ 폴더 안 참조 절대경로 set. `isFileExternal=false` 만 (외부 원본은 stash 카피본 X — sweep 대상 X).

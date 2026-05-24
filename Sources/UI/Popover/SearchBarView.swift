@@ -8,6 +8,8 @@ struct PopoverHeaderView: View {
     @State private var deleteAllHovered: Bool = false
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 박스 포커스 보더/ring 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 언어 변경 시 body 재평가.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
     /// TASK-043 — 일시정지/재개 버튼 hover state.
     @State private var captureToggleHovered: Bool = false
     /// TASK-058 — popover 유지 모드 토글 버튼 hover state.
@@ -18,6 +20,7 @@ struct PopoverHeaderView: View {
 
     var body: some View {
         let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(alignment: .leading, spacing: 0) {
             wordmarkRow
             searchContainer
@@ -40,7 +43,7 @@ struct PopoverHeaderView: View {
                 .tracking(-0.25)
             Spacer()
             if viewModel.clips.count > 0 {
-                Text(String(localized: "search.deleteAll"))
+                Text(L10n("search.deleteAll"))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(deleteAllHovered ? DesignTokens.Colors.searchDeleteAllLabelHover : deleteAllColor)
                     .contentShape(Rectangle())
@@ -84,7 +87,7 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleCapture()
             }
-            .help(viewModel.captureEnabled ? String(localized: "tooltip.capture.disable") : String(localized: "tooltip.capture.enable"))
+            .help(viewModel.captureEnabled ? L10n("tooltip.capture.disable") : L10n("tooltip.capture.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: captureToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.captureEnabled)
             .allowsHitTesting(!isInteractionDisabled)
@@ -110,7 +113,7 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleKeepOpenAfterAction()
             }
-            .help(viewModel.keepOpenAfterAction ? String(localized: "tooltip.keepOpen.disable") : String(localized: "tooltip.keepOpen.enable"))
+            .help(viewModel.keepOpenAfterAction ? L10n("tooltip.keepOpen.disable") : L10n("tooltip.keepOpen.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: keepOpenToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.keepOpenAfterAction)
             .allowsHitTesting(!isInteractionDisabled)
@@ -158,7 +161,7 @@ struct PopoverHeaderView: View {
     }
 
     private var searchPlaceholder: String {
-        return String(localized: "search.placeholder")
+        return L10n("search.placeholder")
     }
 
     /// TASK-025 — 검색바 icon 색상 단일화 (focusZone == .search 분기 제거).

@@ -5,9 +5,12 @@ struct DisplayTab: View {
     @Bindable var viewModel: SettingsViewModel
     // TASK-053 — 콘텐츠 색상 모드 변경 시 슬라이더 tint / 라디오 / 본 탭 강조 영역 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
         let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(spacing: 0) {
             settingsCard {
                 clipsPerPageRow
@@ -23,8 +26,8 @@ struct DisplayTab: View {
 
     private var clipsPerPageRow: some View {
         settingsRow(
-            label: String(localized: "settings.display.clipsPerPage.label"),
-            hint: String(localized: "settings.display.clipsPerPage.hint"),
+            label: L10n("settings.display.clipsPerPage.label"),
+            hint: L10n("settings.display.clipsPerPage.hint"),
             showDivider: true
         ) {
             HStack(spacing: 12) {
@@ -50,8 +53,8 @@ struct DisplayTab: View {
 
     private var autoFitRow: some View {
         settingsRow(
-            label: String(localized: "settings.display.autoFit.label"),
-            hint: String(localized: "settings.display.autoFit.hint"),
+            label: L10n("settings.display.autoFit.label"),
+            hint: L10n("settings.display.autoFit.hint"),
             showDivider: true
         ) {
             customSettingsToggle(
@@ -69,8 +72,8 @@ struct DisplayTab: View {
     /// UserDefaults 키 `hintBarVisible` 유지 (default true = 가이드 표시). UI Binding 만 invert — 변수 진실 (`hintBarVisible: true = 표시`) 보존, KeyboardHintsView 등 사용처 코드 변경 X, 마이그레이션 X.
     private var hintBarVisibleRow: some View {
         settingsRow(
-            label: String(localized: "settings.display.hintBar.label"),
-            hint: String(localized: "settings.display.hintBar.hint"),
+            label: L10n("settings.display.hintBar.label"),
+            hint: L10n("settings.display.hintBar.hint"),
             showDivider: true
         ) {
             customSettingsToggle(
@@ -87,7 +90,7 @@ struct DisplayTab: View {
     /// TASK-054 — 디스플레이 탭 마지막 → 5번째 *보관함 오픈 위치* 추가 따라 divider 활성.
     private var accentColorModeRow: some View {
         settingsRow(
-            label: String(localized: "settings.display.accentColor.label"),
+            label: L10n("settings.display.accentColor.label"),
             showDivider: true
         ) {
             Picker(
@@ -97,9 +100,9 @@ struct DisplayTab: View {
                     set: { viewModel.setAccentColorMode($0) }
                 )
             ) {
-                Text(String(localized: "settings.display.accentColor.default"))
+                Text(L10n("settings.display.accentColor.default"))
                     .tag(AccentColorMode.default)
-                Text(String(localized: "settings.display.accentColor.system"))
+                Text(L10n("settings.display.accentColor.system"))
                     .tag(AccentColorMode.system)
             }
             .pickerStyle(.radioGroup)
@@ -117,13 +120,13 @@ struct DisplayTab: View {
     private var popoverPositionRow: some View {
         let anchorDisabled = viewModel.popoverRememberLastPosition
         return settingsRow(
-            label: String(localized: "settings.display.popoverPosition.label"),
+            label: L10n("settings.display.popoverPosition.label"),
             showDivider: false  // 마지막 행
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 // sub-row 1 — 기본 오픈 위치 (Picker 드롭다운). 이전 위치 기억하기 ON 시 disabled.
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(String(localized: "settings.display.popoverPosition.defaultAnchor"))
+                    Text(L10n("settings.display.popoverPosition.defaultAnchor"))
                         .font(DesignTokens.Typography.settingsBody)
                         .foregroundStyle(anchorDisabled ? DesignTokens.Colors.labelSecondary : DesignTokens.Colors.labelPrimary)
                     Picker(
@@ -134,7 +137,7 @@ struct DisplayTab: View {
                         )
                     ) {
                         ForEach(PopoverAnchor.allCases, id: \.self) { anchor in
-                            Text(String(localized: String.LocalizationValue(anchor.localizationKey)))
+                            Text(L10n(anchor.localizationKey))
                                 .tag(anchor)
                         }
                     }
@@ -146,7 +149,7 @@ struct DisplayTab: View {
                 }
                 // sub-row 2 — 이전 위치 기억하기 (토글)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(String(localized: "settings.display.popoverPosition.rememberLast"))
+                    Text(L10n("settings.display.popoverPosition.rememberLast"))
                         .font(DesignTokens.Typography.settingsBody)
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
                     customSettingsToggle(
