@@ -120,10 +120,13 @@ extension Clip {
 /// read-only — tap gesture X (본문 파일 행 클릭이 reveal 책임).
 struct CopyLocationLine: View {
     let state: ClipDetailCopyLocationState
+    /// TASK-073 — 언어 변경 시 body 재평가 → "복사 위치" / "Copied From" 즉시 갱신.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(String(localized: "clipDetail.location.label"))
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(L10n("clipDetail.location.label"))
                 .font(DesignTokens.Typography.clipMetaLocationLabel)
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
             content
@@ -150,7 +153,7 @@ struct CopyLocationLine: View {
             Text(folder.tildePrefixed + "/")
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
         case .multiFolder:
-            Text(String(localized: "clipDetail.location.multiFolder"))
+            Text(L10n("clipDetail.location.multiFolder"))
                 .italic()
                 .foregroundStyle(DesignTokens.Colors.toastWarn)
         }

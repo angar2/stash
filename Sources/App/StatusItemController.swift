@@ -14,6 +14,8 @@ final class StatusItemController {
     /// TASK-043 — 수집 비활성 시 button 우하단에 표시되는 red dot. captureEnabled=false 시만 button.subview 로 박힘.
     private var captureDotView: NSView?
     private var captureEnabledObserver: NSObjectProtocol?
+    /// TASK-073 — 앱 언어 변경 시 NSMenu items title 매뉴얼 재구성 (init 시점 1회 박힌 title 갱신).
+    private var appLanguageObserver: NSObjectProtocol?
 
     init(popoverWindow: PopoverWindow) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -21,7 +23,7 @@ final class StatusItemController {
 
         let m = NSMenu()
         let quitItem = NSMenuItem(
-            title: String(localized: "menu.quit"),
+            title: L10n("menu.quit"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )
@@ -45,7 +47,26 @@ final class StatusItemController {
             }
         }
 
+        // TASK-073 — 앱 언어 변경 시 NSMenu items title 재구성. AppLanguageService.apply 호출 시 발행.
+        appLanguageObserver = NotificationCenter.default.addObserver(
+            forName: AppLanguageService.appLanguageDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.rebuildMenuTitles()
+            }
+        }
+
         Logger.appLifecycle.info("StatusItemController initialized — NSStatusItem registered")
+    }
+
+    /// TASK-073 — 언어 변경 시 NSMenu items title 매뉴얼 재호출. SwiftUI 와 다르게 NSMenu 는 init 1회 박힌 title 유지 — 노티 시점 명시적 재할당 필요.
+    private func rebuildMenuTitles() {
+        if let quit = menu.items.first {
+            quit.title = L10n("menu.quit")
+        }
+        Logger.appLifecycle.info("StatusItem menu titles rebuilt — lang=\(AppLanguage.current.rawValue, privacy: .public)")
     }
 
     private func configureButton() {

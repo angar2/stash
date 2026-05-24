@@ -14,17 +14,17 @@ extension PasteError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noActiveApplication:
-            return String(localized: "error.paste.no_active_application")
+            return L10n("error.paste.no_active_application")
         case .keyboardSimulationFailed:
-            return String(localized: "error.paste.keyboard_simulation_failed")
+            return L10n("error.paste.keyboard_simulation_failed")
         case .clipboardWriteRollback:
-            return String(localized: "error.paste.clipboard_write_rollback")
+            return L10n("error.paste.clipboard_write_rollback")
         case .imageDataLoadFailed:
-            return String(localized: "error.paste.image_data_load_failed")
+            return L10n("error.paste.image_data_load_failed")
         case .fileURLLoadFailed:
-            return String(localized: "error.paste.file_url_load_failed")
+            return L10n("error.paste.file_url_load_failed")
         case .unsupportedClipPayload:
-            return String(localized: "error.paste.unsupported_clip_payload")
+            return L10n("error.paste.unsupported_clip_payload")
         }
     }
 }

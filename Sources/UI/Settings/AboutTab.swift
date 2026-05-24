@@ -3,6 +3,8 @@ import SwiftUI
 
 struct AboutTab: View {
     @Bindable var viewModel: SettingsViewModel
+    /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
@@ -13,7 +15,8 @@ struct AboutTab: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(spacing: 14) {
             // TASK-069 — 큰 앱 아이콘 (NSWorkspace 로 .app bundle 아이콘 추출 — DesignTokens stashAppIcon helper)
             Image.stashAppIcon
                 .resizable()
@@ -30,7 +33,7 @@ struct AboutTab: View {
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
 
-            Text(String(localized: "about.description"))
+            Text(L10n("about.description"))
                 .font(.system(size: 11.5, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .multilineTextAlignment(.center)
@@ -39,14 +42,14 @@ struct AboutTab: View {
                 .padding(.top, 4)
 
             VStack(spacing: 8) {
-                aboutButton(label: String(localized: "about.github"), icon: "link", action: viewModel.openGitHubRepo)
-                aboutButton(label: String(localized: "about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
-                aboutButton(label: String(localized: "about.releaseNotes"), icon: "doc.text", action: viewModel.openReleaseNotes)
+                aboutButton(label: L10n("about.github"), icon: "link", action: viewModel.openGitHubRepo)
+                aboutButton(label: L10n("about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
+                aboutButton(label: L10n("about.releaseNotes"), icon: "doc.text", action: viewModel.openReleaseNotes)
             }
             .padding(.top, 4)
             .frame(maxWidth: 320)
 
-            Text(String(localized: "about.copyright"))
+            Text(L10n("about.copyright"))
                 .font(.system(size: 10.5, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
                 .padding(.top, 12)

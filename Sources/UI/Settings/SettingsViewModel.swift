@@ -32,6 +32,8 @@ final class SettingsViewModel {
     var popoverDefaultAnchor: PopoverAnchor = .default
     /// TASK-054 — 방식 2 popover *이전 위치 기억하기* 토글. default OFF. ON 시 `panel.hide()` 시점 `frame.origin` UserDefaults 영속 → 다음 오픈 시 복원.
     var popoverRememberLastPosition: Bool = false
+    /// TASK-073 — 앱 사용자 표시 언어 (한국어 / 영어). UserDefaults `appLanguage` 영속 — OS 시스템 언어와 무관 고정. 첫 런칭 시 systemDefault (한국어 OS → `.korean` / 그 외 → `.english`) 박힘.
+    var appLanguage: AppLanguage = .korean
 
     /// TASK-033 — 환경설정 윈도우 내부 토스트 큐 (popover 토스트와 별개 시스템). Login Item 실패 / 권한 변동 / 단축키 modifier 검증 / 충돌 검사 토스트 발행 채널.
     let settingsToast: ToastQueue = ToastQueue()
@@ -92,7 +94,7 @@ final class SettingsViewModel {
             Logger.ui.error("LoginItem toggle failed: \(error.localizedDescription, privacy: .public)")
             // TASK-033 — 실패 토스트 + OFF 원복 (스위치 자동 OFF)
             loginItemEnabled = false
-            settingsToast.enqueue(.error, String(localized: "toast.loginItem.failed"))
+            settingsToast.enqueue(.error, L10n("toast.loginItem.failed"))
         }
     }
 
@@ -160,6 +162,13 @@ final class SettingsViewModel {
         Logger.ui.info("accentColorMode set: \(mode.rawValue, privacy: .public)")
     }
 
+    /// TASK-073 — 앱 사용자 표시 언어 라디오. `AppLanguageService.apply` 호출 → UserDefaults + AppleLanguages override + Notification 발행.
+    /// SwiftUI 영역은 `@AppStorage(AppLanguage.userDefaultsKey)` 의존성 등록으로 body 자동 재평가. AppKit 영역 (StatusItemController NSMenu) 은 Notification 구독 매뉴얼 재구성.
+    func setAppLanguage(_ language: AppLanguage) {
+        appLanguage = language
+        AppLanguageService.apply(language)
+    }
+
     /// TASK-054 — 방식 2 popover 진입 anchor 설정. UserDefaults raw 직렬화 + state 갱신.
     /// NotificationCenter post X — *다음 오픈 시 적용* 정책 (이미 떠 있는 popover frame 즉시 갱신 불필요).
     func setPopoverDefaultAnchor(_ anchor: PopoverAnchor) {
@@ -199,7 +208,9 @@ final class SettingsViewModel {
             popoverDefaultAnchor = anchor
         }
         popoverRememberLastPosition = UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey)
-        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public) popoverAnchor=\(self.popoverDefaultAnchor.rawValue, privacy: .public) rememberLast=\(self.popoverRememberLastPosition, privacy: .public)")
+        // TASK-073 — 앱 사용자 표시 언어. `AppLanguage.current` 가 키 부재/잘못된 값 → systemDefault fallback.
+        appLanguage = AppLanguage.current
+        Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public) popoverAnchor=\(self.popoverDefaultAnchor.rawValue, privacy: .public) rememberLast=\(self.popoverRememberLastPosition, privacy: .public) appLanguage=\(self.appLanguage.rawValue, privacy: .public)")
     }
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.
@@ -227,7 +238,7 @@ final class SettingsViewModel {
         // modifier 검증 — Recorder 에서 modifier 없는 입력 시 rawValue 0 placeholder 박혀서 호출됨.
         if newShortcut.modifiersRawValue == 0 {
             revertPopoverShortcut(id: id)
-            settingsToast.enqueue(.warn, String(localized: "toast.shortcut.modifierRequired"))
+            settingsToast.enqueue(.warn, L10n("toast.shortcut.modifierRequired"))
             return
         }
 
@@ -236,8 +247,8 @@ final class SettingsViewModel {
             guard let other = PopoverShortcutStore.get(otherId) else { continue }
             if other == newShortcut {
                 revertPopoverShortcut(id: id)
-                let otherLabel = String(localized: String.LocalizationValue(otherId.labelKey))
-                let format = String(localized: "toast.shortcut.conflict")
+                let otherLabel = L10n(otherId.labelKey)
+                let format = L10n("toast.shortcut.conflict")
                 settingsToast.enqueue(.warn, String(format: format, otherLabel))
                 return
             }

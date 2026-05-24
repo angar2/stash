@@ -12,13 +12,13 @@ extension DatabaseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .migrationFailed:
-            return String(localized: "error.database.migration_failed")
+            return L10n("error.database.migration_failed")
         case .corruptionDetected:
-            return String(localized: "error.database.corruption_detected")
+            return L10n("error.database.corruption_detected")
         case .writeBlocked:
-            return String(localized: "error.database.write_blocked")
+            return L10n("error.database.write_blocked")
         case .pinLimitReached:
-            return String(localized: "error.database.pin_limit_reached")
+            return L10n("error.database.pin_limit_reached")
         }
     }
 }

@@ -347,13 +347,13 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
 
     private func updateLabel() {
         if isRecording {
-            label.stringValue = "단축키 입력..."
+            label.stringValue = L10n("shortcuts.recorder.placeholder")
             label.textColor = .secondaryLabelColor
             self.layer?.borderColor = NSColor.controlAccentColor.cgColor
             self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
         } else {
             let shortcut = PopoverShortcutStore.get(id)
-            label.stringValue = shortcut?.displayText ?? "변경"
+            label.stringValue = shortcut?.displayText ?? L10n("shortcuts.recorder.change")
             label.textColor = .labelColor
             // TASK-065 — hover 시 보더 진하게 + bg opacity 증가 (시각 피드백).
             self.layer?.borderColor = (isHovered ? NSColor.labelColor.withAlphaComponent(0.35) : NSColor.separatorColor).cgColor
@@ -379,9 +379,12 @@ struct ShortcutsTab: View {
     @Bindable var viewModel: SettingsViewModel
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 강조 텍스트 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
         let _ = accentColorModeRaw  // SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(spacing: 14) {
             settingsCard {
                 VStack(spacing: 0) {
@@ -403,7 +406,7 @@ struct ShortcutsTab: View {
                     fill: DesignTokens.Colors.settingsCardBg,
                     fillHover: DesignTokens.Colors.settingsCardBgHover
                 ) {
-                    Text(String(localized: "shortcuts.resetAll"))
+                    Text(L10n("shortcuts.resetAll"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(DesignTokens.Colors.labelPrimary)
                         .padding(.horizontal, 8)
@@ -411,7 +414,7 @@ struct ShortcutsTab: View {
                 }
             }
 
-            Text(String(localized: "shortcuts.note"))
+            Text(L10n("shortcuts.note"))
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .multilineTextAlignment(.center)
@@ -421,12 +424,12 @@ struct ShortcutsTab: View {
 
     private func popoverShortcutRow(id: PopoverShortcutID) -> some View {
         HStack(alignment: .center, spacing: 8) {
-            Text(String(localized: String.LocalizationValue(id.labelKey)))
+            Text(L10n(id.labelKey))
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
             // TASK-065 — 전체 삭제 항목 라벨 우측에 secondary 컬러 부가 설명. 라벨 자체를 단순화(*전체 삭제*) 하고 핀 제외 정책은 부가 라인으로 분리.
             if id == .deleteAll {
-                Text(String(localized: "shortcuts.deleteAll.note"))
+                Text(L10n("shortcuts.deleteAll.note"))
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(DesignTokens.Colors.labelSecondary)
             }
@@ -452,7 +455,7 @@ private struct _ResetShortcutItemButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(String(localized: "shortcuts.resetItem"))
+            Text(L10n("shortcuts.resetItem"))
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.accent.opacity(isHovered ? 1.0 : 0.70))
         }

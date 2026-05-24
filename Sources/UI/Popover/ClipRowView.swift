@@ -42,6 +42,8 @@ struct ClipRowView: View, Equatable {
     @State private var pinHovered: Bool = false
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 본 행 body 재평가 트리거 (선택 그라데이션 / Pin 아이콘 / multi-file 캡슐 / 검색 매칭 즉시 갱신).
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
+    /// TASK-073 — 언어 변경 시 body 재평가 → L10n() 새 언어 lookup ("이미지" 라벨 등).
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     private var visuallySelected: Bool {
         isSelected && isFocused
@@ -49,6 +51,7 @@ struct ClipRowView: View, Equatable {
 
     var body: some View {
         let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
             HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
                 typeIconArea
@@ -272,7 +275,7 @@ struct ClipRowView: View, Equatable {
             }
             return body
         }
-        return String(localized: "clip.row.image")
+        return L10n("clip.row.image")
     }
 
     // mono 폰트 분기 — 코드 / URL은 mono. plan은 mono 필드 X. 단순 휴리스틱: 50자 이상이거나 줄바꿈 / 코드 패턴 (^/$/{}/=>/) → mono.
@@ -292,9 +295,9 @@ struct ClipRowView: View, Equatable {
             // TASK-026 — 다중 파일 묶음 라벨 = `여러 파일` (단순 라벨, N 정보는 배지가 담당).
             // 파일명 리스트 상세는 TASK-027 *클립 상세 미리보기 sub-window* 에서 별도 표시.
             if clip.isMultiFile {
-                return [String(localized: "clip.row.multiFile.label")]
+                return [L10n("clip.row.multiFile.label")]
             }
-            let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? String(localized: "clip.row.file"))
+            let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? L10n("clip.row.file"))
             return [name]
         case .text:
             // TASK-037 — 행 단일 고정 높이 정책. 첫 줄만 노출, 초과는 truncate.
@@ -316,20 +319,20 @@ struct ClipRowView: View, Equatable {
     // 시간 suffix — store.jsx L228-236 100% 정합 (방금 / N분 전 / N시간 전 / 어제 / N일 전)
     private var relativeTime: String {
         let interval = Date().timeIntervalSince(clip.lastUsedAt)
-        if interval < 60 { return String(localized: "time.now") }
+        if interval < 60 { return L10n("time.now") }
         if interval < 3600 {
             let mins = Int(interval / 60)
-            return "\(mins)\(String(localized: "time.suffix.minutes"))"
+            return "\(mins)\(L10n("time.suffix.minutes"))"
         }
         if interval < 86_400 {
             let hours = Int(interval / 3600)
-            return "\(hours)\(String(localized: "time.suffix.hours"))"
+            return "\(hours)\(L10n("time.suffix.hours"))"
         }
         if interval < 86_400 * 2 {
-            return String(localized: "time.yesterday")
+            return L10n("time.yesterday")
         }
         let days = Int(interval / 86_400)
-        return "\(days)\(String(localized: "time.suffix.days"))"
+        return "\(days)\(L10n("time.suffix.days"))"
     }
 
     // MARK: - Action button (Pin or X) — Bug 2 fix v4 (TASK-031 갱신)

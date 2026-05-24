@@ -4,22 +4,25 @@ import SwiftUI
 
 struct PermissionStep: View {
     @Bindable var viewModel: OnboardingViewModel
+    /// TASK-073 — 언어 변경 시 body 재평가.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     private var granted: Bool { viewModel.permissionGrantedSnapshot }
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(spacing: 0) {
             largeIcon
                 .padding(.top, 8)
                 .padding(.bottom, 18)
 
-            Text(String(localized: granted ? "onboarding.permission.title.granted" : "onboarding.permission.title.waiting"))
+            Text(L10n(granted ? "onboarding.permission.title.granted" : "onboarding.permission.title.waiting"))
                 .font(DesignTokens.Typography.onboardingTitleMid)
                 .tracking(-0.27)
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
                 .padding(.bottom, 8)
 
-            Text(String(localized: granted ? "onboarding.permission.body.granted" : "onboarding.permission.body.waiting"))
+            Text(L10n(granted ? "onboarding.permission.body.granted" : "onboarding.permission.body.waiting"))
                 .font(DesignTokens.Typography.onboardingBody)
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .multilineTextAlignment(.center)
@@ -28,20 +31,20 @@ struct PermissionStep: View {
 
             if !granted {
                 VStack(spacing: 10) {
-                    OnboardingPrimaryButton(String(localized: "onboarding.permission.openSystemSettings")) {
+                    OnboardingPrimaryButton(L10n("onboarding.permission.openSystemSettings")) {
                         viewModel.openSystemSettingsForAccessibility()
                     }
 
                     // 수동 "다음으로" 버튼 — polling 자동 감지 안 될 때 안전망
                     Button(action: { viewModel.advanceToTutorial() }) {
-                        Text(String(localized: "onboarding.permission.next"))
+                        Text(L10n("onboarding.permission.next"))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(DesignTokens.Colors.accent)
                     }
                     .buttonStyle(.plain)
 
                     Button(action: { viewModel.skipPermissionWithCopyBack() }) {
-                        Text(String(localized: "onboarding.permission.skip"))
+                        Text(L10n("onboarding.permission.skip"))
                             .font(.system(size: 11.5, weight: .medium))
                             .foregroundStyle(DesignTokens.Colors.labelSecondary)
                     }
@@ -49,7 +52,7 @@ struct PermissionStep: View {
                 }
                 .padding(.bottom, 28)
             } else {
-                OnboardingPrimaryButton(String(localized: "onboarding.tutorial.complete.alt")) {
+                OnboardingPrimaryButton(L10n("onboarding.tutorial.complete.alt")) {
                     viewModel.advanceToTutorial()
                 }
                 .padding(.bottom, 28)

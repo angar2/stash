@@ -132,7 +132,7 @@ actor ClipboardWatcher {
             if urls.count > Constants.maxMultiFileEntries {
                 Logger.clipboard.info("buildClip: multi-file limit exceeded — count=\(urls.count) skipped max=\(Constants.maxMultiFileEntries)")
                 // TASK-066 — 키 dotted rename + Constants 동적 + kind .warn 분기.
-                let body = String(format: String(localized: "toast.multiFile.limitExceeded"), Constants.maxMultiFileEntries)
+                let body = String(format: L10n("toast.multiFile.limitExceeded"), Constants.maxMultiFileEntries)
                 await onUserMessage?(.warn, body)
                 return nil
             }
@@ -216,7 +216,7 @@ actor ClipboardWatcher {
             // saveFiles 가 이미 *부분 카피본 cleanup* 수행 — 본 catch 는 토스트 + SKIP 만.
             // TASK-066 — 키 dotted rename + kind .warn → .error 분기.
             Logger.clipboard.error("buildClip: multi-file save failed — \(error)")
-            await onUserMessage?(.error, String(localized: "toast.multiFile.saveFailed"))
+            await onUserMessage?(.error, L10n("toast.multiFile.saveFailed"))
             return nil
         }
     }

@@ -15,9 +15,12 @@ struct KeyboardHintsView: View {
     let mode: PopoverInvocationMode
     /// TASK-024 — Accessibility 권한 게이트. `false` 시 ⌘V 행만 회색조 표시 (`enabled=false` 분기). ⌘C 행은 권한 무관 항상 활성.
     let accessibilityGranted: Bool
+    /// TASK-073 Phase 7 fix — 언어 변경 시 body 재평가 → L10n() 호출 새 언어 lookup. 부모 view sentinel 만으로는 자식 (본 view) 자동 재평가 X (입력 mode/accessibilityGranted 불변).
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
     var body: some View {
-        VStack(spacing: 0) {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(spacing: 0) {
             Divider().foregroundStyle(DesignTokens.Colors.divider)
                 .padding(.horizontal, DesignTokens.Spacing.popoverPadding)
             FlowLayout(horizontalSpacing: DesignTokens.Spacing.hintsGroupGap, verticalSpacing: DesignTokens.Spacing.xs) {
@@ -39,14 +42,14 @@ struct KeyboardHintsView: View {
         // TASK-050 — 이동 단축키 3 hint (move/page/jumpEdge) → 1 통합 cell. 키캡 안 화살표 2 문자 동시 (↑↓ / ⌘↑↓ / ⌘⇧↑↓) + 키캡 그룹 spacing 분리 (구분자 없음) + 라벨 단일화 "이동". `hint.page` / `hint.jumpToEdge` i18n 키 폐기 (Phase 2 xcstrings 정리).
         // TASK-050 — pin 힌트 순서 paste 다음 / del 앞으로 재배치 (클립 조작 흐름: 행 선택 → 복사/붙여넣기/고정 → 삭제 학습 일관성).
         return [
-            Hint(id: "move", parts: [.keys(["↑↓"]), .keys(["⌘↑↓"]), .keys(["⌘⇧↑↓"])], label: String(localized: "hint.move"), enabled: true),
-            Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: String(localized: "hint.copy"), enabled: true),
-            Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: String(localized: "hint.paste"), enabled: accessibilityGranted),
-            Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: String(localized: "hint.pin"), enabled: true),
+            Hint(id: "move", parts: [.keys(["↑↓"]), .keys(["⌘↑↓"]), .keys(["⌘⇧↑↓"])], label: L10n("hint.move"), enabled: true),
+            Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: L10n("hint.copy"), enabled: true),
+            Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: L10n("hint.paste"), enabled: accessibilityGranted),
+            Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: L10n("hint.pin"), enabled: true),
             // TASK-055 — 활성 클립 상세 sub-window toggle. 변경 불가 hardcoded ⌘D (PopoverShortcutStore 미등록).
-            Hint(id: "clipDetail", parts: [.keys(["⌘D"])], label: String(localized: "hint.clipDetail"), enabled: true),
-            Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: String(localized: "hint.delete"), enabled: true),
-            Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: String(localized: "hint.deleteAll"), enabled: true)
+            Hint(id: "clipDetail", parts: [.keys(["⌘D"])], label: L10n("hint.clipDetail"), enabled: true),
+            Hint(id: "del", parts: [.keys([keyDisplay(for: .deleteOne, fallback: "⌘⌫")])], label: L10n("hint.delete"), enabled: true),
+            Hint(id: "delAll", parts: [.keys([keyDisplay(for: .deleteAll, fallback: "⌥⌘⌫")])], label: L10n("hint.deleteAll"), enabled: true)
         ]
     }
 
@@ -66,7 +69,7 @@ struct KeyboardHintsView: View {
                         }
                     }
                 case .or:
-                    Text("or")
+                    Text(L10n("hint.or"))
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(DesignTokens.Colors.hintOr)
                 }
