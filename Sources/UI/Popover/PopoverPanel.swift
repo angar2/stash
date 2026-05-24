@@ -133,6 +133,11 @@ enum PopoverPanel {
         visualEffectView.subviews.forEach { $0.removeFromSuperview() }
 
         let hosting = FirstMouseHostingView(rootView: AnyView(rootView))
+        // TASK-071 Phase 3 — popover 상하단 여백 비대칭 fix (TASK-070 알려진 결함 후속).
+        // root cause: PopoverPanel.make 의 `.titled + .fullSizeContentView` styleMask 조합 → NSWindow contentLayoutRect = frame - titlebar 영역 (≈28pt). NSHostingView 기본 동작이 contentLayoutRect 를 *top safe area* 로 SwiftUI body 에 전달 → SwiftUI body 가 titlebar height 만큼 아래로 shift → 상단 여백 늘어남 + 하단 컨텐츠 (설정 행) panel.frame 밖으로 밀려나 잘림.
+        // fix: safeAreaRegions = [] 박음 (macOS 13.0+ 공식 API). SwiftUI body 가 frame 전체 사용 → titlebar safe area 추종 차단.
+        // TASK-070 의 *ve.frame 강제 박음 효과 X* 시도는 NSVisualEffectView layer 영역 — 본 fix 는 NSHostingView ↔ SwiftUI 사이 인터페이스 layer (다른 영역).
+        hosting.safeAreaRegions = []
         hosting.translatesAutoresizingMaskIntoConstraints = true
         hosting.frame = visualEffectView.bounds
         hosting.autoresizingMask = [.width, .height]
