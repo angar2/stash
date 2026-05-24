@@ -559,10 +559,8 @@ enum DesignTokens {
     enum Radius {
         // popover / sidebar 외곽 — popover.jsx L283
         static let popoverOuter:    CGFloat = 18
-        // 클립 행 / Pin 행 — popover.jsx L91, L443
+        // 클립 행 / Pin 행 / 환경설정 행 — popover.jsx L91, L443, L491 (TASK-067 — preferencesRow 토큰 폐기, 단일 clipRow 통합)
         static let clipRow:         CGFloat = 12
-        // 환경설정 행 — popover.jsx L491
-        static let preferencesRow:  CGFloat = 8
         // 키캡 — popover.jsx L42
         static let keycap:          CGFloat = 3.5
         // Pin Row 우측 단축키 안내 키캡 — TASK-019

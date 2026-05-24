@@ -295,7 +295,7 @@ struct HistoryPopover: View {
                 }
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.preferencesRow, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture {
             guard !isInteractionDisabled else { return }
