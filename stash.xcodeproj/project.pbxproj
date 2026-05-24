@@ -74,7 +74,6 @@
 		8069E88977094C5967679524 /* MockLoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E89689F16DED962DF08C1D /* MockLoginItemRegistrar.swift */; };
 		835F6FE3B1AA9EA3A1C6DA5B /* SMLoginItemRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFFEA3BA0BB94B320D24BA5 /* SMLoginItemRegistrar.swift */; };
 		84851E764809550BD1D5B4E3 /* HotkeyMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B923EDBE5786A27FC11377E1 /* HotkeyMonitorTests.swift */; };
-		87D5518B28D3C69643E45E62 /* TrayIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D633265EB8401FA28615C5B1 /* TrayIconView.swift */; };
 		88E943BD0312700E5FE4B175 /* ClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62BBACFBBB2C99462C4CC386 /* ClipRepository.swift */; };
 		89822F67D27754E1FC32D193 /* GRDBClipRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434B3F4402897EE56F73DB99 /* GRDBClipRepository.swift */; };
 		8A200B6C7E80CB94F02E537D /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 751A7A0CB094605AA22D5832 /* StatusItemController.swift */; };
@@ -288,7 +287,6 @@
 		D38286152C9E4F697E8B7A1E /* ClipFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipFixture.swift; sourceTree = "<group>"; };
 		D45A2C65902CBAC074B1FB4E /* HotkeyRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRegistrar.swift; sourceTree = "<group>"; };
 		D5D0C4997C9075B9B3B38044 /* HoverFillCardButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverFillCardButton.swift; sourceTree = "<group>"; };
-		D633265EB8401FA28615C5B1 /* TrayIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayIconView.swift; sourceTree = "<group>"; };
 		D7A33B8A9B8C00D8066B6E17 /* StashUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashUITests.swift; sourceTree = "<group>"; };
 		DADE6BF4854D63A0C86C70AF /* PermissionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStep.swift; sourceTree = "<group>"; };
 		DC71F8B2299A5468DA25ED97 /* CGEventPasteSynthesizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGEventPasteSynthesizer.swift; sourceTree = "<group>"; };
@@ -614,7 +612,6 @@
 			children = (
 				E98FBB4F17FD1447563685ED /* DesignTokens.swift */,
 				1165FDD9A41E4E0DA4BAF6CF /* FlowLayout.swift */,
-				D633265EB8401FA28615C5B1 /* TrayIconView.swift */,
 				C7FD1FD60882E1D5749E1D14 /* VisualEffectView.swift */,
 			);
 			path = Theme;
@@ -889,7 +886,6 @@
 				57E5D2A635DFB7430F46BB7A /* SystemPasteboard.swift in Sources */,
 				0457687AE2177245E6CDD9AF /* ToastView.swift in Sources */,
 				C76DC45858A556435C206A04 /* ToastWindow.swift in Sources */,
-				87D5518B28D3C69643E45E62 /* TrayIconView.swift in Sources */,
 				E7EF38DD46F3B757DC9F3C23 /* TutorialStep.swift in Sources */,
 				E41683EA86744D9C9E364D71 /* UNNotificationCenterImpl.swift in Sources */,
 				48D7FE31707F59FB754E4233 /* V1_InitialSchema.swift in Sources */,

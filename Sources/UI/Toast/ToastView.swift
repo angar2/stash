@@ -50,8 +50,11 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.toastGap) {
-            // 좌측 14×14 stash 적층 카드 로고 — kind 색상 fill (TASK-066)
-            TrayIconView(full: true, size: DesignTokens.Spacing.toastLogoSize)
+            // TASK-069 — 좌측 stash 메뉴바 아이콘 (단색 검정 template — 작은 18 px 사이즈 시인성 위해 컬러풀 AppIcon 대신 채택). TASK-066 kind 색상 fill 부활.
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .resizable()
+                .frame(width: DesignTokens.Spacing.toastLogoSize, height: DesignTokens.Spacing.toastLogoSize)
                 .foregroundStyle(item.kind.color)
 
             Text(item.text)

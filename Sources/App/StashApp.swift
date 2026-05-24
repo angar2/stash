@@ -163,10 +163,7 @@ struct StashApp: App {
             onOpenSettings: { [prefsController] in prefsController.show() }
         )
         self.popoverWindow = popover
-        self.statusItemController = StatusItemController(
-            permissionStatusPublisher: permSvc.statusPublisher,
-            popoverWindow: popover
-        )
+        self.statusItemController = StatusItemController(popoverWindow: popover)
 
         // ⑨ HotkeyMonitor callback 연결 — TASK-018 Phase 9 ⌘ hold *v1.0 보류* (onHoldStart/onHoldEnd 미연결). TASK-046 — ⌘ double-tap 트리거 폐기로 `onDoubleTap` 콜백 삭제. 방식 2 popover 호출 자체는 유지 — 트리거는 ⑨-2 SPM 단축키 (default `⌘⇧V`) 가 담당.
         // ⌘ hold 보류 사유: (a) 일반 ⌘+key 단축키 사용 중 의도 안 한 popover 오트리거 사용성 저해, (b) 방식 1/2 popover 열린 상태에서 단축키 입력 시 방식 3 진입으로 전환되어 사용성 저해. 코드 분기(`PopoverWindow.mode == .method3`)는 유지 (미래 부활 가능). 호출 사이트 X.
