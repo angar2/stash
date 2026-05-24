@@ -1,17 +1,14 @@
-// Onboarding 2단계 — onboarding-toast.jsx OB_Permission L73-142 100% 정합
+// Onboarding 2단계 — 권한 대기 / 권한 부여 직후 분기. TASK-070 — 시스템 색상 모드 분기 제거 + auto-advance 제거 (다음 페이지 이동은 ViewModel.advanceToTutorial 사용자 명시 호출만).
 // 권한 X 대기 = lock 아이콘 회색 / 권한 O = 그린 그라데이션 + ✓
 import SwiftUI
 
 struct PermissionStep: View {
     @Bindable var viewModel: OnboardingViewModel
-    /// TASK-053 — 콘텐츠 색상 모드 변경 시 강조 아이콘 즉시 갱신.
-    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     private var granted: Bool { viewModel.permissionGrantedSnapshot }
 
     var body: some View {
-        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             largeIcon
                 .padding(.top, 8)
                 .padding(.bottom, 18)

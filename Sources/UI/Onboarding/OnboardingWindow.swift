@@ -1,16 +1,14 @@
-// Onboarding 윈도우 (3단계 모달 — onboarding-toast.jsx L8-202 100% 정합)
-// 진행 도트 + WelcomeStep / PermissionStep / TutorialStep 분기
+// Onboarding 윈도우 (3단계 모달). TASK-070 — 시스템 색상 모드 분기 제거 + 진행 도트 시각 (활성 가로 늘림 X / 색상만 accent) + 시스템 표준 NSWindow 패턴 (titled + transparent titlebar) 정합.
+// 진행 도트 + WelcomeStep / PermissionStep / TutorialStep 분기 + OnboardingNSWindow (ESC 차단 NSWindow subclass)
 import SwiftUI
+import AppKit
 
 struct OnboardingWindow: View {
     @Bindable var viewModel: OnboardingViewModel
     let onClose: () -> Void
-    // TASK-053 — 콘텐츠 색상 모드 변경 시 Onboarding body 재평가 트리거.
-    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     var body: some View {
-        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             progressDots
             Group {
                 switch viewModel.phase {
@@ -28,16 +26,7 @@ struct OnboardingWindow: View {
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: viewModel.phase)
         }
-        .frame(width: DesignTokens.WindowSize.onboardingWidth)
-        .background(
-            ZStack {
-                VisualEffectView(material: .windowBackground, blendingMode: .behindWindow)
-                DesignTokens.Colors.onboardingBackground
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.onboardingWindow, style: .continuous))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.onboardingWindow, style: .continuous))
-        .shadow(color: DesignTokens.Shadow.onboardingShadow, radius: DesignTokens.Shadow.onboardingRadius, y: DesignTokens.Shadow.onboardingOffsetY)
+        .frame(width: DesignTokens.WindowSize.onboardingWidth, height: 380, alignment: .top)
     }
 
     private var progressDots: some View {
@@ -56,7 +45,7 @@ struct OnboardingWindow: View {
         let isPast = step < currentStep
         return Capsule()
             .fill(isActive || isPast ? DesignTokens.Colors.accent : DesignTokens.Colors.progressDotInactive)
-            .frame(width: isActive ? 18 : 6, height: 6)
+            .frame(width: 6, height: 6)
             .animation(.easeInOut(duration: 0.2), value: currentStep)
     }
 }
@@ -69,5 +58,16 @@ extension OnboardingViewModel {
         case .permission: return 2
         case .tutorial: return 3
         }
+    }
+}
+
+// TASK-070 — ESC 차단 + canBecomeKey 보장 NSWindow subclass. 종료 경로 = 완료 버튼 only 정책 정합.
+final class OnboardingNSWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+
+    /// ESC 키 default action (cancelOperation) no-op override — 종료 경로는 완료 버튼만.
+    override func cancelOperation(_ sender: Any?) {
+        // 의도적 무반응 — TASK-070 종료 정책 (X 버튼 + ESC 차단 / 완료 버튼만 종료).
     }
 }

@@ -1,4 +1,4 @@
-// Onboarding 3단계 상태 머신 (UX-UI §3 정합)
+// Onboarding 3단계 상태 머신 (UX-UI §3 정합). TASK-070 — 권한 부여 자동 polling 유지 (UI 상태 자동 전환) + 다음 페이지 auto-advance 제거 (사용자 명시 클릭만).
 import Foundation
 import Observation
 import AppKit
@@ -30,17 +30,15 @@ final class OnboardingViewModel {
         pollingTask?.cancel()
         pollingTask = Task { @MainActor in
             await permissionService.startOnboardingPolling()
-            // statusPublisher Combine 구독은 .receive(on:) 메인 — 별도 task
         }
-        // status 변경 추적 — 매 1초 recheck (시스템 환경설정에서 권한 부여 시 PermissionService.subject 갱신)
+        // 매 1초 recheck — granted 감지 시 UI 상태만 전환. 다음 페이지 advance 는 사용자가 "다음으로" 버튼 명시 클릭 (TASK-070).
         pollingTask = Task { @MainActor in
             for _ in 0..<120 {  // 최대 2분 polling
                 if Task.isCancelled { return }
                 await permissionService.recheck()
                 if await permissionService.currentStatus() == .granted {
                     permissionGrantedSnapshot = true
-                    try? await Task.sleep(for: .milliseconds(600))  // onboarding-toast.jsx L78-83 정합 (granted 후 600ms 후 step 3)
-                    advanceToTutorial()
+                    Logger.ui.info("Onboarding: 권한 부여 감지 — UI 상태 전환 (auto-advance 제거됨, 사용자 명시 클릭 대기)")
                     return
                 }
                 try? await Task.sleep(for: .seconds(1))

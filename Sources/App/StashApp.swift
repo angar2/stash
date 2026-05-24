@@ -264,7 +264,7 @@ struct StashApp: App {
             Logger.database.info("Startup orphan sweep done — referenced=\(referenced.count)")
         }
 
-        // ⑪ Onboarding — 첫 실행 시 표시
+        // TASK-070 — 첫 실행 시 자동 표시 (원래 정책). 윈도우 정책 (X 버튼 제거 + ESC 차단 + 완료 버튼 only) 으로 1회 보장.
         if !onboardingVM.hasCompleted {
             Task { @MainActor in
                 Self.presentOnboarding(viewModel: onboardingVM)
@@ -274,33 +274,68 @@ struct StashApp: App {
         Logger.appLifecycle.info("StashApp init complete — all services wired")
     }
 
+    /// TASK-070 — onboarding 윈도우 표시. 시스템 표준 NSWindow (titled + fullSizeContentView + transparent titlebar) — 시스템 자체가 둥근 corner + 보더 + 그림자 박음. 종료 = 완료 버튼 only (closable 버튼 3종 hidden + ESC 차단 = OnboardingNSWindow.cancelOperation no-op).
     @MainActor
-    private static func presentOnboarding(viewModel: OnboardingViewModel) {
-        let onboardingWindow = NSWindow(
-            contentRect: NSRect(
-                x: 0, y: 0,
-                width: DesignTokens.WindowSize.onboardingWidth,
-                height: 460
-            ),
-            styleMask: [.titled, .closable],
+    static func presentOnboarding(viewModel: OnboardingViewModel) {
+        let contentRect = NSRect(
+            x: 0, y: 0,
+            width: DesignTokens.WindowSize.onboardingWidth,
+            height: 380
+        )
+        let window = makeOnboardingWindow(contentRect: contentRect)
+        attachOnboardingContent(window: window, contentRect: contentRect, viewModel: viewModel)
+
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        Logger.appLifecycle.info("Onboarding window presented")
+    }
+
+    @MainActor
+    private static func makeOnboardingWindow(contentRect: NSRect) -> OnboardingNSWindow {
+        let window = OnboardingNSWindow(
+            contentRect: contentRect,
+            styleMask: [.titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        onboardingWindow.title = String(localized: "onboarding.welcome.title")
-        onboardingWindow.center()
-        onboardingWindow.isReleasedWhenClosed = false
-        onboardingWindow.level = .modalPanel
-        let hosting = NSHostingController(
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.title = ""
+        window.standardWindowButton(.closeButton)?.isHidden = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.isMovableByWindowBackground = true
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.level = .modalPanel
+        return window
+    }
+
+    @MainActor
+    private static func attachOnboardingContent(window: OnboardingNSWindow, contentRect: NSRect, viewModel: OnboardingViewModel) {
+        // NSVisualEffectView — Liquid Glass. 시스템 NSWindow 가 외곽 corner/보더/그림자 자동 박음 — VE 자체 cornerRadius/border 박지 X.
+        let ve = NSVisualEffectView(frame: contentRect)
+        ve.material = .popover
+        ve.blendingMode = .behindWindow
+        ve.state = .active
+        ve.isEmphasized = true
+        ve.autoresizingMask = [.width, .height]
+        window.contentView = ve
+
+        let hosting = NSHostingView(
             rootView: OnboardingWindow(
                 viewModel: viewModel,
-                onClose: { [weak onboardingWindow] in
-                    onboardingWindow?.orderOut(nil)
+                onClose: { [weak window] in
+                    window?.orderOut(nil)
                 }
             )
         )
-        onboardingWindow.contentViewController = hosting
-        NSApp.activate(ignoringOtherApps: true)
-        onboardingWindow.makeKeyAndOrderFront(nil)
+        hosting.translatesAutoresizingMaskIntoConstraints = true
+        hosting.frame = ve.bounds
+        hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        ve.addSubview(hosting)
     }
 
     var body: some Scene {

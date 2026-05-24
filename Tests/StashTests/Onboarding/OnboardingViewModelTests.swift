@@ -47,4 +47,24 @@ struct OnboardingViewModelTests {
         vm.complete()
         #expect(vm.hasCompleted == true)
     }
+
+    @Test("startPermissionPolling — granted 감지 시 phase 유지 (auto-advance 제거 — TASK-070)")
+    func grantedDoesNotAutoAdvance() async {
+        let vm = makeViewModel(trusted: true)
+        vm.advanceToPermission()
+        vm.startPermissionPolling()
+        // polling loop 가 첫 iteration 에서 granted 감지 + permissionGrantedSnapshot=true 박고 자체 종료.
+        // 600ms 대기 (auto-advance 제거 검증 — 기존 정책이라면 600ms 후 advanceToTutorial 자동 호출됨).
+        try? await Task.sleep(for: .milliseconds(800))
+        #expect(vm.permissionGrantedSnapshot == true)
+        #expect(vm.phase == .permission)  // tutorial 로 자동 advance 안 됨 — 사용자가 "다음으로" 버튼 명시 클릭해야 진행
+    }
+
+    @Test("advanceToTutorial — 사용자 명시 호출 시 phase 전환 permission → tutorial (TASK-070)")
+    func advanceToTutorialExplicit() {
+        let vm = makeViewModel()
+        vm.advanceToPermission()
+        vm.advanceToTutorial()
+        #expect(vm.phase == .tutorial)
+    }
 }
