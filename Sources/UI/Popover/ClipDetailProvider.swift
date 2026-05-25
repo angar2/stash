@@ -380,15 +380,19 @@ struct ImageClipDetailProvider: ClipDetailProvider {
         return AnyView(ImageDetailContentView(clip: clip, onTap: onFileTap))
     }
 
-    /// 본문 자체 height raw 추정 — NSImage 로드 후 aspectRatio. 로드 실패 시 16:10 fallback. padding 가산 X (PanelView 책임).
+    /// 본문 자체 height raw 추정 — CGImageSource metadata 만 (PixelWidth / PixelHeight) 추출해 aspectRatio. 로드 실패 시 16:10 fallback. padding 가산 X (PanelView 책임).
     /// width 식 = `clipDetailWidth - 2 × clipDetailPadding` (실제 Image fit 영역 — PanelView 가 좌우 padding 박음).
-    /// NSImage 로드 비용 매 호출 발생 가능 — 200ms debounce 로 활성 1개 한정 → 실측 영향 X.
+    /// TASK-082 Phase 4 — `NSImage(contentsOfFile:)` 풀 인스턴스 생성 회피 + `CGImageSourceCopyPropertiesAtIndex` 로 size metadata 만 추출 → 디코딩 path 자체 없음. preferredHeight 호출 비용 ↓ + render path (`ImageDetailContentView.loadedImage`) 와 분리.
     func preferredHeight(for clip: Clip) -> CGFloat {
         let path = clip.filePath ?? ""
-        let img = path.isEmpty ? nil : NSImage(contentsOfFile: path)
         let ratio: CGFloat
-        if let img, img.size.width > 0 {
-            ratio = img.size.height / img.size.width
+        if !path.isEmpty,
+           let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+           let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+           let width = props[kCGImagePropertyPixelWidth] as? Double,
+           let height = props[kCGImagePropertyPixelHeight] as? Double,
+           width > 0 {
+            ratio = CGFloat(height / width)
         } else {
             ratio = 10.0 / 16.0 // 16:10 fallback
         }
@@ -400,13 +404,21 @@ struct ImageClipDetailProvider: ClipDetailProvider {
 
 /// 이미지 클립 본문 SwiftUI — Image(nsImage:) aspectRatio fit. NSImage 로드 실패 시 LinearGradient fallback.
 /// 본문 클릭 → `onTap(URL(fileURLWithPath: fileOriginalPath ?? filePath))` 발화.
+/// TASK-082 Phase 4 — `loadedImage` computed property → `@State` 보관. body 재평가마다 `NSImage(contentsOfFile:)` 재호출 차단. `init` 시점 동기 로드 + `State(initialValue:)` 박음 (1-frame fallback flicker 차단) + `.onChange(of: clip.id)` 갱신. panel close 시 SwiftUI lifecycle 따라 자연 회수.
 private struct ImageDetailContentView: View {
     let clip: Clip
     let onTap: @MainActor (URL) -> Void
+    @State private var loadedImage: NSImage?
 
-    private var loadedImage: NSImage? {
-        guard let path = clip.filePath, !path.isEmpty else { return nil }
-        return NSImage(contentsOfFile: path)
+    init(clip: Clip, onTap: @escaping @MainActor (URL) -> Void) {
+        self.clip = clip
+        self.onTap = onTap
+        // TASK-082 Phase 4 fix-1 — 1-frame fallback flicker 차단. init 시점 동기 로드 박음. body 첫 평가 시점에 이미 NSImage 박혀있음 → LinearGradient fallback 임시 표시 X.
+        let initial: NSImage? = {
+            guard let path = clip.filePath, !path.isEmpty else { return nil }
+            return NSImage(contentsOfFile: path)
+        }()
+        self._loadedImage = State(initialValue: initial)
     }
 
     private var tapURL: URL {
@@ -441,6 +453,17 @@ private struct ImageDetailContentView: View {
             Logger.ui.info("ClipDetailPanel: image tap → Finder reveal")
             onTap(tapURL)
         }
+        // TASK-082 Phase 4 fix-1 — `.onAppear` 폐기 (init 동기 로드로 첫 표시 보장). `.onChange(of: clip.id)` 만 보존 — clip 변경 시 재로드.
+        .onChange(of: clip.id) { _, _ in loadImage() }
+    }
+
+    /// `.onChange(of: clip.id)` 진입점 — clip 변경 시 1회 갱신. computed property 매 body 평가 호출 회피.
+    private func loadImage() {
+        guard let path = clip.filePath, !path.isEmpty else {
+            loadedImage = nil
+            return
+        }
+        loadedImage = NSImage(contentsOfFile: path)
     }
 }
 

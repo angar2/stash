@@ -11,12 +11,20 @@ final class GRDBClipRepository: ClipRepository {
         self.dbPath = dbPath
         self.dbQueue = try DatabaseQueue(path: dbPath.path)
         var migrator = DatabaseMigrator()
+        Self.registerAllMigrations(in: &migrator)
+        try migrator.migrate(dbQueue)
+        Logger.database.info("GRDBClipRepository 초기화 완료 — \(dbPath.lastPathComponent)")
+    }
+
+    /// TASK-082 Phase 6 — migration 등록 단일 진실 소스. init / recoverFromCorruption 양쪽 동일 helper 호출 → V4 누락 회귀 영구 차단.
+    /// 신규 Vn 추가 시 본 helper 1줄만 갱신 → 두 호출 경로 자동 정합.
+    /// TASK-082 Phase 8 — V5 `(type, body)` 인덱스 추가 (dedup hot-path 대비).
+    private static func registerAllMigrations(in migrator: inout DatabaseMigrator) {
         V1_InitialSchema.register(in: &migrator)
         V2_DedupSameBody.register(in: &migrator)
         V3_AddPinnedAt.register(in: &migrator)
         V4_AddFilePathsJson.register(in: &migrator)
-        try migrator.migrate(dbQueue)
-        Logger.database.info("GRDBClipRepository 초기화 완료 — \(dbPath.lastPathComponent)")
+        V5_AddBodyIndex.register(in: &migrator)
     }
 
     // MARK: - ClipRepository
@@ -131,9 +139,8 @@ final class GRDBClipRepository: ClipRepository {
             try FileManager.default.removeItem(atPath: dbPath.path)
             let newQueue = try DatabaseQueue(path: dbPath.path)
             var migrator = DatabaseMigrator()
-            V1_InitialSchema.register(in: &migrator)
-            V2_DedupSameBody.register(in: &migrator)
-            V3_AddPinnedAt.register(in: &migrator)
+            // TASK-082 Phase 6 — `registerAllMigrations` 단일 helper 호출로 변경 (이전 V1/V2/V3 만 register, V4 누락 fix). 손상 복구 후 multi-file insert / select crash 영구 차단.
+            Self.registerAllMigrations(in: &migrator)
             try migrator.migrate(newQueue)
             dbQueue = newQueue
             Logger.database.info("recoverFromCorruption 완료 — 백업: \(backupPath)")
