@@ -76,16 +76,6 @@ enum DesignTokens {
             )
         }
 
-        // ─── paste 직후 700ms 초록 플래시 — popover.jsx L60-66 ───
-        static let pasteFlash = Color(
-            light: Color(red: 48/255, green: 209/255, blue: 88/255, opacity: 0.16),
-            dark:  Color(red: 48/255, green: 209/255, blue: 88/255, opacity: 0.30)
-        )
-        static let pasteFlashBorder = Color(
-            light: Color(red: 48/255, green: 209/255, blue: 88/255, opacity: 0.40),
-            dark:  Color(red: 48/255, green: 209/255, blue: 88/255, opacity: 0.45)
-        )
-
         // ─── 본문 / 보조 fg ───────────────────────────────────────────
         static let labelPrimary = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.88),
@@ -687,9 +677,6 @@ enum DesignTokens {
         // Clip Detail sub-window (TASK-027) — 다중파일 상세 sub-window debounce
         static let clipDetailDebounceDelay: TimeInterval = 0.20  // 200ms (pinSidebar hover 정합)
 
-        // paste 직후 초록 플래시 — store.jsx L201-204
-        static let pasteFlashDuration: TimeInterval = 0.7  // 700ms
-
         // popover fade
         static let popoverFadeIn: TimeInterval = 0.18
         static let popoverFadeOut: TimeInterval = 0.12
@@ -697,7 +684,7 @@ enum DesignTokens {
         // 키보드 nav 시 ScrollView가 selected 행을 anchor: .center로 follow하는 duration
         static let scrollFollowDuration: TimeInterval = 0.10
 
-        // 클립 행 selection / flash 그라데이션 fade — popover.jsx L344 transition: "all 0.12s"
+        // 클립 행 selection 그라데이션 fade — popover.jsx L344 transition: "all 0.12s"
         static let clipRowSelectionFade: TimeInterval = 0.12
 
         // popover dismiss 후 destination 앱 활성화 안정 대기 — NSRunningApplication.activate가 비동기 frontmost 전환을 유발해 ⌘V CGEvent가 새 frontmost에 도달할 시간 필요

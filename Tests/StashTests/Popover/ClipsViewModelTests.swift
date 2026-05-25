@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 @Suite("ClipsViewModel", .serialized)
 struct ClipsViewModelTests {
-    private func makeViewModel(prefilled: [Clip] = []) async -> (ClipsViewModel, InMemoryClipRepository, MockFileClipService) {
+    private func makeViewModel(prefilled: [Clip] = []) async -> (ClipsViewModel, InMemoryClipRepository, MockFileClipService, MockPasteboard) {
         let repo = InMemoryClipRepository()
         for clip in prefilled {
             _ = try? await repo.insert(clip)
@@ -14,9 +14,10 @@ struct ClipsViewModelTests {
         let checker = MockPermissionChecker()
         checker.trusted = true
         let permSvc = PermissionService(checker: checker)
+        let pasteboard = MockPasteboard()
         let pasteSvc = PasteService(
             synthesizer: MockPasteSynthesizer(),
-            pasteboard: MockPasteboard(),
+            pasteboard: pasteboard,
             repository: repo,
             permissionService: permSvc
         )
@@ -25,7 +26,7 @@ struct ClipsViewModelTests {
         UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
         UserDefaults.standard.set(false, forKey: "autoFitClipListHeight")
         let vm = ClipsViewModel(repository: repo, pasteService: pasteSvc, fileClipService: fcs)
-        return (vm, repo, fcs)
+        return (vm, repo, fcs, pasteboard)
     }
 
     private func makeClip(body: String, pinned: Bool = false) -> Clip {
@@ -47,7 +48,7 @@ struct ClipsViewModelTests {
     @Test("reload — repository fetchAll로 clips 채움")
     func reloadFillsClips() async {
         let prefilled = [makeClip(body: "hello"), makeClip(body: "world")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.clips.count == 2)
     }
@@ -59,7 +60,7 @@ struct ClipsViewModelTests {
             makeClip(body: "FooBar"),
             makeClip(body: "Hello swift")
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         // TASK-061 — `filteredClips` 클라이언트 필터 제거 (clips 그대로 반환). 검색은 `performSearch` 가 repository.search 결과로 clips 박음 → 명시 호출 후 검증.
         vm.searchQuery = "hello"
@@ -74,7 +75,7 @@ struct ClipsViewModelTests {
     @Test("moveSelectionDown / Up — wrap-around")
     func navigationWrapAround() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.selectedIdx == 0)
         vm.moveSelectionDown()
@@ -92,7 +93,7 @@ struct ClipsViewModelTests {
     @Test("moveSelectionToFirst — focusZone == .clip 일 때 selectedIdx=0 + pendingScrollToId 첫 항목 (TASK-036 Home)")
     func moveSelectionToFirst_clipZone() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c"), makeClip(body: "d")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 3  // 끝으로 이동
         vm.pendingScrollToId = nil
@@ -105,7 +106,7 @@ struct ClipsViewModelTests {
     @Test("moveSelectionToLast — focusZone == .clip 일 때 selectedIdx=last + pendingScrollToId 마지막 항목 (TASK-036 End)")
     func moveSelectionToLast_clipZone() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c"), makeClip(body: "d")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 0
         vm.pendingScrollToId = nil
@@ -123,7 +124,7 @@ struct ClipsViewModelTests {
             makeClip(body: "p2", pinned: true),
             makeClip(body: "p3", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 2
@@ -140,7 +141,7 @@ struct ClipsViewModelTests {
             makeClip(body: "p2", pinned: true),
             makeClip(body: "p3", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
@@ -150,7 +151,7 @@ struct ClipsViewModelTests {
 
     @Test("moveSelectionToFirst / Last — 빈 리스트 no-op 가드 (TASK-036)")
     func moveSelectionToEdge_emptyList_noOp() async {
-        let (vm, _, _) = await makeViewModel(prefilled: [])
+        let (vm, _, _, _) = await makeViewModel(prefilled: [])
         await vm.reload()
         vm.selectedIdx = 0
         vm.pendingScrollToId = nil
@@ -170,7 +171,7 @@ struct ClipsViewModelTests {
     func pageUpDown_clipZone_jumpsByTokenPageSize() async {
         let n = Self.expectedPageSize
         let prefilled = (0..<(n * 3)).map { makeClip(body: "c\($0)") }  // 충분히 큰 리스트 (clamp 회피)
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 0
         vm.pendingScrollToId = nil
@@ -188,7 +189,7 @@ struct ClipsViewModelTests {
     @Test("pageUp — 경계 (top) clamp (TASK-036)")
     func pageUp_clamp_atTopBoundary() async {
         let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 2  // 토큰 pageSize=6 보다 작음 → 0 으로 clamp
         vm.pageUp()
@@ -199,7 +200,7 @@ struct ClipsViewModelTests {
     @Test("pageDown — 경계 (bottom) clamp (TASK-036)")
     func pageDown_clamp_atBottomBoundary() async {
         let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 8  // 8 + 6 = 14, count - 1 = 9 → 9 로 clamp
         vm.pageDown()
@@ -211,7 +212,7 @@ struct ClipsViewModelTests {
     func pageDown_pinZone_jumpsInPinSidebar() async {
         let n = Self.expectedPageSize
         let prefilled = (0..<(n * 2)).map { makeClip(body: "p\($0)", pinned: true) }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
@@ -226,7 +227,7 @@ struct ClipsViewModelTests {
     @Test("pageDown — UserDefaults clipsPerPage=8 박은 후 8행 점프 (TASK-037)")
     func pageDown_jumpsByUserDefaultsClipsPerPage() async {
         let prefilled = (0..<30).map { makeClip(body: "c\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         UserDefaults.standard.set(8, forKey: "clipsPerPage")
         await vm.reload()
         vm.selectedIdx = 0
@@ -241,7 +242,7 @@ struct ClipsViewModelTests {
     @Test("pageUp — UserDefaults clipsPerPage=5 박은 후 5행 점프 + clamp (TASK-037)")
     func pageUp_jumpsByUserDefaultsClipsPerPage_andClamps() async {
         let prefilled = (0..<20).map { makeClip(body: "c\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         UserDefaults.standard.set(5, forKey: "clipsPerPage")
         await vm.reload()
         vm.selectedIdx = 3
@@ -257,7 +258,7 @@ struct ClipsViewModelTests {
     @Test("pageDown — UserDefaults clipsPerPage 1 미만 박혀도 1로 clamp (TASK-037)")
     func pageDown_clampToMinOne() async {
         let prefilled = (0..<10).map { makeClip(body: "c\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         UserDefaults.standard.set(0, forKey: "clipsPerPage")  // 잘못된 값 (안전망 검증)
         await vm.reload()
         vm.selectedIdx = 0
@@ -268,7 +269,7 @@ struct ClipsViewModelTests {
 
     @Test("TASK-025 — resetForOpen 후 검색 활성 단계 폐기 정합")
     func resetForOpenNoSearchActiveState() async {
-        let (vm, _, _) = await makeViewModel(prefilled: [makeClip(body: "hello")])
+        let (vm, _, _, _) = await makeViewModel(prefilled: [makeClip(body: "hello")])
         await vm.reload()
         vm.searchQuery = "test"
         vm.focusZone = .pin
@@ -292,7 +293,7 @@ struct ClipsViewModelTests {
             makeClip(body: "pinned-1", pinned: true),
             makeClip(body: "unpinned-2", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.visibleClips.count == 3)  // 핀 포함 전체 노출
         #expect(vm.pinnedClips.count == 1)
@@ -305,7 +306,7 @@ struct ClipsViewModelTests {
             makeClip(body: "common-keyword regular", pinned: false),
             makeClip(body: "other", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         // TASK-061 — `filteredClips` 클라이언트 필터 제거. `performSearch` 명시 호출 후 검증.
         vm.searchQuery = "common-keyword"
@@ -317,7 +318,7 @@ struct ClipsViewModelTests {
     @Test("togglePinSidebar — 핀 있을 때 open/close 토글")
     func togglePinSidebarTogglesOpenState() async {
         let prefilled = [makeClip(body: "pinned-1", pinned: true)]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.pinSidebarOpen == false)
         vm.togglePinSidebar()
@@ -331,7 +332,7 @@ struct ClipsViewModelTests {
     @Test("togglePinSidebar — 빈 핀 상태에서 no-op")
     func togglePinSidebarNoOpWhenNoPins() async {
         let prefilled = [makeClip(body: "unpinned", pinned: false)]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.pinnedClips.isEmpty)
         vm.togglePinSidebar()
@@ -341,7 +342,7 @@ struct ClipsViewModelTests {
     @Test("togglePin — 핀 토글 후 일반 visibleClips에 그대로 잔존 (TASK-019 Bug 2 fix)")
     func togglePinKeepsClipInVisibleList() async {
         let clip = makeClip(body: "to-be-pinned", pinned: false)
-        let (vm, _, _) = await makeViewModel(prefilled: [clip])
+        let (vm, _, _, _) = await makeViewModel(prefilled: [clip])
         await vm.reload()
         #expect(vm.visibleClips.count == 1)
         await vm.togglePin(at: 0)
@@ -360,7 +361,7 @@ struct ClipsViewModelTests {
             makeClip(body: "clip-2", pinned: false),
             makeClip(body: "clip-3", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         let orderBefore = vm.visibleClips.map(\.id)
         let targetIdx = 1  // 가운데 클립
@@ -382,7 +383,7 @@ struct ClipsViewModelTests {
             makeClip(body: "p2", pinned: true),
             makeClip(body: "p3", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSidebarOpen = true
@@ -396,7 +397,7 @@ struct ClipsViewModelTests {
     @Test("togglePin(id:trackSelection:.pin) — 마지막 핀 해제 시 사이드바 자동 닫힘")
     func togglePinLastInPinSidebarCollapses() async {
         let prefilled = [makeClip(body: "only-pin", pinned: true)]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSidebarOpen = true
@@ -414,7 +415,7 @@ struct ClipsViewModelTests {
             makeClip(body: "p2", pinned: true),
             makeClip(body: "p3", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
@@ -436,7 +437,7 @@ struct ClipsViewModelTests {
             makeClip(body: "regular", pinned: false),
             makeClip(body: "pinned-target", pinned: true)
         ]
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0  // pinnedClips[0] 은 "pinned-target"
@@ -454,7 +455,7 @@ struct ClipsViewModelTests {
             makeClip(body: "pinned-target", pinned: true),
             makeClip(body: "other-pin", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
@@ -473,7 +474,7 @@ struct ClipsViewModelTests {
             makeClip(body: "p1", pinned: true),
             makeClip(body: "p2", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         // ignoreHoverUntil 가 popover 열림 직후라 hover 무시될 수 있음 — 시간 흐른 후 호출.
         // 대안: ClipsViewModel 새로 만들면 ignoreHoverUntil 은 .distantPast 라 hover 즉시 허용.
@@ -490,7 +491,7 @@ struct ClipsViewModelTests {
             makeClip(body: "c2", pinned: false),
             makeClip(body: "c3", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         let targetIdx = 0
         vm.selectedIdx = targetIdx
@@ -540,7 +541,7 @@ struct ClipsViewModelTests {
             makeClip(body: "pin-a", pinned: false),
             makeClip(body: "pin-b", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         let targetId = vm.clips.first(where: { $0.body == "pin-b" })!.id
         await vm.togglePin(id: targetId, trackSelection: .clip)
@@ -552,7 +553,7 @@ struct ClipsViewModelTests {
     @Test("togglePin — 핀 시 pinnedAt 박힘 / unpin 시 nil (TASK-019 pinnedAt)")
     func togglePinSetsPinnedAt() async {
         let prefilled = [makeClip(body: "pin-target", pinned: false)]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.clips.first?.pinnedAt == nil)
         await vm.togglePin(at: 0)
@@ -572,7 +573,7 @@ struct ClipsViewModelTests {
             makeClip(body: "second-pin", pinned: false),
             makeClip(body: "third-pin", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         // 순서대로 핀 — Date() 시간 차이 보장 (10ms sleep).
         let firstId = vm.clips.first(where: { $0.body == "first-pin" })!.id
@@ -593,7 +594,7 @@ struct ClipsViewModelTests {
     @Test("onPinSidebarOpenChange / onPinnedClipsChange 콜백 — PopoverWindow 토글 / size 재조정 트리거")
     func pinSidebarCallbacksFire() async {
         let prefilled = [makeClip(body: "p1", pinned: true)]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         var openChangeCount = 0
         var pinnedChangeCount = 0
@@ -614,7 +615,7 @@ struct ClipsViewModelTests {
     @Test("delete — 행 제거 후 selectedIdx clamp")
     func deleteAndClamp() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 2
         await vm.delete(at: 2)
@@ -629,7 +630,7 @@ struct ClipsViewModelTests {
             makeClip(body: "b", pinned: true),
             makeClip(body: "c", pinned: false)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         await vm.deleteAllExceptPinned()
         #expect(vm.clips.count == 1)
@@ -641,7 +642,7 @@ struct ClipsViewModelTests {
     @Test("hover setSelectedIdx — pendingScrollToId 미설정 (스크롤 루프 차단)")
     func hoverSetSelectedIdx_DoesNotSetPendingScrollToId() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.pendingScrollToId == nil)
         vm.setSelectedIdx(1)
@@ -657,7 +658,7 @@ struct ClipsViewModelTests {
     @Test("키보드 moveSelectionDown — selectedIdx 1씩 증가 + pendingScrollToId = list[selectedIdx].id 갱신")
     func keyboardMoveDown_IncrementsAndSetsScrollId() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.moveSelectionDown()
         #expect(vm.selectedIdx == 1)
@@ -667,7 +668,7 @@ struct ClipsViewModelTests {
     @Test("키보드 moveSelectionDown — 리스트 끝 wrap → selectedIdx 0 + pendingScrollToId = list[0].id")
     func keyboardMoveDown_WrapToFirst() async {
         let prefilled = (0..<3).map { makeClip(body: "\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 2  // 마지막
         vm.moveSelectionDown()
@@ -678,7 +679,7 @@ struct ClipsViewModelTests {
     @Test("키보드 moveSelectionUp — selectedIdx 1씩 감소 + pendingScrollToId = list[selectedIdx].id 갱신")
     func keyboardMoveUp_DecrementsAndSetsScrollId() async {
         let prefilled = [makeClip(body: "a"), makeClip(body: "b"), makeClip(body: "c")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.selectedIdx = 2
         vm.moveSelectionUp()
@@ -689,7 +690,7 @@ struct ClipsViewModelTests {
     @Test("키보드 moveSelectionUp — 첫 행 ↑ wrap → selectedIdx count-1 + pendingScrollToId = list[count-1].id")
     func keyboardMoveUp_WrapToLast() async {
         let prefilled = (0..<3).map { makeClip(body: "\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.selectedIdx == 0)
         vm.moveSelectionUp()
@@ -701,7 +702,7 @@ struct ClipsViewModelTests {
     func consumePendingScroll_ResetsToNil() async {
         // 경계 진출 시점에서 pendingScrollToId가 set 됨을 보장 + consume 후 nil 검증.
         let prefilled = (0..<7).map { makeClip(body: "\($0)") }
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         for _ in 0..<6 { vm.moveSelectionDown() }
         #expect(vm.pendingScrollToId != nil)
@@ -728,7 +729,7 @@ struct ClipsViewModelTests {
             fileBookmark: nil, sourceAppBundleId: nil,
             isPinned: false, createdAt: Date(), lastUsedAt: Date()
         )
-        let (vm, _, fcs) = await makeViewModel(prefilled: [fileClip])
+        let (vm, _, fcs, _) = await makeViewModel(prefilled: [fileClip])
         await vm.reload()
 
         await vm.delete(at: 0)
@@ -758,7 +759,7 @@ struct ClipsViewModelTests {
                 isPinned: false, createdAt: Date(), lastUsedAt: Date()
             )
         }
-        let (vm, _, fcs) = await makeViewModel(prefilled: [pinnedFile] + unpinned)
+        let (vm, _, fcs, _) = await makeViewModel(prefilled: [pinnedFile] + unpinned)
         await vm.reload()
 
         await vm.deleteAllExceptPinned()
@@ -781,7 +782,7 @@ struct ClipsViewModelTests {
                 isPinned: false, createdAt: Date(), lastUsedAt: Date()
             )
         }
-        let (vm, _, fcs) = await makeViewModel(prefilled: unpinned)
+        let (vm, _, fcs, _) = await makeViewModel(prefilled: unpinned)
         await vm.reload()
 
         await vm.deleteAllExceptPinned()
@@ -799,7 +800,7 @@ struct ClipsViewModelTests {
             makeClip(body: "c", pinned: false),
             makeClip(body: "d", pinned: true)
         ]
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         #expect(vm.clips.count == 4)
 
@@ -814,7 +815,7 @@ struct ClipsViewModelTests {
 
     @Test("TASK-024 — updateAccessibilityGranted: state 변경 시에만 갱신 (멱등)")
     func updateAccessibilityGrantedTogglesState() async {
-        let (vm, _, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
+        let (vm, _, _, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
         #expect(vm.accessibilityGranted == false)
         vm.updateAccessibilityGranted(true)
         #expect(vm.accessibilityGranted == true)
@@ -827,26 +828,24 @@ struct ClipsViewModelTests {
     @Test("TASK-024 — copy(at:) — Settings pasteMode = autoPaste 일 때도 클립보드만 갱신 (⌘V 합성 X)")
     func copyForcesCopyBackEvenIfPasteModeAutoPaste() async {
         let prefilled = [makeClip(body: "copy-target")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, pasteboard) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         UserDefaults.standard.set(true, forKey: "autoPasteEnabled")  // TASK-033 — .autoPaste 대응 (UserDefaults 단일 진실 소스)
         vm.updateAccessibilityGranted(true)  // 권한 O 라도 ⌘C 는 .copyBack 강제 검증
-        let clipId = vm.visibleClips[0].id
         await vm.copy(at: 0, zone: .clip)
-        // copy 호출 후 flashedClipId 가 target 으로 설정됨 → 정상 호출 흔적.
-        #expect(vm.flashedClipId == clipId)
+        // copy 호출 후 MockPasteboard 에 target body 가 박힘 → PasteService 정상 호출 흔적 (TASK-085 — paste flash 시각 피드백 폐기 정합, pasteboard 직접 검증).
+        #expect(pasteboard.recordedSetString.last?.0 == "copy-target")
     }
 
     @Test("TASK-024 — copy(at:) — pasteMode = copyBack 일 때도 정상 호출 (동일 동작)")
     func copyWorksWhenPasteModeIsCopyBack() async {
         let prefilled = [makeClip(body: "copy-target")]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, pasteboard) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         UserDefaults.standard.set(false, forKey: "autoPasteEnabled")  // TASK-033 — .copyBack 대응
         vm.updateAccessibilityGranted(false)  // 권한 X 도 ⌘C 는 항상 활성
-        let clipId = vm.visibleClips[0].id
         await vm.copy(at: 0, zone: .clip)
-        #expect(vm.flashedClipId == clipId)
+        #expect(pasteboard.recordedSetString.last?.0 == "copy-target")
     }
 
     @Test("TASK-024 — copy(at:) focusZone == .pin 일 때 pinnedClips 항목 대상")
@@ -855,22 +854,21 @@ struct ClipsViewModelTests {
             makeClip(body: "regular", pinned: false),
             makeClip(body: "pinned-copy", pinned: true)
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, pasteboard) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         vm.focusZone = .pin
         vm.pinSelectedIdx = 0
-        let targetId = vm.pinnedClips[0].id
         await vm.copy(at: 0, zone: .pin)
-        #expect(vm.flashedClipId == targetId)
+        #expect(pasteboard.recordedSetString.last?.0 == "pinned-copy")
     }
 
-    @Test("TASK-024 — copy(at:) out-of-range idx — no-op (flashedClipId 미설정)")
+    @Test("TASK-024 — copy(at:) out-of-range idx — no-op (pasteboard 미터치)")
     func copyOutOfRangeIsNoOp() async {
-        let (vm, _, _) = await makeViewModel(prefilled: [makeClip(body: "a")])
+        let (vm, _, _, pasteboard) = await makeViewModel(prefilled: [makeClip(body: "a")])
         await vm.reload()
-        #expect(vm.flashedClipId == nil)
+        #expect(pasteboard.changeCount == 0)
         await vm.copy(at: 99, zone: .clip)  // out-of-range
-        #expect(vm.flashedClipId == nil)
+        #expect(pasteboard.changeCount == 0)
     }
 
     @Test("TASK-024 — paste(at:) 권한 X 시 effective mode .copyBack 강제 — pasteMode autoPaste 라도 ⌘V 합성 X")
@@ -951,14 +949,14 @@ struct ClipsViewModelTests {
     @Test("captureEnabled — UserDefaults 미등록 시 true default")
     func captureEnabledDefaultsToTrue() async {
         UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         #expect(vm.captureEnabled == true)
     }
 
     @Test("captureEnabled — UserDefaults 박힌 false 복원")
     func captureEnabledRestoresFromUserDefaults() async {
         UserDefaults.standard.set(false, forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         #expect(vm.captureEnabled == false)
         // 정리 — 다른 테스트 영향 차단.
         UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
@@ -967,7 +965,7 @@ struct ClipsViewModelTests {
     @Test("toggleCapture — 상태 반전 + UserDefaults persist + NotificationCenter post")
     func toggleCapturePersistsAndNotifies() async {
         UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         let initial = vm.captureEnabled
 
         var receivedNotificationEnabled: Bool? = nil
@@ -999,20 +997,20 @@ struct ClipsViewModelTests {
 
     @Test("keepOpenAfterAction — 초기값 false")
     func keepOpenAfterActionInitialValueIsFalse() async {
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         #expect(vm.keepOpenAfterAction == false)
     }
 
     @Test("toggleKeepOpenAfterAction — 1회 호출 시 true 로 반전")
     func toggleKeepOpenAfterActionInvertsToTrue() async {
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         vm.toggleKeepOpenAfterAction()
         #expect(vm.keepOpenAfterAction == true)
     }
 
     @Test("toggleKeepOpenAfterAction — 2회 호출 시 false 복귀 (idempotent toggle)")
     func toggleKeepOpenAfterActionTwiceReturnsToFalse() async {
-        let (vm, _, _) = await makeViewModel()
+        let (vm, _, _, _) = await makeViewModel()
         vm.toggleKeepOpenAfterAction()
         vm.toggleKeepOpenAfterAction()
         #expect(vm.keepOpenAfterAction == false)
@@ -1027,7 +1025,7 @@ struct ClipsViewModelTests {
             makeClip(body: "alphabet"),
             makeClip(body: "alphanumeric")
         ]
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         repo.searchCallCount = 0  // reload 는 fetchAll 만 호출이라 counter 영향 X 인데 명시 reset
 
@@ -1054,7 +1052,7 @@ struct ClipsViewModelTests {
             makeClip(body: "alpha"),
             makeClip(body: "beta")
         ]
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         repo.searchCallCount = 0
 
@@ -1078,7 +1076,7 @@ struct ClipsViewModelTests {
     @Test("resetForOpen — pending 검색 Task cancel 안전망 (popover 재진입 race 차단)")
     func resetForOpen_cancelsPendingSearch() async throws {
         let prefilled = [makeClip(body: "alpha")]
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         repo.searchCallCount = 0
 
@@ -1098,7 +1096,7 @@ struct ClipsViewModelTests {
     @Test("scheduleSearch — max wait 도달 시 디바운스 임계 미만 연속 호출 도중에도 강제 fire (사용자 빠른 타이핑 시 결과 영원히 안 박힘 차단)")
     func scheduleSearch_maxWaitForcesFireOnRapidContinuousCalls() async throws {
         let prefilled = (0..<5).map { makeClip(body: "rapid-\($0)") }
-        let (vm, repo, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, repo, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         repo.searchCallCount = 0
 
@@ -1125,7 +1123,7 @@ struct ClipsViewModelTests {
             makeClip(body: "beta"),
             makeClip(body: "gamma")
         ]
-        let (vm, _, _) = await makeViewModel(prefilled: prefilled)
+        let (vm, _, _, _) = await makeViewModel(prefilled: prefilled)
         await vm.reload()
         let initialCount = vm.filteredClips.count
         #expect(initialCount == 3)

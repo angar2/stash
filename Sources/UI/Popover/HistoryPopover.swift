@@ -125,7 +125,6 @@ struct HistoryPopover: View {
                             clip: clip,
                             isSelected: idx == viewModel.selectedIdx,
                             isFocused: viewModel.focusZone == .clip,
-                            isFlashing: clip.id == viewModel.flashedClipId,
                             mode: mode,
                             searchQuery: viewModel.searchQuery,  // TASK-035 — 일반 히스토리 영역 매칭 강조 prop 전달.
                             onClick: { Task { @MainActor in
