@@ -49,10 +49,10 @@ struct StashApp: App {
         // TASK-037 — 디스플레이 탭 신규 — clipsPerPage default 6 (TASK-036 토큰 추정값 인계), autoFitClipListHeight default false.
         // TASK-052 — 디스플레이 탭 *단축키 설명 표시* 토글 default true (신규 사용자 학습 보조 — 사용자가 숙지 후 명시적 OFF).
         UserDefaults.standard.register(defaults: [
-            "autoPasteEnabled": true,
-            "clipsPerPage": 6,
-            "autoFitClipListHeight": false,
-            "hintBarVisible": true
+            Constants.UserDefaultsKeys.autoPasteEnabled: true,
+            Constants.UserDefaultsKeys.clipsPerPage: Constants.clipsPerPageDefault,
+            Constants.UserDefaultsKeys.autoFitClipListHeight: false,
+            Constants.UserDefaultsKeys.hintBarVisible: true
         ])
 
         // TASK-073 — 앱 사용자 표시 언어 적용. UserDefaults `appLanguage` 키 부재 시 systemDefault (한국어 OS → .korean / 그 외 → .english) 박음 + AppleLanguages override.
@@ -100,8 +100,8 @@ struct StashApp: App {
         // TASK-043 — UserDefaults 마지막 상태 복원. 미등록 시 true default.
         let captureEnabledInit: Bool = {
             let defaults = UserDefaults.standard
-            if defaults.object(forKey: Constants.clipboardCaptureEnabledKey) == nil { return true }
-            return defaults.bool(forKey: Constants.clipboardCaptureEnabledKey)
+            if defaults.object(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled) == nil { return true }
+            return defaults.bool(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
         }()
         let watcher = ClipboardWatcher(
             pasteboard: pb,

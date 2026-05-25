@@ -54,30 +54,12 @@ enum Constants {
     static let clipsPerPageMin: Int = 1
     static let clipsPerPageMax: Int = 50
 
-    // TASK-043 클립보드 수집 토글 — UserDefaults 키. ClipboardWatcher.enabled 초기값 + StatusItemController red dot indicator 추적.
-    static let clipboardCaptureEnabledKey: String = "clipboardCaptureEnabled"
-
-    // TASK-043 — ClipboardWatcher.enabled / red dot indicator 변경 시 StatusItemController 추종용 NotificationCenter 이름.
-    static let captureEnabledDidChangeNotification: Notification.Name = Notification.Name("stash.captureEnabledDidChange")
-
-    // TASK-058 fix-1 — ClipboardWatcher insert 직후 post. ClipsViewModel 구독 → popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload. 잠금 모드 도입 전에는 popover close → open 흐름으로 자연 reload 됐으나 유지 모드 ON 시 popover 미 close 라 알림 진입점 필요.
-    static let clipboardDidInsertClipNotification: Notification.Name = Notification.Name("stash.clipboardDidInsertClip")
-
-    // TASK-054 popover 진입 위치 + 드래그/리사이즈 — UX-UI §4-3 *보관함 오픈 위치* 영속.
-    // 5종 anchor enum raw 직렬화 + 영구 좌표 4종 (X/Y/Screen) + 토글 1종.
-    static let popoverDefaultAnchorKey: String = "popoverDefaultAnchor"
-    static let popoverRememberLastPositionKey: String = "popoverRememberLastPosition"
-    static let popoverLastPositionXKey: String = "popoverLastPositionX"
-    static let popoverLastPositionYKey: String = "popoverLastPositionY"
-    static let popoverLastPositionScreenIdKey: String = "popoverLastPositionScreenId"
-
     // TASK-054 클립 행 click vs drag 분리 임계 — mouseDown → mouseDragged 누적 거리 ≥ 5pt 시 윈도우 이동 진입.
     // macOS NSEvent 표준 정합 (시스템 click vs drag distinction 일반 5pt). UX-UI §4-3 본문 *클립 행 5pt threshold* 단일 진실.
     static let clipRowDragThreshold: CGFloat = 5
 
     // TASK-054 fix-1 popover width 영속 (사용자 freeform 변경 + 항상 영속).
     // UserDefaults 키 / cap 범위 — UX-UI §4-3 본문 단일 진실. 방식 1·2 공유 단일 키 (사용자 결정).
-    static let popoverWidthKey: String = "popoverWidth"
     static let popoverWidthMin: CGFloat = 280
     static let popoverWidthMax: CGFloat = 600
 
@@ -91,4 +73,78 @@ enum Constants {
     // TASK-079 — popover 상단 버튼 호버 툴팁 발화 지연. `.help()` 가 not-key panel 환경에서 미발화 → SwiftUI overlay 자체 구현으로 우회.
     // macOS 시스템 NSToolTip 표준 ~500-800ms 정합 — 0.8s 채택. 보조 안내성 툴팁이므로 의도적 호버 신호 필요 (clipDetailHoverDelaySeconds 0.6s 보다 약간 김 — 상세 sub-window 가 *정보 표시*이므로 빠른 진입이 합리적, 툴팁은 *보조 안내*).
     static let hoverTooltipDelaySeconds: TimeInterval = 0.8
+
+    // UserDefaults 키 단일 진실 소스 — 모든 raw 문자열 키는 본 nested enum 안에 박힘. 호출처는 `UserDefaults.standard.<get/set>(forKey: Constants.UserDefaultsKeys.X)` 패턴.
+    // *키 raw value 자체는 영구 불변* — 변경 시 기존 사용자 설정값 손실. enum case 이름·위치만 변경 자유.
+    enum UserDefaultsKeys {
+        // TASK-043 클립보드 수집 토글. ClipboardWatcher.enabled 초기값 + StatusItemController red dot indicator 추적.
+        static let clipboardCaptureEnabled: String = "clipboardCaptureEnabled"
+
+        // TASK-033 자동 paste 모드. ClipsViewModel.paste 의 effectiveMode 결정 (× accessibilityGranted).
+        static let autoPasteEnabled: String = "autoPasteEnabled"
+
+        // TASK-037 한 페이지 클립 수 (1~50).
+        static let clipsPerPage: String = "clipsPerPage"
+
+        // TASK-037 클립 리스트 높이 자동 조정.
+        static let autoFitClipListHeight: String = "autoFitClipListHeight"
+
+        // TASK-052 단축키 설명 표시.
+        static let hintBarVisible: String = "hintBarVisible"
+
+        // TASK-054 popover 진입 위치 + 드래그/리사이즈 — UX-UI §4-3 *보관함 오픈 위치* 영속. 5종 anchor enum raw 직렬화 + 영구 좌표 4종 (X/Y/Screen) + 토글 1종.
+        static let popoverDefaultAnchor: String = "popoverDefaultAnchor"
+        static let popoverRememberLastPosition: String = "popoverRememberLastPosition"
+        static let popoverLastPositionX: String = "popoverLastPositionX"
+        static let popoverLastPositionY: String = "popoverLastPositionY"
+        static let popoverLastPositionScreenId: String = "popoverLastPositionScreenId"
+
+        // TASK-054 fix-1 popover width 영속 — 사용자 freeform 변경 + 항상 영속.
+        static let popoverWidth: String = "popoverWidth"
+
+        // FEATURES F-007 차단 앱 (Settings PrivacyTab).
+        static let blockedAppBundleIds: String = "blockedAppBundleIds"
+
+        // PermissionToastNotifier — 권한 부여 첫 알림 1회 발화 추적.
+        static let permissionGrantedNotified: String = "permissionGrantedNotified"
+
+        // Onboarding 완료 영속 — 첫 실행 vs 재실행 분기. OnboardingViewModel.complete() 시점 true 박힘.
+        static let hasCompletedOnboarding: String = "hasCompletedOnboarding"
+
+        // Deprecated — 옛 키. 마이그레이션 전용 (SettingsViewModel.migrateLegacyPasteModeIfNeeded).
+        enum Deprecated {
+            // TASK-033 이전 PasteMode enum raw value 키. 현재는 autoPasteEnabled Bool 로 마이그레이션 완료.
+            static let pasteMode: String = "pasteMode"
+        }
+    }
+
+    // Notification.Name 단일 진실 소스 — 앱 내부 broadcast 이벤트.
+    enum Notifications {
+        // TASK-043 — ClipboardWatcher.enabled / red dot indicator 변경 시 StatusItemController 추종용.
+        static let captureEnabledDidChange: Notification.Name = Notification.Name("stash.captureEnabledDidChange")
+
+        // TASK-058 fix-1 — ClipboardWatcher insert 직후 post. ClipsViewModel 구독 → popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload. 잠금 모드 도입 전에는 popover close → open 흐름으로 자연 reload 됐으나 유지 모드 ON 시 popover 미 close 라 알림 진입점 필요.
+        static let clipboardDidInsertClip: Notification.Name = Notification.Name("stash.clipboardDidInsertClip")
+    }
+
+    // 변경 불가 단축키 keyCode (NSEvent 표준, UInt16 raw). PopoverPanel.PopoverHotkey + 기타 NSEvent 매칭 호출처가 단일 진실 소스로 참조.
+    // macOS keyCode 표준 정합 — 영구 불변. enum 이름·구조만 정리 자유.
+    enum KeyCodes {
+        // 방향키 (`PopoverHotkey.moveSelectionUp` 외).
+        static let arrowUp: UInt16 = 126
+        static let arrowDown: UInt16 = 125
+
+        // Return (일반) + Numpad Enter — TASK-051 `.confirm` 두 keyCode 동시 매칭.
+        static let returnKey: UInt16 = 36
+        static let numpadEnter: UInt16 = 76
+
+        // ESC — `PopoverHotkey.escape` + ShortcutsTab.PopoverShortcutRecorder cancel.
+        static let escape: UInt16 = 53
+
+        // D — TASK-055 `.toggleClipDetail` (⌘+D).
+        static let keyD: UInt16 = 2
+
+        // Tab — TASK-044 PopoverPanel 안전망 (NSTextView insertTab: 차단).
+        static let tab: UInt16 = 48
+    }
 }

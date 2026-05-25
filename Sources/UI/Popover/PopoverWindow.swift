@@ -71,11 +71,147 @@ final class PopoverWindow: NSObject {
     /// TASK-054 — 설정 *기본 오픈 위치* 조회. UserDefaults raw → PopoverAnchor. 잘못된 값 / 미설정 → `.default` (.topRight, TASK-065) fallback.
     /// 매 popover 오픈 시점 호출 — SettingsViewModel 의존 차단 (PopoverWindow 가 SettingsViewModel 직접 참조 X, UserDefaults 단일 진실 소스).
     static func currentDefaultAnchor() -> PopoverAnchor {
-        guard let raw = UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey),
+        guard let raw = UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor),
               let anchor = PopoverAnchor(rawValue: raw) else {
             return .default
         }
         return anchor
+    }
+
+    /// TASK-084 Phase 4a — `_performRefreshFrame()` origin 계산 분기 추출. 값 기반 순수 함수 — NSPanel state 의존 0, 단위 테스트 진입점.
+    /// 세 분기 (panelMovedByUser / anchorFirstEntry / followUp) × visibleFrame clamp + anchor 별 Y 정책 (bottom 고정 / top 고정 / center 고정).
+    enum ComputeOriginMode {
+        /// 사용자 드래그 / 저장 좌표 진입 — 현재 origin.x 유지 + top 고정 + 화면 밖 clamp.
+        case panelMovedByUser
+        /// 첫 anchor 진입 (방식 2·3 + !hasAnchoredOnce) — anchor 결과 origin + anchor 별 Y 정책.
+        case anchorFirstEntry(anchor: PopoverAnchor, inset: CGFloat)
+        /// 후속 refresh (방식 1 첫 진입 포함) — 현재 origin.x 유지 + top 고정 + 화면 밖 clamp.
+        case followUp
+    }
+
+    /// TASK-084 Phase 4b — `showClipDetailPanel()` geometry 계산 분기 추출. ClipDetailPanel 의 origin / detailH / direction / arrowOffsetY 단일 산출.
+    /// 값 기반 순수 함수 — NSPanel state 의존 0, 단위 테스트 진입점. DesignTokens 상수는 *전역 정적* 이라 nonisolated 안전.
+    struct ClipDetailGeometry: Equatable {
+        let originX: CGFloat
+        let originY: CGFloat
+        let detailH: CGFloat
+        let direction: ClipDetailDirection
+        let arrowOffsetY: CGFloat
+    }
+
+    /// `showClipDetailPanel()` 의 zone 분기 + anchor frame 결정 + 좌표 변환 + 화면 경계 clamp + arrow offset 계산을 통합한 순수 함수.
+    /// 호출자 책임: mode/panel.isVisible/zone-pinSidebar 가드 + provider preferredHeight 조회 + hasCopyLocation 판정 + side effect (mount / setFrame / maskImage / orderFront / lastShownDetailRequest 갱신).
+    nonisolated static func computeClipDetailGeometry(
+        zone: FocusZone,
+        rowFrameInPopoverMidY: CGFloat,
+        anchorFrame: NSRect,
+        popoverFrame: NSRect,
+        pinSidebarFrame: NSRect?,
+        screenVisibleFrame: NSRect,
+        rawContentHeight: CGFloat,
+        hasCopyLocation: Bool
+    ) -> ClipDetailGeometry {
+        // detail panel height (TASK-039) — Provider raw + 본문 상하 padding + 메타 footer + (해당 시) 복사 위치 라인.
+        let vPad = 2 * DesignTokens.Spacing.clipDetailPadding
+        let extraH = vPad
+            + DesignTokens.Spacing.clipMetaFooterHeight
+            + (hasCopyLocation ? DesignTokens.Spacing.clipMetaLocationBlockHeight : 0)
+        let contentMaxH = max(DesignTokens.WindowSize.clipDetailMaxHeight - extraH, 0)
+        let contentH = min(rawContentHeight, contentMaxH)
+        let detailH = contentH + extraH
+        // TASK-027 fix — panel 총 width = 본문 + 꼭지. clipDetailTotalWidth 와 동일 산식.
+        let totalW = DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
+        let gap = DesignTokens.Spacing.clipDetailGap
+        let safe = DesignTokens.Spacing.clipDetailEdgeSafety
+
+        // TASK-055 — 방향 결정.
+        // zone == .pin && pinSidebar 가시 시 — 사이드바 *바깥쪽* 강제. 사이드바가 본체 좌측이면 detail 더 좌측 / 사이드바가 본체 우측 fallback 진입 상태면 detail 더 우측.
+        // 그 외 (zone == .clip) — `ClipDetailDirection.resolve` 좌측 default + 좌측 막힘 시 우측 fallback.
+        let direction: ClipDetailDirection
+        if zone == .pin, let pinFrame = pinSidebarFrame {
+            direction = (pinFrame.minX < popoverFrame.minX) ? .left : .right
+        } else {
+            direction = ClipDetailDirection.resolve(
+                anchorFrame: anchorFrame,
+                totalWidth: totalW,
+                gap: gap,
+                safe: safe,
+                visibleFrame: screenVisibleFrame
+            )
+        }
+        // originX 계산 + 화면 가장자리 클램프 (양쪽 막힘 케이스 안전망).
+        var originX = direction.originX(anchorFrame: anchorFrame, totalWidth: totalW, gap: gap)
+        originX = max(screenVisibleFrame.minX + safe, min(originX, screenVisibleFrame.maxX - totalW - safe))
+
+        // SwiftUI top-down ↔ NSPanel bottom-up 좌표 변환.
+        let rowCenterY_screen = anchorFrame.origin.y + (anchorFrame.height - rowFrameInPopoverMidY)
+
+        // detail panel originY (screen, bottom-up) — 꼭지가 행 center 가리키도록 기본은 panel 중앙에 꼭지.
+        var arrowOffsetY = detailH / 2
+        var originY = rowCenterY_screen - (detailH - arrowOffsetY)
+
+        // TASK-039 fix — anchor (PinSidebar) height < detailH 케이스 시각 정합. detail bottom = anchor bottom 정렬 + arrowOffsetY 재계산.
+        if zone == .pin, pinSidebarFrame != nil, detailH > anchorFrame.height {
+            originY = anchorFrame.origin.y
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        }
+
+        // 화면 상/하단 클램프 — 클램프 발생 시 arrowOffsetY 보정으로 꼭지가 행 center 유지.
+        let minY = screenVisibleFrame.minY + safe
+        let maxY = screenVisibleFrame.maxY - detailH - safe
+        if originY < minY {
+            originY = minY
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        } else if originY > maxY {
+            originY = maxY
+            arrowOffsetY = detailH - (rowCenterY_screen - originY)
+        }
+        // arrowOffsetY 범위 [arrowH/2, detailH - arrowH/2] 가드.
+        let arrowH = DesignTokens.Spacing.clipDetailArrowHeight
+        arrowOffsetY = max(arrowH / 2, min(detailH - arrowH / 2, arrowOffsetY))
+
+        return ClipDetailGeometry(
+            originX: originX,
+            originY: originY,
+            detailH: detailH,
+            direction: direction,
+            arrowOffsetY: arrowOffsetY
+        )
+    }
+
+    nonisolated static func computeOrigin(
+        mode: ComputeOriginMode,
+        currentFrame: NSRect,
+        fittingHeight: CGFloat,
+        preservedWidth: CGFloat,
+        visibleFrame: NSRect
+    ) -> NSPoint {
+        let prevTop = currentFrame.origin.y + currentFrame.height
+        let prevMidY = currentFrame.origin.y + currentFrame.height / 2
+        switch mode {
+        case .panelMovedByUser, .followUp:
+            // TASK-061 — 사용자 드래그 후 height 변동도 top 고정 (사용자 요구 정합). 기존 `y = panel.frame.origin.y` (= bottom 고정) → `y = prevTop - h` (= top 고정).
+            let h = fittingHeight
+            var x = currentFrame.origin.x
+            var y = prevTop - h
+            x = max(visibleFrame.minX, min(x, visibleFrame.maxX - preservedWidth))
+            y = max(visibleFrame.minY, min(y, visibleFrame.maxY - h))
+            return NSPoint(x: x, y: y)
+        case let .anchorFirstEntry(anchor, inset):
+            // TASK-061 — 첫 anchor 진입은 기존 anchor 결과 origin 박음 (시각 진입 anchor 정합 보존). anchor 별 Y 정책: bottom/top/center.
+            let panelSize = NSSize(width: preservedWidth, height: fittingHeight)
+            let o = anchor.origin(panelSize: panelSize, visibleFrame: visibleFrame, inset: inset)
+            let newY: CGFloat
+            switch anchor {
+            case .bottomRight, .bottomLeft:
+                newY = o.y                              // bottom 고정
+            case .topLeft, .topRight:
+                newY = prevTop - fittingHeight          // top 고정 — height 변경 시 origin.y 보정
+            case .center:
+                newY = prevMidY - fittingHeight / 2     // center 고정
+            }
+            return NSPoint(x: o.x, y: newY)
+        }
     }
 
     /// TASK-054 — *이전 위치 기억하기* ON 시 저장 좌표 진입. 화면 밖 fallback 시 false 반환 → 호출자가 anchor fallback.
@@ -84,15 +220,15 @@ final class PopoverWindow: NSObject {
     /// 성공 시 `panelMovedByUser = true` 박음 — 후속 `refreshFrame` 의 anchor 재계산 무시 + 사용자 위치 보존.
     /// 저장값은 fallback 진입해도 UserDefaults 에서 제거 X (호환 화면 복귀 시 재사용).
     private func applyRememberedOrigin(anchor: PopoverAnchor) -> Bool {
-        guard UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey) else {
+        guard UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition) else {
             return false
         }
-        guard UserDefaults.standard.object(forKey: Constants.popoverLastPositionXKey) != nil,
-              UserDefaults.standard.object(forKey: Constants.popoverLastPositionYKey) != nil else {
+        guard UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverLastPositionX) != nil,
+              UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverLastPositionY) != nil else {
             return false
         }
-        let x = UserDefaults.standard.double(forKey: Constants.popoverLastPositionXKey)
-        let y = UserDefaults.standard.double(forKey: Constants.popoverLastPositionYKey)
+        let x = UserDefaults.standard.double(forKey: Constants.UserDefaultsKeys.popoverLastPositionX)
+        let y = UserDefaults.standard.double(forKey: Constants.UserDefaultsKeys.popoverLastPositionY)
         let origin = NSPoint(x: x, y: y)
         guard let screen = panel.screen ?? NSScreen.main else { return false }
         let visible = screen.visibleFrame
@@ -112,15 +248,15 @@ final class PopoverWindow: NSObject {
     private func saveLastPositionIfNeeded() {
         guard let mode = currentMode, mode == .method1 || mode == .method2 || mode == .method3 else { return }
         // width 는 항상 영속 — 방식 1·2·3 공유 단일 키.
-        UserDefaults.standard.set(Double(panel.frame.size.width), forKey: Constants.popoverWidthKey)
+        UserDefaults.standard.set(Double(panel.frame.size.width), forKey: Constants.UserDefaultsKeys.popoverWidth)
         // 위치는 방식 2·3 + 토글 ON 시만 영속.
         guard mode == .method2 || mode == .method3 else { return }
-        guard UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey) else { return }
+        guard UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition) else { return }
         let origin = panel.frame.origin
-        UserDefaults.standard.set(Double(origin.x), forKey: Constants.popoverLastPositionXKey)
-        UserDefaults.standard.set(Double(origin.y), forKey: Constants.popoverLastPositionYKey)
+        UserDefaults.standard.set(Double(origin.x), forKey: Constants.UserDefaultsKeys.popoverLastPositionX)
+        UserDefaults.standard.set(Double(origin.y), forKey: Constants.UserDefaultsKeys.popoverLastPositionY)
         if let screenId = panel.screen?.localizedName {
-            UserDefaults.standard.set(screenId, forKey: Constants.popoverLastPositionScreenIdKey)
+            UserDefaults.standard.set(screenId, forKey: Constants.UserDefaultsKeys.popoverLastPositionScreenId)
         }
         Logger.ui.info("popover saved last origin (\(origin.x, privacy: .public),\(origin.y, privacy: .public)) width=\(self.panel.frame.size.width, privacy: .public)")
     }
@@ -134,7 +270,7 @@ final class PopoverWindow: NSObject {
         self.settingsViewModel = settingsViewModel
         self.onOpenSettings = onOpenSettings
         // TASK-054 fix-1 — popover width 영속. UserDefaults 저장값 우선 + cap clamp + default fallback.
-        let savedWidth = (UserDefaults.standard.object(forKey: Constants.popoverWidthKey) as? Double)
+        let savedWidth = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverWidth) as? Double)
             .map { CGFloat($0) } ?? DesignTokens.WindowSize.popoverWidth
         let initialWidth = max(Constants.popoverWidthMin, min(Constants.popoverWidthMax, savedWidth))
         let (p, ve) = PopoverPanel.make(
@@ -229,60 +365,46 @@ final class PopoverWindow: NSObject {
 
         // TASK-054 fix-2 — width 는 사용자 박은 값 (또는 default `popoverWidth=380`) 보존. fitting.width 는 SwiftUI body `maxWidth: .infinity` 박힌 후 *content intrinsic 최소값* 반환이라 NSPanel width 가 축소됨. 시스템 표준 NSWindow resize 가 width 자체 변경 책임. origin 계산도 본 width 기준.
         let preservedWidth = panel.frame.size.width
-        let prevTop = panel.frame.origin.y + panel.frame.height
-        let prevMidY = panel.frame.origin.y + panel.frame.height / 2
-        let newOriginX: CGFloat
-        let newOriginY: CGFloat
-        // TASK-071 — 방식 1·2·3 통합. 방식 1 의 *최초 진입 anchor* 는 showInternal 의 PopoverPanel.positionBelow 가 이미 panel.frame.origin 박음 → 첫 refreshFrame 진입 시 `!hasAnchoredOnce + currentDefaultAnchor` 분기 대신 *panel.frame.origin.x 유지 + top 고정* 흐름 진입해야 메뉴바 anchor 보존. 방식 1 진입 시 currentDefaultAnchor 호출 회피 위해 button anchor 케이스 별도 가드.
-        // TASK-054 — 사용자 드래그 / 저장 좌표 진입 케이스. 현재 origin 유지 + 화면 밖 clamp.
-        // TASK-061 — 사용자 드래그 후 height 변동도 top 고정 (사용자 요구 정합). 기존 `y = panel.frame.origin.y` (= bottom 고정) → `y = prevTop - h` (= top 고정).
-        if panelMovedByUser, let screen = panel.screen ?? NSScreen.main {
-            let visible = screen.visibleFrame
-            let h = fitting.height
-            var x = panel.frame.origin.x
-            var y = prevTop - h
-            x = max(visible.minX, min(x, visible.maxX - preservedWidth))
-            y = max(visible.minY, min(y, visible.maxY - h))
-            newOriginX = x
-            newOriginY = y
-        } else if let screen = panel.screen ?? NSScreen.main {
-            // TASK-061 — 첫 anchor 진입 (`!hasAnchoredOnce`) 은 기존 anchor 결과 origin 박음 (시각 진입 anchor 정합 보존).
-            // TASK-071 — 방식 1 (button anchor) 진입 시 currentDefaultAnchor 호출 회피. showInternal 의 positionBelow 가 박은 panel.frame.origin 그대로 보존 + top 고정.
-            // 후속 refresh (검색 결과 변동 / 환경설정 변경 등) 는 anchor 무관 top 고정 + bottom 변동 (사용자 요구 정합 — autoFit ON 시 상단 고정 + 하단부 변동).
-            if !hasAnchoredOnce && currentMode != .method1 {
-                let visible = screen.visibleFrame
-                let anchor = Self.currentDefaultAnchor()
-                let inset = DesignTokens.WindowSize.popoverInsetBottom
-                let panelSize = NSSize(width: preservedWidth, height: fitting.height)
-                let o = anchor.origin(panelSize: panelSize, visibleFrame: visible, inset: inset)
-                newOriginX = o.x
-                switch anchor {
-                case .bottomRight, .bottomLeft:
-                    newOriginY = o.y  // bottom 고정
-                case .topLeft, .topRight:
-                    newOriginY = prevTop - fitting.height  // top 고정 — height 변경 시 origin.y 보정
-                case .center:
-                    newOriginY = prevMidY - fitting.height / 2  // center 고정
-                }
+        // TASK-084 Phase 4a — origin 계산 분기 helper 추출 (`computeOrigin`). 세 분기 (panelMovedByUser / anchorFirstEntry / followUp) × screen visible frame clamp.
+        // TASK-071 정합 — 방식 1 (button anchor) 진입 시 anchor 호출 회피. showInternal 의 positionBelow 가 박은 panel.frame.origin 그대로 보존 + top 고정 (`.followUp` 분기).
+        let newOrigin: NSPoint
+        if let visible = (panel.screen ?? NSScreen.main)?.visibleFrame {
+            if panelMovedByUser {
+                newOrigin = Self.computeOrigin(
+                    mode: .panelMovedByUser,
+                    currentFrame: panel.frame,
+                    fittingHeight: fitting.height,
+                    preservedWidth: preservedWidth,
+                    visibleFrame: visible
+                )
+            } else if !hasAnchoredOnce && currentMode != .method1 {
+                newOrigin = Self.computeOrigin(
+                    mode: .anchorFirstEntry(
+                        anchor: Self.currentDefaultAnchor(),
+                        inset: DesignTokens.WindowSize.popoverInsetBottom
+                    ),
+                    currentFrame: panel.frame,
+                    fittingHeight: fitting.height,
+                    preservedWidth: preservedWidth,
+                    visibleFrame: visible
+                )
                 hasAnchoredOnce = true
             } else {
-                // TASK-061 — 후속 refresh + TASK-071 방식 1 첫 진입: panel.frame.origin.x 유지 + top 고정.
-                let visible = screen.visibleFrame
-                let h = fitting.height
-                var x = panel.frame.origin.x
-                var y = prevTop - h
-                x = max(visible.minX, min(x, visible.maxX - preservedWidth))
-                y = max(visible.minY, min(y, visible.maxY - h))
-                newOriginX = x
-                newOriginY = y
+                newOrigin = Self.computeOrigin(
+                    mode: .followUp,
+                    currentFrame: panel.frame,
+                    fittingHeight: fitting.height,
+                    preservedWidth: preservedWidth,
+                    visibleFrame: visible
+                )
                 hasAnchoredOnce = true
             }
         } else {
-            newOriginX = panel.frame.origin.x
-            newOriginY = panel.frame.origin.y
+            // screen 미발견 fallback — origin 유지, hasAnchoredOnce 미변경. setFrame 자체는 진행 (동일 frame 박힘 시 아래 동등 비교에서 skip).
+            newOrigin = panel.frame.origin
         }
 
-        let newFrame = NSRect(x: newOriginX, y: newOriginY, width: preservedWidth, height: fitting.height)
+        let newFrame = NSRect(x: newOrigin.x, y: newOrigin.y, width: preservedWidth, height: fitting.height)
         // TASK-061 — 동일 frame setFrame 호출 skip. setFrame → windowDidResize 발화 → refreshFrame 재호출 → loop / measurement race 차단.
         if newFrame == panel.frame {
             return
@@ -495,74 +617,27 @@ final class PopoverWindow: NSObject {
         } else {
             anchorFrame = panel.frame
         }
-        // detail panel height (TASK-039) — Provider.preferredHeight (본문 자체 raw 추정) + 본문 상하 padding (2 × clipDetailPadding) + 메타 footer + (해당 시) 복사 위치 라인 블록.
-        // Provider 본문이 본문 max 도달 시 PanelView 의 ScrollView.frame(maxHeight:) 가 클램프 → 본문은 max content 까지만 확장. 본문 padding + 복사 위치 라인 + 메타 footer 는 항상 박힘.
+        // detail panel geometry (TASK-039 / TASK-055 / TASK-027) — height / direction / origin / arrowOffsetY 계산.
+        // TASK-084 Phase 4b — geometry 계산 helper 추출 (`computeClipDetailGeometry`). 값 기반 순수 함수 단일 산출.
         let provider = ClipDetailRegistry.provider(for: request.clip)
         let rawContentH = provider?.preferredHeight(for: request.clip) ?? DesignTokens.WindowSize.clipDetailMaxHeight
         let hasLocation = Self.hasCopyLocation(for: request.clip)
-        let vPad = 2 * DesignTokens.Spacing.clipDetailPadding // top + bottom 균일 padding
-        let extraH = vPad
-            + DesignTokens.Spacing.clipMetaFooterHeight
-            + (hasLocation ? DesignTokens.Spacing.clipMetaLocationBlockHeight : 0)
-        // 본문 max = clipDetailMaxHeight - extraH. content height 가 max 초과면 max 로 클램프 (panel 안 내부 스크롤).
-        let contentMaxH = max(DesignTokens.WindowSize.clipDetailMaxHeight - extraH, 0)
-        let contentH = min(rawContentH, contentMaxH)
-        let detailH = contentH + extraH
-        // TASK-027 fix — panel 총 width = 본문(clipDetailWidth) + 꼭지(clipDetailArrowWidth). maskImage 로 panel 자체를 말풍선 모양으로 잘라냄.
+        let geometry = Self.computeClipDetailGeometry(
+            zone: request.zone,
+            rowFrameInPopoverMidY: request.rowFrameInPopover.midY,
+            anchorFrame: anchorFrame,
+            popoverFrame: panel.frame,
+            pinSidebarFrame: pinSidebarPanel.isVisible ? pinSidebarPanel.frame : nil,
+            screenVisibleFrame: panel.screen?.visibleFrame ?? .zero,
+            rawContentHeight: rawContentH,
+            hasCopyLocation: hasLocation
+        )
+        let originX = geometry.originX
+        let originY = geometry.originY
+        let detailH = geometry.detailH
+        let direction = geometry.direction
+        let arrowOffsetY = geometry.arrowOffsetY
         let totalW = Self.clipDetailTotalWidth
-        let gap = DesignTokens.Spacing.clipDetailGap
-        let safe = DesignTokens.Spacing.clipDetailEdgeSafety
-        let screenVisible = panel.screen?.visibleFrame ?? .zero
-
-        // TASK-055 — 방향 결정.
-        // zone == .pin && pinSidebar 가시 시 — 사이드바 *바깥쪽* (본체와 반대편) 으로 강제. 사이드바가 본체 좌측이면 detail 더 좌측 / 사이드바가 본체 우측 fallback 진입 상태면 detail 더 우측.
-        // 그 외 (zone == .clip) — `ClipDetailDirection.resolve` 좌측 default + 좌측 막힘 시 우측 fallback.
-        let direction: ClipDetailDirection
-        if request.zone == .pin && pinSidebarPanel.isVisible {
-            direction = (pinSidebarPanel.frame.minX < panel.frame.minX) ? .left : .right
-        } else {
-            direction = ClipDetailDirection.resolve(
-                anchorFrame: anchorFrame,
-                totalWidth: totalW,
-                gap: gap,
-                safe: safe,
-                visibleFrame: screenVisible
-            )
-        }
-        // originX 계산 + 화면 가장자리 클램프 (양쪽 막힘 케이스 안전망).
-        var originX = direction.originX(anchorFrame: anchorFrame, totalWidth: totalW, gap: gap)
-        originX = max(screenVisible.minX + safe, min(originX, screenVisible.maxX - totalW - safe))
-
-        // SwiftUI top-down ↔ NSPanel bottom-up 좌표 변환:
-        // 행 center Y (SwiftUI, popoverBody 안 좌표계, top-down) = rowFrameInPopover.midY
-        // 행 center Y (screen, bottom-up) = anchorFrame.origin.y + (anchorFrame.height - rowCenterY_SwiftUI)
-        let rowCenterY_SwiftUI = request.rowFrameInPopover.midY
-        let rowCenterY_screen = anchorFrame.origin.y + (anchorFrame.height - rowCenterY_SwiftUI)
-
-        // detail panel originY (screen, bottom-up) — 꼭지가 행 center 가리키도록 기본은 panel 중앙에 꼭지.
-        // detail panel 내부 arrowOffsetY (SwiftUI, top-down) 기본값 = detailH / 2 → detail.originY = rowCenterY_screen - detailH/2.
-        var arrowOffsetY = detailH / 2
-        var originY = rowCenterY_screen - (detailH - arrowOffsetY)
-
-        // TASK-039 fix — anchor (PinSidebar) height < detailH 케이스 시각 정합. PinSidebar 가 bottom-aligned 인 데다 1 행만 박혀 height 작은 케이스에서 detail panel 이 PinSidebar 위로 크게 확장 → 시각상 *본체 popover 좌측* 처럼 보이는 비정합. detail bottom = anchor bottom 정렬 (PinSidebar bottom-aligned 정합) + arrowOffsetY 재계산.
-        if request.zone == .pin && pinSidebarPanel.isVisible && detailH > anchorFrame.height {
-            originY = anchorFrame.origin.y // PinSidebar bottom (NSPanel bottom-up 좌표)
-            arrowOffsetY = detailH - (rowCenterY_screen - originY)
-        }
-
-        // 화면 상/하단 클램프 — 클램프 발생 시 arrowOffsetY 보정으로 꼭지가 행 center 유지.
-        let minY = screenVisible.minY + safe
-        let maxY = screenVisible.maxY - detailH - safe
-        if originY < minY {
-            originY = minY
-            arrowOffsetY = detailH - (rowCenterY_screen - originY)
-        } else if originY > maxY {
-            originY = maxY
-            arrowOffsetY = detailH - (rowCenterY_screen - originY)
-        }
-        // arrowOffsetY 범위 [arrowH/2, detailH - arrowH/2] 가드.
-        let arrowH = DesignTokens.Spacing.clipDetailArrowHeight
-        arrowOffsetY = max(arrowH / 2, min(detailH - arrowH / 2, arrowOffsetY))
 
         // hosting rebuild — 매 show 마다 fresh SwiftUI tree (clip 변화 반영).
         _ = PopoverPanel.mount(
@@ -880,7 +955,7 @@ extension PopoverWindow: NSWindowDelegate {
         if autoFit, let m = measured, let settings = settingsViewModel {
             let visibleCount = viewModel.visibleClips.count
             let hasPinnedForCap = !viewModel.pinnedClips.isEmpty
-            let hintBarVisibleForCap: Bool = (UserDefaults.standard.object(forKey: "hintBarVisible") as? Bool) ?? true
+            let hintBarVisibleForCap: Bool = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) as? Bool) ?? true
             let capRowsForCap = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: hasPinnedForCap, hintBarVisible: hintBarVisibleForCap)
             cap = ClipsViewModel.computeAutoFitCap(
                 measured: m,
@@ -921,7 +996,7 @@ extension PopoverWindow: NSWindowDelegate {
         // 기존 `setClipsPerPage(current + signDelta)` 박으면 raw 50→49 만 변동 + clipList 영역은 cap 도달 상태 그대로 (effectiveClipListHeight cap 적용) → NSPanel.frame.height 1행 축소 박혔는데 SwiftUI body fittingSize 불변 → 46pt squeeze → 헤더/preferencesRow 잘림.
         // 해결: 분기 결정을 `ClipsViewModel.resolveNewClipsPerPageForResize` 위임. raw>cap 축소 케이스에서는 raw 를 capRows 로 jump 동기화 후 ±1 진행.
         let hasPinned = !viewModel.pinnedClips.isEmpty
-        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: "hintBarVisible") as? Bool) ?? true
+        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) as? Bool) ?? true
         let capRows = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible)
         let newRaw = ClipsViewModel.resolveNewClipsPerPageForResize(current: current, signDelta: signDelta, capRows: capRows)
         if newRaw != current {

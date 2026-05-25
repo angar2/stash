@@ -9,10 +9,10 @@ struct HistoryPopover: View {
     let onOpenSettings: () -> Void
     let onDismiss: () -> Void
     /// TASK-037 fix-1 — @AppStorage 로 UserDefaults 추적. SwiftUI 가 KVO 자동 감지 → 슬라이더/체크박스 변경 시 body 재계산 → .frame(maxHeight:) 실시간 반영.
-    @AppStorage("clipsPerPage") private var clipsPerPage: Int = Constants.clipsPerPageDefault
-    @AppStorage("autoFitClipListHeight") private var autoFitClipListHeight: Bool = false
+    @AppStorage(Constants.UserDefaultsKeys.clipsPerPage) private var clipsPerPage: Int = Constants.clipsPerPageDefault
+    @AppStorage(Constants.UserDefaultsKeys.autoFitClipListHeight) private var autoFitClipListHeight: Bool = false
     /// TASK-052 — 단축키 설명 표시 토글. OFF 시 `KeyboardHintsView` if 분기 false → 전체 비표시 + popover height 자동 축소.
-    @AppStorage("hintBarVisible") private var hintBarVisible: Bool = true
+    @AppStorage(Constants.UserDefaultsKeys.hintBarVisible) private var hintBarVisible: Bool = true
     /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
     /// HistoryPopover는 idx + zone 전달 → Window 측이 hide → restore → sleep → viewModel.paste(at:zone:) 순서 보장.
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.

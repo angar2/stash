@@ -376,7 +376,7 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     @MainActor
     private static func handleKeyDown(event: NSEvent, recorder: PopoverShortcutRecorderViewCocoa) -> Bool {
         // ESC → 취소 (변경 X)
-        if event.keyCode == 53 {
+        if event.keyCode == Constants.KeyCodes.escape {
             recorder.stopRecording()
             return true
         }

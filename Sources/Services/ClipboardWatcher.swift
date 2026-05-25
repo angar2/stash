@@ -20,7 +20,7 @@ actor ClipboardWatcher {
     /// *acknowledgeOwnWrite 대기 → synthesizeCommandV 지연* race 차단. PasteService 가 begin/end 호출.
     private var pastePending: Bool = false
     /// TASK-043 — 사용자 명시 *클립보드 수집 토글*. false 시 tick 안 buildClip 진입 skip + lastChangeCount 동기화 유지 (활성 복귀 시 race 차단).
-    /// `ClipsViewModel.toggleCapture()` → `setEnabled(_:)` 외부 호출. Composition Root 초기값 = `UserDefaults.bool(forKey: Constants.clipboardCaptureEnabledKey)`.
+    /// `ClipsViewModel.toggleCapture()` → `setEnabled(_:)` 외부 호출. Composition Root 초기값 = `UserDefaults.bool(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)`.
     private var enabled: Bool
 
     init(
@@ -96,7 +96,7 @@ actor ClipboardWatcher {
                 try? await fileClipService.delete(deleted)
             }
             // TASK-058 fix-1 — 신규 클립 insert 후 알림 post. ClipsViewModel 구독 → popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload.
-            NotificationCenter.default.post(name: Constants.clipboardDidInsertClipNotification, object: nil)
+            NotificationCenter.default.post(name: Constants.Notifications.clipboardDidInsertClip, object: nil)
         } catch {
             Logger.clipboard.error("ClipboardWatcher tick failed: \(error)")
         }
@@ -106,7 +106,7 @@ actor ClipboardWatcher {
         // TASK-033 — *저장하지 않을 앱* 매칭 + TASK-040 클립 출처 박음. frontmost 앱 번들 ID 한 번 추출.
         let frontmostBundle = await frontmostTracker?.currentBundleId
         if let frontmostBundle {
-            let blockedIds = UserDefaults.standard.stringArray(forKey: "blockedAppBundleIds") ?? []
+            let blockedIds = UserDefaults.standard.stringArray(forKey: Constants.UserDefaultsKeys.blockedAppBundleIds) ?? []
             if blockedIds.contains(frontmostBundle) {
                 Logger.clipboard.info("buildClip: blocked app — frontmost=\(frontmostBundle, privacy: .public) skip")
                 return nil

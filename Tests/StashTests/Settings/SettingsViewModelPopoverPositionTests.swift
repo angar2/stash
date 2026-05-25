@@ -11,11 +11,11 @@ struct SettingsViewModelPopoverPositionTests {
         let reg = MockLoginItemRegistrar()
         let svc = LoginItemService(registrar: reg)
         // 격리 — TASK-054 신규 키 + 기존 디스플레이 키 모두 클린.
-        UserDefaults.standard.removeObject(forKey: Constants.popoverDefaultAnchorKey)
-        UserDefaults.standard.removeObject(forKey: Constants.popoverRememberLastPositionKey)
-        UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionXKey)
-        UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionYKey)
-        UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionScreenIdKey)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionX)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionY)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionScreenId)
         UserDefaults.standard.removeObject(forKey: "pasteMode")
         UserDefaults.standard.removeObject(forKey: "autoPasteEnabled")
         UserDefaults.standard.removeObject(forKey: "blockedAppBundleIds")
@@ -42,7 +42,7 @@ struct SettingsViewModelPopoverPositionTests {
         let vm = makeViewModel()
         vm.setPopoverDefaultAnchor(.center)
         #expect(vm.popoverDefaultAnchor == .center)
-        #expect(UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey) == "center")
+        #expect(UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor) == "center")
     }
 
     @Test("TASK-054 — setPopoverDefaultAnchor 5종 anchor 모두 정합")
@@ -51,7 +51,7 @@ struct SettingsViewModelPopoverPositionTests {
         for anchor in PopoverAnchor.allCases {
             vm.setPopoverDefaultAnchor(anchor)
             #expect(vm.popoverDefaultAnchor == anchor)
-            #expect(UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey) == anchor.rawValue)
+            #expect(UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor) == anchor.rawValue)
         }
     }
 
@@ -60,30 +60,30 @@ struct SettingsViewModelPopoverPositionTests {
         let vm = makeViewModel()
         vm.setPopoverRememberLastPosition(true)
         #expect(vm.popoverRememberLastPosition == true)
-        #expect(UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey) == true)
+        #expect(UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition) == true)
     }
 
     @Test("TASK-054 — setPopoverRememberLastPosition(false) → 저장 좌표 키 제거")
     func setRememberOffPurgesSavedOrigin() {
         let vm = makeViewModel()
-        UserDefaults.standard.set(true, forKey: Constants.popoverRememberLastPositionKey)
-        UserDefaults.standard.set(100.0, forKey: Constants.popoverLastPositionXKey)
-        UserDefaults.standard.set(200.0, forKey: Constants.popoverLastPositionYKey)
-        UserDefaults.standard.set("Display1", forKey: Constants.popoverLastPositionScreenIdKey)
+        UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
+        UserDefaults.standard.set(100.0, forKey: Constants.UserDefaultsKeys.popoverLastPositionX)
+        UserDefaults.standard.set(200.0, forKey: Constants.UserDefaultsKeys.popoverLastPositionY)
+        UserDefaults.standard.set("Display1", forKey: Constants.UserDefaultsKeys.popoverLastPositionScreenId)
 
         vm.setPopoverRememberLastPosition(false)
 
         #expect(vm.popoverRememberLastPosition == false)
-        #expect(UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey) == false)
-        #expect(UserDefaults.standard.object(forKey: Constants.popoverLastPositionXKey) == nil)
-        #expect(UserDefaults.standard.object(forKey: Constants.popoverLastPositionYKey) == nil)
-        #expect(UserDefaults.standard.object(forKey: Constants.popoverLastPositionScreenIdKey) == nil)
+        #expect(UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition) == false)
+        #expect(UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverLastPositionX) == nil)
+        #expect(UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverLastPositionY) == nil)
+        #expect(UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverLastPositionScreenId) == nil)
     }
 
     @Test("TASK-054 — loadDisplayPreferences (init 안 호출) → UserDefaults 값 박혀있으면 그 값 반영")
     func loadPersistedValues() {
-        UserDefaults.standard.set("center", forKey: Constants.popoverDefaultAnchorKey)
-        UserDefaults.standard.set(true, forKey: Constants.popoverRememberLastPositionKey)
+        UserDefaults.standard.set("center", forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
+        UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
         UserDefaults.standard.set(Constants.clipsPerPageDefault, forKey: "clipsPerPage")
 
         let reg = MockLoginItemRegistrar()
@@ -94,13 +94,13 @@ struct SettingsViewModelPopoverPositionTests {
         #expect(vm.popoverRememberLastPosition == true)
 
         // 클린업
-        UserDefaults.standard.removeObject(forKey: Constants.popoverDefaultAnchorKey)
-        UserDefaults.standard.removeObject(forKey: Constants.popoverRememberLastPositionKey)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
     }
 
     @Test("TASK-065 — loadDisplayPreferences 잘못된 anchor raw → fallback .topRight (default 변경 정합)")
     func loadInvalidAnchorFallback() {
-        UserDefaults.standard.set("invalid_anchor", forKey: Constants.popoverDefaultAnchorKey)
+        UserDefaults.standard.set("invalid_anchor", forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
 
         let reg = MockLoginItemRegistrar()
         let svc = LoginItemService(registrar: reg)
@@ -108,7 +108,7 @@ struct SettingsViewModelPopoverPositionTests {
 
         #expect(vm.popoverDefaultAnchor == .topRight, "잘못된 raw → default fallback")
 
-        UserDefaults.standard.removeObject(forKey: Constants.popoverDefaultAnchorKey)
+        UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
     }
 
     // TASK-054 fix-1 — clipsPerPageDeltaRequest notification 폐기 (시스템 표준 NSWindow resize 위임).

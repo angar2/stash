@@ -41,12 +41,12 @@ enum PopoverHotkey: CaseIterable {
     /// TASK-051 — `.confirm` 은 일반 Return 36 + Numpad Enter 76 둘 다 매칭하므로 본 프로퍼티는 *primary* (36) 반환. matches(event:) 분기에서 76 도 함께 검사.
     var keyCode: UInt16 {
         switch self {
-        case .moveSelectionUp, .pageUp, .moveSelectionToFirst: return 126        // ↑ (단독 / ⌘+↑ / ⌘+⇧+↑)
-        case .moveSelectionDown, .pageDown, .moveSelectionToLast: return 125     // ↓ (단독 / ⌘+↓ / ⌘+⇧+↓)
-        case .confirm: return 36                                                 // Return (primary — matches(event:) 가 Numpad 76 도 함께 검사)
-        case .escape: return 53                                                  // ESC
-        case .toggleClipDetail: return 2                                         // D (TASK-055 — ⌘+D)
-        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0  // PopoverShortcutStore 동적 조회
+        case .moveSelectionUp, .pageUp, .moveSelectionToFirst: return Constants.KeyCodes.arrowUp        // ↑ (단독 / ⌘+↑ / ⌘+⇧+↑)
+        case .moveSelectionDown, .pageDown, .moveSelectionToLast: return Constants.KeyCodes.arrowDown   // ↓ (단독 / ⌘+↓ / ⌘+⇧+↓)
+        case .confirm: return Constants.KeyCodes.returnKey                                              // Return (primary — matches(event:) 가 Numpad Enter 도 함께 검사)
+        case .escape: return Constants.KeyCodes.escape                                                  // ESC
+        case .toggleClipDetail: return Constants.KeyCodes.keyD                                          // D (TASK-055 — ⌘+D)
+        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0             // PopoverShortcutStore 동적 조회
         }
     }
 
@@ -72,7 +72,7 @@ enum PopoverHotkey: CaseIterable {
         let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
         // TASK-051 — `.confirm` 은 일반 Return (36) + Numpad Enter (76) 둘 다 매칭.
         if self == .confirm {
-            guard event.keyCode == 36 || event.keyCode == 76 else { return false }
+            guard event.keyCode == Constants.KeyCodes.returnKey || event.keyCode == Constants.KeyCodes.numpadEnter else { return false }
             return event.modifierFlags.intersection(meaningful) == modifiers
         }
         // 변경 불가 (방향키/ESC) — hardcoded 단일 keyCode
@@ -389,7 +389,7 @@ enum PopoverPanel {
             do {
                 let zone = viewModel.focusZone
                 let idx = viewModel.activeIdx
-                let auto = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+                let auto = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
                 Logger.ui.debug("Enter dispatched — autoPasteEnabled=\(auto, privacy: .public) zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public)")
                 Task { @MainActor in
                     if auto {
@@ -438,7 +438,7 @@ enum PopoverPanel {
             // marked text (한글/일본어/중국어 IME 변환 중간 상태) 가 있을 때 Enter 누르면 *변환 확정* 의도이므로
             // confirm dispatch 차단 + NSTextView forward. monitor 가 NSResponder chain 전 단계에서 발화하므로
             // NSTextInputContext.handleEvent (IME 처리) 전에 가드 박아야 정확.
-            if event.keyCode == 36 || event.keyCode == 76 {
+            if event.keyCode == Constants.KeyCodes.returnKey || event.keyCode == Constants.KeyCodes.numpadEnter {
                 if let textField = PopoverPanel.findFirstTextField(in: panel.contentView),
                    let editor = textField.currentEditor() as? NSTextView,
                    editor.hasMarkedText() {
@@ -460,7 +460,7 @@ enum PopoverPanel {
                 return handled ? nil : event
             }
             // Tab 키 안전망 — NSTextView `insertTab:` 매핑 차단 (first responder 잃지 않도록).
-            if event.keyCode == 48 {  // Tab
+            if event.keyCode == Constants.KeyCodes.tab {
                 Logger.ui.debug("Tab consumed by popover key monitor (TASK-025)")
                 return nil
             }

@@ -129,9 +129,6 @@ enum DesignTokens {
         )
         // searchFocused 시 보더 (파란 라인) — TASK-053 accent 베이스 추종.
         static var searchBoxFocusedBorder: Color { accent.opacity(0.50) }
-        // searchFocused 시 outer ring
-        static var searchBoxFocusedRing: Color { accent.opacity(0.22) }
-
         // 검색 아이콘 (비활성)
         static let searchIconInactive = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.45),
@@ -202,13 +199,6 @@ enum DesignTokens {
         )
 
         // ─── 수집 토글 indicator (TASK-043) ──────────────────────────
-        /// 메뉴바 트레이 아이콘 우하단 red dot — 클립보드 수집 비활성 상태 시각 알림.
-        /// systemRed 정합 (#FF3B30 라이트 / #FF453A 다크).
-        static let captureDisabledDot = Color(
-            light: Color(red: 255/255, green: 59/255, blue: 48/255),
-            dark:  Color(red: 255/255, green: 69/255, blue: 58/255)
-        )
-
         // ─── Pin Sidebar 헤더 ────────────────────────────────────────
         static let pinSidebarHeader = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.40),
@@ -476,9 +466,7 @@ enum DesignTokens {
         static let pinRowMarginVert:       CGFloat = 2
 
         // 환경설정 행 (popover.jsx L470-497)
-        static let preferencesRowHeight:   CGFloat = 32
         static let preferencesRowPadHorz:  CGFloat = 12
-        static let preferencesRowMarginTop: CGFloat = 2
 
         // 힌트바 (popover.jsx L165-207)
         static let hintsBarPaddingTop:     CGFloat = 5
@@ -701,7 +689,6 @@ enum DesignTokens {
 
         // paste 직후 초록 플래시 — store.jsx L201-204
         static let pasteFlashDuration: TimeInterval = 0.7  // 700ms
-        static let popoverAutoCloseAfterPaste: TimeInterval = 0.15  // 150ms (popover.jsx L263)
 
         // popover fade
         static let popoverFadeIn: TimeInterval = 0.18

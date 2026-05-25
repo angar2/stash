@@ -103,7 +103,7 @@ final class ClipsViewModel {
 
     // MARK: - Capture toggle (TASK-043)
 
-    /// 클립보드 수집 활성/비활성 상태. UserDefaults `Constants.clipboardCaptureEnabledKey` 진실 소스. init 시 UserDefaults 읽어 초기화. `toggleCapture()` 가 갱신.
+    /// 클립보드 수집 활성/비활성 상태. UserDefaults `Constants.UserDefaultsKeys.clipboardCaptureEnabled` 진실 소스. init 시 UserDefaults 읽어 초기화. `toggleCapture()` 가 갱신.
     var captureEnabled: Bool
 
     // MARK: - Keep open toggle (TASK-058)
@@ -126,14 +126,14 @@ final class ClipsViewModel {
         self.toastQueue = toastQueue
         // TASK-043 — UserDefaults 미등록 시 true default (UserDefaults.bool 자연 fallback).
         let defaults = UserDefaults.standard
-        if defaults.object(forKey: Constants.clipboardCaptureEnabledKey) == nil {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled) == nil {
             self.captureEnabled = true
         } else {
-            self.captureEnabled = defaults.bool(forKey: Constants.clipboardCaptureEnabledKey)
+            self.captureEnabled = defaults.bool(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
         }
         // TASK-058 fix-1 — ClipboardWatcher insert 알림 구독. popover 떠있는 상태 (특히 유지 모드 ON) 에서 즉시 reload — 사용자가 popover 열어둔 채 다른 앱에서 클립 복사 시 popover 안 즉시 새 클립 반영.
         self.clipboardInsertObserver = NotificationCenter.default.addObserver(
-            forName: Constants.clipboardDidInsertClipNotification,
+            forName: Constants.Notifications.clipboardDidInsertClip,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -165,9 +165,9 @@ final class ClipsViewModel {
     func toggleCapture() {
         let newValue = !captureEnabled
         captureEnabled = newValue
-        UserDefaults.standard.set(newValue, forKey: Constants.clipboardCaptureEnabledKey)
+        UserDefaults.standard.set(newValue, forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled)
         NotificationCenter.default.post(
-            name: Constants.captureEnabledDidChangeNotification,
+            name: Constants.Notifications.captureEnabledDidChange,
             object: nil,
             userInfo: ["enabled": newValue]
         )
@@ -348,7 +348,7 @@ final class ClipsViewModel {
     /// TASK-036 — 페이지 점프 사이즈. TASK-037 으로 사용자 환경설정 N (UserDefaults `clipsPerPage`) 동적 조회.
     /// 매 호출 시점 최신값 조회 — 슬라이더 변경 즉시 다음 page jump 부터 반영.
     private func effectivePageSize() -> Int {
-        let raw = UserDefaults.standard.integer(forKey: "clipsPerPage")
+        let raw = UserDefaults.standard.integer(forKey: Constants.UserDefaultsKeys.clipsPerPage)
         return max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, raw))
     }
 
@@ -442,9 +442,9 @@ final class ClipsViewModel {
     /// TASK-037 — UserDefaults 직접 조회 wrapper. SwiftUI 외부 호출용.
     /// TASK-052 — `hintBarVisible` UserDefaults 조회 추가 (default true — 사용자 미설정 시 시각 ON 유지).
     static func effectiveClipListHeightFromUserDefaults(visibleCount: Int, hasPinned: Bool) -> CGFloat {
-        let n = UserDefaults.standard.integer(forKey: "clipsPerPage")
-        let autoFit = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
-        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: "hintBarVisible") as? Bool) ?? true
+        let n = UserDefaults.standard.integer(forKey: Constants.UserDefaultsKeys.clipsPerPage)
+        let autoFit = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoFitClipListHeight)
+        let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) as? Bool) ?? true
         return effectiveClipListHeight(visibleCount: visibleCount, clipsPerPage: n, autoFit: autoFit, hasPinned: hasPinned, hintBarVisible: hintBarVisible)
     }
 
@@ -533,7 +533,7 @@ final class ClipsViewModel {
         guard let clip = clipForZone(at: idx, zone: zone) else { return }
         Logger.ui.info("Paste invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public)")
         // TASK-033 — autoPasteEnabled (UserDefaults 단일 진실 소스) × accessibilityGranted 매트릭스. 둘 다 true 시에만 auto-paste, 외는 copy back fallback. UserDefaults default true 는 Composition Root 가 register defaults 로 박음.
-        let autoPasteEnabled = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+        let autoPasteEnabled = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
         let effectiveMode: PasteMode = (accessibilityGranted && autoPasteEnabled) ? .autoPaste : .copyBack
         do {
             try await pasteService.paste(clip: clip, mode: effectiveMode)

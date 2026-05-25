@@ -29,9 +29,9 @@ final class PermissionToastNotifier {
         guard status == .granted && lastStatus != .granted else { return }
         // TASK-066 — i18n 키 dotted rename (toast.permissionGranted → toast.permission.granted) + ttl 자동 추종.
         toastQueue.enqueue(.success, L10n("toast.permission.granted"))
-        let notified = UserDefaults.standard.bool(forKey: "permissionGrantedNotified")
+        let notified = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.permissionGrantedNotified)
         if !notified {
-            UserDefaults.standard.set(true, forKey: "permissionGrantedNotified")
+            UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.permissionGrantedNotified)
             Task { [notificationService] in
                 await notificationService.notify(.permissionGranted)
                 Logger.permission.info("System notification 발송 — 권한 부여 1회 정책")

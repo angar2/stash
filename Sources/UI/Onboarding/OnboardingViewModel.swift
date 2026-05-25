@@ -16,7 +16,7 @@ final class OnboardingViewModel {
     var phase: OnboardingPhase = .welcome
     var permissionGrantedSnapshot: Bool = false
     var hasCompleted: Bool {
-        UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.hasCompletedOnboarding)
     }
 
     private let permissionService: PermissionService
@@ -61,7 +61,7 @@ final class OnboardingViewModel {
 
     func skipPermissionWithCopyBack() {
         // TASK-033 — UserDefaults 키 갱신. PasteMode enum → autoPasteEnabled boolean. 권한 건너뛰기 = autoPasteEnabled false (copy-back 모드 자연 활성).
-        UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+        UserDefaults.standard.set(false, forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
         Logger.ui.info("Onboarding: Accessibility 권한 건너뛰기 — autoPasteEnabled = false")
         advanceToTutorial()
     }
@@ -72,7 +72,7 @@ final class OnboardingViewModel {
     }
 
     func complete() {
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.hasCompletedOnboarding)
         Logger.ui.info("Onboarding 완료")
     }
 

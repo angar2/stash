@@ -33,11 +33,11 @@ final class StatusItemController {
 
         configureButton()
         // TASK-043 — UserDefaults 초기값으로 red dot 정합 (앱 시작 시 마지막 상태 복원).
-        applyCaptureAppearance(UserDefaults.standard.bool(forKey: Constants.clipboardCaptureEnabledKey, default: true))
+        applyCaptureAppearance(UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.clipboardCaptureEnabled, default: true))
 
         // TASK-043 — ClipsViewModel.toggleCapture() 가 post 하는 알림 추종.
         captureEnabledObserver = NotificationCenter.default.addObserver(
-            forName: Constants.captureEnabledDidChangeNotification,
+            forName: Constants.Notifications.captureEnabledDidChange,
             object: nil,
             queue: .main
         ) { [weak self] notification in

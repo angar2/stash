@@ -71,14 +71,14 @@ final class SettingsViewModel {
             // TASK-066 — 설정 윈도우 토스트 발화 제거. autoPasteEnabled 자동 ON 흐름은 보존 (popover 토스트는 PermissionToastNotifier 가 별도 발화).
             if !autoPasteEnabled {
                 autoPasteEnabled = true
-                UserDefaults.standard.set(true, forKey: "autoPasteEnabled")
+                UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
                 Logger.ui.info("Permission granted — autoPasteEnabled auto-ON")
             }
         } else if prev && !granted {
             // TASK-066 — 설정 윈도우 토스트 발화 제거. autoPasteEnabled 자동 OFF 흐름은 보존.
             if autoPasteEnabled {
                 autoPasteEnabled = false
-                UserDefaults.standard.set(false, forKey: "autoPasteEnabled")
+                UserDefaults.standard.set(false, forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
                 Logger.ui.info("Permission revoked — autoPasteEnabled forced OFF")
             }
         }
@@ -106,23 +106,23 @@ final class SettingsViewModel {
             return
         }
         autoPasteEnabled = enabled
-        UserDefaults.standard.set(enabled, forKey: "autoPasteEnabled")
+        UserDefaults.standard.set(enabled, forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
         Logger.ui.info("autoPasteEnabled set: \(enabled, privacy: .public)")
     }
 
     private func loadAutoPasteEnabled() {
         // TASK-033 — 마이그레이션. 기존 "pasteMode" 키 잔존값 (PasteMode.rawValue) → boolean 변환 + 기존 키 제거.
-        if let raw = UserDefaults.standard.string(forKey: "pasteMode") {
+        if let raw = UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.Deprecated.pasteMode) {
             let migrated = (raw == "autoPaste")
-            UserDefaults.standard.set(migrated, forKey: "autoPasteEnabled")
-            UserDefaults.standard.removeObject(forKey: "pasteMode")
+            UserDefaults.standard.set(migrated, forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
+            UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.Deprecated.pasteMode)
             autoPasteEnabled = migrated
             Logger.ui.info("Migrated pasteMode -> autoPasteEnabled: \(migrated, privacy: .public)")
             return
         }
         // default = true (자동 paste 기본 ON — 권한 부여 후 자연 활성)
-        if UserDefaults.standard.object(forKey: "autoPasteEnabled") != nil {
-            autoPasteEnabled = UserDefaults.standard.bool(forKey: "autoPasteEnabled")
+        if UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.autoPasteEnabled) != nil {
+            autoPasteEnabled = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
         }
     }
 
@@ -132,7 +132,7 @@ final class SettingsViewModel {
     func setClipsPerPage(_ value: Int) {
         let clamped = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, value))
         clipsPerPage = clamped
-        UserDefaults.standard.set(clamped, forKey: "clipsPerPage")
+        UserDefaults.standard.set(clamped, forKey: Constants.UserDefaultsKeys.clipsPerPage)
         NotificationCenter.default.post(name: ClipsViewModel.displayLayoutDidChange, object: nil)
         Logger.ui.info("clipsPerPage set: \(clamped, privacy: .public)")
     }
@@ -140,7 +140,7 @@ final class SettingsViewModel {
     /// 높이 자동 조정 체크박스 토글. UserDefaults 갱신 + state 갱신 + NSPanel frame 재계산 알림.
     func setAutoFitClipListHeight(_ value: Bool) {
         autoFitClipListHeight = value
-        UserDefaults.standard.set(value, forKey: "autoFitClipListHeight")
+        UserDefaults.standard.set(value, forKey: Constants.UserDefaultsKeys.autoFitClipListHeight)
         NotificationCenter.default.post(name: ClipsViewModel.displayLayoutDidChange, object: nil)
         Logger.ui.info("autoFitClipListHeight set: \(value, privacy: .public)")
     }
@@ -149,7 +149,7 @@ final class SettingsViewModel {
     /// `HistoryPopover` 가 `@AppStorage("hintBarVisible")` 로 동일 키 추적 → SwiftUI body 즉시 재계산 (KeyboardHintsView if 분기), `displayLayoutDidChange` notification 으로 `PopoverWindow._performRefreshFrame` 가 fittingSize 재측정 후 NSPanel.setFrame.
     func setHintBarVisible(_ value: Bool) {
         hintBarVisible = value
-        UserDefaults.standard.set(value, forKey: "hintBarVisible")
+        UserDefaults.standard.set(value, forKey: Constants.UserDefaultsKeys.hintBarVisible)
         NotificationCenter.default.post(name: ClipsViewModel.displayLayoutDidChange, object: nil)
         Logger.ui.info("hintBarVisible set: \(value, privacy: .public)")
     }
@@ -173,7 +173,7 @@ final class SettingsViewModel {
     /// NotificationCenter post X — *다음 오픈 시 적용* 정책 (이미 떠 있는 popover frame 즉시 갱신 불필요).
     func setPopoverDefaultAnchor(_ anchor: PopoverAnchor) {
         popoverDefaultAnchor = anchor
-        UserDefaults.standard.set(anchor.rawValue, forKey: Constants.popoverDefaultAnchorKey)
+        UserDefaults.standard.set(anchor.rawValue, forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor)
         Logger.ui.info("popoverDefaultAnchor set: \(anchor.rawValue, privacy: .public)")
     }
 
@@ -181,11 +181,11 @@ final class SettingsViewModel {
     /// OFF→ON 직후 저장값 없음 → 다음 오픈은 기본 anchor 진입, 닫힐 때 저장. ON→OFF 시 UserDefaults 저장 좌표 키 제거 (영구 좌표 정합 — 다시 ON 시점에 stale 좌표 진입 차단).
     func setPopoverRememberLastPosition(_ value: Bool) {
         popoverRememberLastPosition = value
-        UserDefaults.standard.set(value, forKey: Constants.popoverRememberLastPositionKey)
+        UserDefaults.standard.set(value, forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
         if !value {
-            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionXKey)
-            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionYKey)
-            UserDefaults.standard.removeObject(forKey: Constants.popoverLastPositionScreenIdKey)
+            UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionX)
+            UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionY)
+            UserDefaults.standard.removeObject(forKey: Constants.UserDefaultsKeys.popoverLastPositionScreenId)
         }
         Logger.ui.info("popoverRememberLastPosition set: \(value, privacy: .public)")
     }
@@ -193,21 +193,21 @@ final class SettingsViewModel {
     private func loadDisplayPreferences() {
         // register defaults 가 StashApp 진입점에서 박혔으므로 integer/bool 조회 시 default 값 (6 / false / true) 자연 반환.
         // 단, 사용자가 잘못된 값 (음수 / 30 초과) 박은 케이스 방어 — clamp.
-        let rawN = UserDefaults.standard.integer(forKey: "clipsPerPage")
+        let rawN = UserDefaults.standard.integer(forKey: Constants.UserDefaultsKeys.clipsPerPage)
         clipsPerPage = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, rawN))
-        autoFitClipListHeight = UserDefaults.standard.bool(forKey: "autoFitClipListHeight")
+        autoFitClipListHeight = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoFitClipListHeight)
         // TASK-052 fix — register defaults 의존 폐기 + `loadAutoPasteEnabled` 패턴 정합 (`object(forKey:) != nil` 분기). default true 는 stored property 초기값 으로 보존 — 사용자가 toggle 한 적 없으면 시각 ON 유지.
-        if UserDefaults.standard.object(forKey: "hintBarVisible") != nil {
-            hintBarVisible = UserDefaults.standard.bool(forKey: "hintBarVisible")
+        if UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) != nil {
+            hintBarVisible = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.hintBarVisible)
         }
         // TASK-053 — 콘텐츠 색상 모드. `AccentColorMode.current` 가 키 없음/잘못된 값 자연 `.default` 반환.
         accentColorMode = AccentColorMode.current
         // TASK-054 — popover 진입 위치 (보관함 오픈 위치). raw 잘못된 값 / 미설정 → `.default` (.bottomRight) fallback.
-        if let raw = UserDefaults.standard.string(forKey: Constants.popoverDefaultAnchorKey),
+        if let raw = UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.popoverDefaultAnchor),
            let anchor = PopoverAnchor(rawValue: raw) {
             popoverDefaultAnchor = anchor
         }
-        popoverRememberLastPosition = UserDefaults.standard.bool(forKey: Constants.popoverRememberLastPositionKey)
+        popoverRememberLastPosition = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
         // TASK-073 — 앱 사용자 표시 언어. `AppLanguage.current` 가 키 부재/잘못된 값 → systemDefault fallback.
         appLanguage = AppLanguage.current
         Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public) popoverAnchor=\(self.popoverDefaultAnchor.rawValue, privacy: .public) rememberLast=\(self.popoverRememberLastPosition, privacy: .public) appLanguage=\(self.appLanguage.rawValue, privacy: .public)")
@@ -315,11 +315,11 @@ final class SettingsViewModel {
     }
 
     private func loadBlockedApps() {
-        blockedAppBundleIds = UserDefaults.standard.stringArray(forKey: "blockedAppBundleIds") ?? []
+        blockedAppBundleIds = UserDefaults.standard.stringArray(forKey: Constants.UserDefaultsKeys.blockedAppBundleIds) ?? []
     }
 
     private func saveBlockedApps() {
-        UserDefaults.standard.set(blockedAppBundleIds, forKey: "blockedAppBundleIds")
+        UserDefaults.standard.set(blockedAppBundleIds, forKey: Constants.UserDefaultsKeys.blockedAppBundleIds)
     }
 
     // MARK: - Data folder
