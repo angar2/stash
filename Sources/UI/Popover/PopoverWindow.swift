@@ -61,10 +61,11 @@ final class PopoverWindow: NSObject {
         DesignTokens.WindowSize.clipDetailWidth + DesignTokens.Spacing.clipDetailArrowWidth
     }
 
-    /// 복사 위치 라인 표시 여부 — Clip extension 단일 진실 소스 호출 (TASK-039 refactor).
-    /// `ClipDetailPanelView.copyLocationState` 와 동일 분기 정책 — PanelView 의 SwiftUI 컴퓨티드와 PopoverWindow 의 NSPanel height 계산이 *동일 정책* 으로 일치 보장.
+    /// detail 메타 라인 (글자수 / 복사 위치) 표시 여부 — Clip extension 단일 진실 소스 호출 (TASK-076 Phase 4 fix).
+    /// `ClipDetailPanelView.contentMaxHeight` 와 동일 정책 — PanelView 의 SwiftUI 컴퓨티드와 PopoverWindow 의 NSPanel height 계산이 *동일 정책* 으로 일치 보장.
+    /// TASK-039 시점 `hasCopyLocation` → TASK-076 Phase 4 에서 글자수 라인 추가되며 *메타 라인* 일반화 (이름 유지 — 외부 호출 시그니처 호환).
     static func hasCopyLocation(for clip: Clip) -> Bool {
-        clip.clipDetailCopyLocationState != nil
+        clip.hasClipDetailMetaLine
     }
 
     /// TASK-054 — 설정 *기본 오픈 위치* 조회. UserDefaults raw → PopoverAnchor. 잘못된 값 / 미설정 → `.default` (.topRight, TASK-065) fallback.

@@ -109,6 +109,7 @@
 		B40725A415049D5FD523C8BF /* ShortcutsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CB621779FF8D98D7FAD107 /* ShortcutsTab.swift */; };
 		B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */; };
 		BA937B228044131CE612EA3B /* ClipMetaFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ECD9ADE15751417058B4D3 /* ClipMetaFooterView.swift */; };
+		CB7AF23C569A4635848D9E74 /* ScrollableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94341795AFA74E278E3CD801 /* ScrollableTextView.swift */; };
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
 		BCBB3792E11923E82CACD6C1 /* ClipboardError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAA4EFBB52CB89FB4BD659 /* ClipboardError.swift */; };
 		BCFFC8ECD68A5E60AAC89024 /* PopoverAnchorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84222FC42A1AF0C57D2BD3AD /* PopoverAnchorTests.swift */; };
@@ -225,6 +226,7 @@
 		66E22A3012CBFDCAB4A1325B /* KeyboardHintsViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHintsViewTests.swift; sourceTree = "<group>"; };
 		66E89689F16DED962DF08C1D /* MockLoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLoginItemRegistrar.swift; sourceTree = "<group>"; };
 		68024B3A70B6A090A9FB5402 /* PopoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindow.swift; sourceTree = "<group>"; };
+		94341795AFA74E278E3CD801 /* ScrollableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollableTextView.swift; sourceTree = "<group>"; };
 		6C50E3A1DC1A7DF9FAEC90AC /* ClipRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipRowView.swift; sourceTree = "<group>"; };
 		6EFFEA3BA0BB94B320D24BA5 /* SMLoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMLoginItemRegistrar.swift; sourceTree = "<group>"; };
 		7336885A313849C86D5F0AB5 /* ClipboardWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWatcherTests.swift; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 				9F288446E988CE0124570329 /* PopoverAnchor.swift */,
 				B5A52843E961156954C45322 /* PopoverPanel.swift */,
 				68024B3A70B6A090A9FB5402 /* PopoverWindow.swift */,
+				94341795AFA74E278E3CD801 /* ScrollableTextView.swift */,
 				9A8CE78E45821C6CDDC8E566 /* SearchBarView.swift */,
 			);
 			path = Popover;
@@ -884,6 +887,7 @@
 				FCFDF16441483CA979876223 /* PopoverWindow.swift in Sources */,
 				FC40E4B90B8CD481EA673185 /* PreferencesWindowController.swift in Sources */,
 				4AB55E7FE9D73BCA49388FAB /* PrivacyTab.swift in Sources */,
+				CB7AF23C569A4635848D9E74 /* ScrollableTextView.swift in Sources */,
 				835F6FE3B1AA9EA3A1C6DA5B /* SMLoginItemRegistrar.swift in Sources */,
 				4955BFFEA859CB9FB338884A /* SearchBarView.swift in Sources */,
 				EBE9555266A27592751DC6CB /* SettingsViewModel.swift in Sources */,
