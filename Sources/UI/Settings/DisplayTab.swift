@@ -113,10 +113,11 @@ struct DisplayTab: View {
     }
 
     /// TASK-054 — 보관함 오픈 위치. 좌측 큰 라벨 *보관함 오픈 위치* 1개 + 우측 control-col 안 sub-row 2개 세로 스택.
-    /// sub-row 1 = *기본 오픈 위치* (Picker 5종 anchor, 폭 = displaySliderMaxWidth/2 ≒ control-col 50%).
+    /// sub-row 1 = *기본 오픈 위치* (Picker 5종 anchor).
     /// sub-row 2 = *이전 위치 기억하기* (capsule 토글, default OFF).
     /// 부가설명 라인 X (사용자 결정 — 라벨만으로 명확). HTML 목업 [.temp/054_settings-popover-position-mockup.html] 정합.
     /// TASK-054 fix-2 — `popoverRememberLastPosition` ON 시 *기본 오픈 위치* Picker disabled (영속 좌표 우선이라 anchor 무의미).
+    /// TASK-081 — TASK-064 매직값 두 줄(폭 제한 frame + leading 음수 padding) 제거. maxWidth alignment 미지정 default center + 매직 보정값 조합이 NSPopUpButton intrinsic width(한국어/영어 라벨 폭 차이) 따라 시각 위치 변동 → 언어 토글 시 정렬 회귀. GeneralTab languageRow 패턴 정합(menu style + labelsHidden)으로 두 언어 모두 sub-row Text 좌측 edge ↔ Picker 좌측 edge 정합 유지.
     private var popoverPositionRow: some View {
         let anchorDisabled = viewModel.popoverRememberLastPosition
         return settingsRow(
@@ -142,9 +143,7 @@ struct DisplayTab: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(maxWidth: DesignTokens.Spacing.displaySliderMaxWidth / 2)
-                    // TASK-064 — NSPopUpButton 내부 leading inset 보정. control-col 좌측 시작점과 픽셀 정합. 보정값 -20pt = dev 단계 시각 실측 확정 (macOS Sonoma+ SwiftUI Picker `.menu` style 의 NSPopUpButton wrap 시각 내부 inset). SwiftUI 공식 API 미노출 영역이라 매직값 박음 — DesignTokens 토큰 미박음 (단일 사용처).
-                    .padding(.leading, -20)
+                    .pickerStyle(.menu)
                     .disabled(anchorDisabled)
                 }
                 // sub-row 2 — 이전 위치 기억하기 (토글)
