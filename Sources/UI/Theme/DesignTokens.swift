@@ -360,6 +360,17 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.05),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.08)
         )
+
+        // TASK-079 — 호버 툴팁 시각. popover `nonactivatingPanel` + `becomesKeyOnlyIfNeeded=true` 환경에서 NSToolTip(SwiftUI `.help()` backing) 미발화 → SwiftUI `.overlay` 자체 구현. macOS 시스템 NSToolTip 시각 흉내.
+        /// 호버 툴팁 배경 — 시스템 라이트·다크 자동 적응. 살짝 반투명 (NSToolTip 정합).
+        static let tooltipBg = Color(
+            light: Color(red: 252/255, green: 252/255, blue: 252/255, opacity: 0.96),
+            dark:  Color(red: 50/255,  green: 50/255,  blue: 52/255,  opacity: 0.96)
+        )
+        /// 호버 툴팁 테두리 — `NSColor.separatorColor` 정합.
+        static let tooltipBorder = Color(nsColor: NSColor.separatorColor)
+        /// 호버 툴팁 라벨 — `NSColor.labelColor` 정합 (라이트·다크 자동).
+        static let tooltipLabel = Color(nsColor: NSColor.labelColor)
     }
 
     // Toast kind enum (DesignTokens 내부용 — UI 파일에선 별도 ToastKind 사용)
@@ -416,6 +427,9 @@ enum DesignTokens {
 
         // Toast — onboarding-toast.jsx L257
         static let toastBody = Font.system(size: 12.5, weight: .medium)
+
+        // TASK-079 — 호버 툴팁 본문 폰트. macOS 시스템 NSToolTip ~11pt regular 정합.
+        static let tooltip = Font.system(size: 11, weight: .regular)
     }
 
     // MARK: - Spacing (popover.jsx + settings.jsx + onboarding-toast.jsx 정합)
@@ -555,6 +569,13 @@ enum DesignTokens {
         static let clipMetaPadH:                CGFloat = 16  // 메타 footer / 복사 위치 라인 좌우 padding (clipDetailPadding 정합 — TASK-039 fix3: 12 → 16)
         static let clipMetaPadV:                CGFloat = 10  // 메타 footer 상하 padding (TASK-039 fix4: 6 → 10)
         static let clipMetaLocationBlockHeight: CGFloat = 44  // 복사 위치 라인 (라벨 + 경로) 블록 height (TASK-039 fix4: 36 → 44)
+
+        // TASK-079 — 호버 툴팁 spacing. macOS NSToolTip 시각 흉내.
+        static let tooltipPaddingH: CGFloat = 8
+        static let tooltipPaddingV: CGFloat = 4
+        /// `.topTrailing` alignment 기준 — overlay top edge 위치 = content top + offsetY. 버튼 height 16 + gap 6 = 22pt.
+        /// 버튼 (16pt) 을 완전히 아래로 비켜 박음 — overlay 가 버튼 영역을 가리지 X.
+        static let tooltipOffsetY:  CGFloat = 22
     }
 
     // MARK: - Radius
@@ -596,6 +617,9 @@ enum DesignTokens {
         static let lg:  CGFloat = 8
         static let xl:  CGFloat = 10
         static let xxl: CGFloat = 12
+
+        // TASK-079 — 호버 툴팁 corner radius. macOS NSToolTip ~4pt 정합.
+        static let tooltip: CGFloat = 4
     }
 
     // MARK: - WindowSize
@@ -704,6 +728,9 @@ enum DesignTokens {
 
         // Toast slide-in — HTML L38-41
         static let toastSlideIn: TimeInterval = 0.25
+
+        // TASK-079 — 호버 툴팁 fade in/out. clipRowSelectionFade (0.12) 정합 — popover 안 짧은 시각 전이 일관성.
+        static let tooltipFade: TimeInterval = 0.12
     }
 }
 

@@ -87,4 +87,8 @@ enum Constants {
     // UserDefaults 노출 X — 사용자 환경설정 영역 비공개. 향후 필요 시 코드 한 줄 수정으로 조정. FEATURES §3-8 단일 진실.
     // 2026-05-23 — 2.0 → 0.6 단축 (TASK-055 fix-3, 사용자 결정).
     static let clipDetailHoverDelaySeconds: TimeInterval = 0.6
+
+    // TASK-079 — popover 상단 버튼 호버 툴팁 발화 지연. `.help()` 가 not-key panel 환경에서 미발화 → SwiftUI overlay 자체 구현으로 우회.
+    // macOS 시스템 NSToolTip 표준 ~500-800ms 정합 — 0.8s 채택. 보조 안내성 툴팁이므로 의도적 호버 신호 필요 (clipDetailHoverDelaySeconds 0.6s 보다 약간 김 — 상세 sub-window 가 *정보 표시*이므로 빠른 진입이 합리적, 툴팁은 *보조 안내*).
+    static let hoverTooltipDelaySeconds: TimeInterval = 0.8
 }
