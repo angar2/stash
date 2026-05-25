@@ -87,7 +87,7 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleCapture()
             }
-            .help(viewModel.captureEnabled ? L10n("tooltip.capture.disable") : L10n("tooltip.capture.enable"))
+            .hoverTooltip(viewModel.captureEnabled ? L10n("tooltip.capture.disable") : L10n("tooltip.capture.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: captureToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.captureEnabled)
             .allowsHitTesting(!isInteractionDisabled)
@@ -113,7 +113,7 @@ struct PopoverHeaderView: View {
                 guard !isInteractionDisabled else { return }
                 viewModel.toggleKeepOpenAfterAction()
             }
-            .help(viewModel.keepOpenAfterAction ? L10n("tooltip.keepOpen.disable") : L10n("tooltip.keepOpen.enable"))
+            .hoverTooltip(viewModel.keepOpenAfterAction ? L10n("tooltip.keepOpen.disable") : L10n("tooltip.keepOpen.enable"))
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: keepOpenToggleHovered)
             .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: viewModel.keepOpenAfterAction)
             .allowsHitTesting(!isInteractionDisabled)

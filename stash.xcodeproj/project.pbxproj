@@ -103,11 +103,13 @@
 		AEC85CC1FAB99CF5BB37353C /* PopoverHotkeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1EC507344EB93C02DA1DB0 /* PopoverHotkeyTests.swift */; };
 		B133FB29F2DE2D13E8CC592D /* AccentColorModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7393E99FED9F8F88FCBA97A9 /* AccentColorModeTests.swift */; };
 		B20C0B3764BA11E1C693C9EF /* PinSidebarHeightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE81430772D73A904021906 /* PinSidebarHeightTests.swift */; };
+		A4E5F6B789C012D34567890E /* HoverTooltipControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F6E7A89BC012D34567890F /* HoverTooltipControllerTests.swift */; };
 		B27FAC7FD17D31C127F9E96A /* KeyboardShortcutsRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E908DDD10A21E78579E39EF /* KeyboardShortcutsRegistrar.swift */; };
 		B2E1ECFF4B7315DA2E05F011 /* GeneralTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF3D4FD25B50CFB057A8B27 /* GeneralTab.swift */; };
 		B3C8AD19ED78CE098BA384A2 /* PopoverPanelMaskedCornersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B102F4B10CEF166C7FD5DD /* PopoverPanelMaskedCornersTests.swift */; };
 		B40725A415049D5FD523C8BF /* ShortcutsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CB621779FF8D98D7FAD107 /* ShortcutsTab.swift */; };
 		B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */; };
+		B79A1B23C45D6789E0F12345 /* HoverTooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79D5E67F89A0B12C34D5E78 /* HoverTooltip.swift */; };
 		BA937B228044131CE612EA3B /* ClipMetaFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ECD9ADE15751417058B4D3 /* ClipMetaFooterView.swift */; };
 		CB7AF23C569A4635848D9E74 /* ScrollableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94341795AFA74E278E3CD801 /* ScrollableTextView.swift */; };
 		BAC9E1C25BA70982A8E01256 /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C91522719500FA76B373310 /* PasteMode.swift */; };
@@ -196,6 +198,7 @@
 		379F6ECA97AD0E7655561FC7 /* NotificationCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenter.swift; sourceTree = "<group>"; };
 		37B7B8E4905EACA02E1A82F2 /* V3_AddPinnedAt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V3_AddPinnedAt.swift; sourceTree = "<group>"; };
 		3CE81430772D73A904021906 /* PinSidebarHeightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarHeightTests.swift; sourceTree = "<group>"; };
+		D5F6E7A89BC012D34567890F /* HoverTooltipControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverTooltipControllerTests.swift; sourceTree = "<group>"; };
 		3EE324DF8C54B8E453C156DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3EF3D4FD25B50CFB057A8B27 /* GeneralTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralTab.swift; sourceTree = "<group>"; };
 		3FB7C47C462D260CBAC144F0 /* SystemPasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPasteboard.swift; sourceTree = "<group>"; };
@@ -261,6 +264,7 @@
 		A3B102F4B10CEF166C7FD5DD /* PopoverPanelMaskedCornersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelMaskedCornersTests.swift; sourceTree = "<group>"; };
 		A6577C41BC09D20FF8725437 /* V4_AddFilePathsJson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V4_AddFilePathsJson.swift; sourceTree = "<group>"; };
 		A80A56E8923D0A18EB0F7619 /* PinSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarView.swift; sourceTree = "<group>"; };
+		C79D5E67F89A0B12C34D5E78 /* HoverTooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverTooltip.swift; sourceTree = "<group>"; };
 		A81D4D0321EA1FC3A3ED81D7 /* LoginItemServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemServiceTests.swift; sourceTree = "<group>"; };
 		A853A709FB78E43A7D4FC03F /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A8C2523A8FC86D3032EFD079 /* MultiFileClipModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiFileClipModelTests.swift; sourceTree = "<group>"; };
@@ -420,6 +424,7 @@
 				43FF65FE67F610B7433E0597 /* ClipsViewModel.swift */,
 				CA66964C40C39F55E4018818 /* FocusZone.swift */,
 				9633EB9F8D2E8E21EFB055AB /* HistoryPopover.swift */,
+				C79D5E67F89A0B12C34D5E78 /* HoverTooltip.swift */,
 				45E443A998D3F1BCA8FD6A13 /* KeyablePanel.swift */,
 				F02EA779802CE2D68EA428CE /* KeyboardHintsView.swift */,
 				0C2639102006CC9123B5C2E6 /* KeyCapView.swift */,
@@ -605,6 +610,7 @@
 				04CCD837F00542D46EFC3AD7 /* ClipsViewModelPinSidebarHoverExitTests.swift */,
 				A2D4DECFBFB72D8C30C654F7 /* ClipsViewModelResizeSyncTests.swift */,
 				10537D5F27411AA8B43FCD5C /* ClipsViewModelTests.swift */,
+				D5F6E7A89BC012D34567890F /* HoverTooltipControllerTests.swift */,
 				66E22A3012CBFDCAB4A1325B /* KeyboardHintsViewTests.swift */,
 				3CE81430772D73A904021906 /* PinSidebarHeightTests.swift */,
 				84222FC42A1AF0C57D2BD3AD /* PopoverAnchorTests.swift */,
@@ -881,6 +887,7 @@
 				6DBA7441BFAC6D8322F2D04D /* PermissionStep.swift in Sources */,
 				D2D9EC2BD4302203DC9FC6A8 /* PermissionToastNotifier.swift in Sources */,
 				B640B3E8037D4D4C3738CBD9 /* PinSidebarView.swift in Sources */,
+				B79A1B23C45D6789E0F12345 /* HoverTooltip.swift in Sources */,
 				4E08A08994CC2F2CBBD582BD /* PlainNSTextField.swift in Sources */,
 				4575F4E749C61ECEAE213F06 /* PopoverAnchor.swift in Sources */,
 				3857B7103C74EC8CA7397168 /* PopoverPanel.swift in Sources */,
@@ -946,6 +953,7 @@
 				D7B43B1D4C83DD0D60E97F42 /* InMemoryClipRepository.swift in Sources */,
 				1DE109826B028D359CE01146 /* InMemoryClipRepositoryTests.swift in Sources */,
 				939CE1B07346CA8E792FE14A /* KeyboardHintsViewTests.swift in Sources */,
+				A4E5F6B789C012D34567890E /* HoverTooltipControllerTests.swift in Sources */,
 				F204BFCFF86A22D975E2ABEC /* AppLanguageServiceTests.swift in Sources */,
 				42E07A1BC12252DE8CCD0A78 /* LoginItemServiceTests.swift in Sources */,
 				566AB976E56EFC855715420C /* MockFileClipService.swift in Sources */,
