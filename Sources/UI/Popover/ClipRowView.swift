@@ -158,9 +158,15 @@ struct ClipRowView: View, Equatable {
     }
 
     /// 이미지 썸네일 — NSImage 로드 성공 시 실제 이미지, 실패 시 그라데이션 박스 (TASK-023).
+    /// TASK-082 Phase 3 — `NSImage(contentsOfFile:)` 풀해상도 로드 → `ThumbnailCache.shared.thumbnail(for:targetSize:)` 다운스케일 + LRU 캐시.
+    /// 메모리 footprint 차단 (200 행 × 풀해상도 누적 약 1.5GB → 다운스케일 누적 약 2.4MB). 반환 타입 `NSImage?` 동일 — if-let 분기 + fallback 구조 100% 보존. PinSidebarView 가 ClipRowView 재사용이라 자연 혜택 (M4) + PopoverPanel.mount rebuild 시도 캐시 hit (M5).
     @ViewBuilder
     private var imageThumbnail: some View {
-        if let path = clip.filePath, let nsImage = NSImage(contentsOfFile: path) {
+        let thumbnailTarget = NSSize(
+            width: DesignTokens.WindowSize.clipImageThumbW,
+            height: DesignTokens.WindowSize.clipImageThumbH
+        )
+        if let path = clip.filePath, let nsImage = ThumbnailCache.shared.thumbnail(for: path, targetSize: thumbnailTarget) {
             Image(nsImage: nsImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
@@ -193,13 +199,25 @@ struct ClipRowView: View, Equatable {
         }
     }
 
+    /// TASK-082 Phase 7 (C1) fix-1 — 디렉토리 여부 캐시. body 평가마다 동기 `FileManager.fileExists` 디스크 I/O 호출 회피.
+    /// `@State + onAppear` 패턴이 1-frame `doc → folder` flicker 가능성 → static cache + computed property 동기 반환으로 변경.
+    /// cache miss 시 디스크 I/O 1회 + 박음 / hit 시 즉시 반환. path 가 UUID 파일명이라 *동일 path 재사용* X — stale cache 영향 0.
+    @MainActor
+    private static var directoryCheckCache: [String: Bool] = [:]
+
     /// .file 클립의 path가 폴더인지 일반 파일인지 — fileOriginalPath 우선, 없으면 filePath fallback. 둘 다 없으면 false (doc 아이콘).
+    /// TASK-082 Phase 7 (C1) — static cache 적용. body 첫 평가 시점에 동기 결정 + 즉시 반환.
     private var isFileADirectory: Bool {
         let path = clip.fileOriginalPath ?? clip.filePath
         guard let path else { return false }
+        if let cached = Self.directoryCheckCache[path] {
+            return cached
+        }
         var isDir: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
-        return exists && isDir.boolValue
+        let result = exists && isDir.boolValue
+        Self.directoryCheckCache[path] = result
+        return result
     }
 
     private var typeIconColor: SwiftUI.Color {
