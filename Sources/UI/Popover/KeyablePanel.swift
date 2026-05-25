@@ -26,18 +26,19 @@ final class KeyablePanel: NSPanel {
         return frameRect
     }
 
-    /// TASK-063 — `windowWillResize` autoFit 분기 결정 순수 함수 (NSWindow/NSPanel 의존 X — 단위 테스트 진입점).
-    /// 환경설정 *높이 자동 조정* (`autoFitClipListHeight`) 토글 상태에 따라 시스템 제안 height 를 어떻게 박을지 결정.
-    /// - autoFit `false`: `proposedHeight` 그대로 통과 (기존 동작 — TASK-054 height 1행 snap 흐름 진입).
-    /// - autoFit `true`: 사용자 height 드래그 시도 무시. `measuredFittingHeight` (width drag wrap 추종 fitting) 우선 → nil 시 `currentHeight` (안전망 — popover 미추종 유지).
+    /// TASK-077 — `windowWillResize` autoFit cap 적용 순수 함수 (NSWindow/NSPanel 의존 X — 단위 테스트 진입점).
+    /// 사용자 요구: popover 사이즈 변경은 *언제나 가능*. 단 autoFit ON 일 때 *클립 데이터 수 기반 추적 높이* (= measuredFittingHeight) *초과* 시도만 차단.
+    /// - autoFit `false`: `proposedHeight` 그대로 통과 (기존 TASK-054 1행 snap + clipsPerPage 동기화 흐름).
+    /// - autoFit `true` + measured 있음: `min(proposedHeight, measured)` 반환 — proposedHeight ≤ cap 자유 / cap 초과 시도 시 cap 에서 멈춤.
+    /// - autoFit `true` + measured nil: `proposedHeight` 그대로 (안전망 — cap 측정 불가 시 자유 통과).
     static func resolveResizeHeight(
         autoFit: Bool,
         proposedHeight: CGFloat,
-        currentHeight: CGFloat,
         measuredFittingHeight: CGFloat?
     ) -> CGFloat {
         guard autoFit else { return proposedHeight }
-        return measuredFittingHeight ?? currentHeight
+        guard let cap = measuredFittingHeight else { return proposedHeight }
+        return min(proposedHeight, cap)
     }
 
     /// TASK-054 — edge resize 1행 snap 순수 함수 (NSEvent 의존 X — 단위 테스트 진입점).
