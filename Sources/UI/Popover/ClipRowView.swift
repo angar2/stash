@@ -7,7 +7,6 @@ struct ClipRowView: View, Equatable {
     let clip: Clip
     let isSelected: Bool
     let isFocused: Bool      // focusZone === "clip" 일 때만 시각 활성
-    let isFlashing: Bool
     let mode: PopoverInvocationMode
     /// 시간 라벨 표시 여부 — Pin 사이드바(220 너비) 안에서는 false 박아 본문 truncate 완화 (TASK-019 fix 3차 B8).
     var showTimeLabel: Bool = true
@@ -30,7 +29,6 @@ struct ClipRowView: View, Equatable {
         lhs.clip == rhs.clip &&
         lhs.isSelected == rhs.isSelected &&
         lhs.isFocused == rhs.isFocused &&
-        lhs.isFlashing == rhs.isFlashing &&
         lhs.mode == rhs.mode &&
         lhs.showTimeLabel == rhs.showTimeLabel &&
         lhs.searchQuery == rhs.searchQuery
@@ -84,8 +82,6 @@ struct ClipRowView: View, Equatable {
             }
         }
         // TASK-037 fix-16 — visuallySelected animation 폐기. 호버 시 highlight 가 120ms fade 거쳐서 *마우스 지나간 후 뒤늦게 색 변경* 인식. 즉시 highlight 박힘.
-        // isFlashing animation 은 paste flash 시각 효과라 유지.
-        .animation(.easeInOut(duration: DesignTokens.Animation.clipRowSelectionFade), value: isFlashing)
         // TASK-027 — 활성 행 frame 을 popover coordinateSpace 에 게시. 비활성 행은 .zero (PreferenceKey reduce 가 ignore).
         .background(
             GeometryReader { proxy in
@@ -413,9 +409,7 @@ struct ClipRowView: View, Equatable {
     // MARK: - Background / Border
     @ViewBuilder
     private var rowBackground: some View {
-        if isFlashing {
-            DesignTokens.Colors.pasteFlash
-        } else if visuallySelected {
+        if visuallySelected {
             LinearGradient(
                 colors: [DesignTokens.Colors.clipRowSelectionTop, DesignTokens.Colors.clipRowSelectionBottom],
                 startPoint: .top, endPoint: .bottom
@@ -429,10 +423,7 @@ struct ClipRowView: View, Equatable {
 
     @ViewBuilder
     private var rowBorder: some View {
-        if isFlashing {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous)
-                .stroke(DesignTokens.Colors.pasteFlashBorder, lineWidth: 0.5)
-        } else if visuallySelected {
+        if visuallySelected {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous)
                 .stroke(DesignTokens.Colors.clipRowSelectionBorder, lineWidth: 0.5)
         }

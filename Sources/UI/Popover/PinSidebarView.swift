@@ -27,7 +27,6 @@ struct PinSidebarView: View {
                             clip: clip,
                             isSelected: viewModel.pinSelectedIdx == idx,
                             isFocused: viewModel.focusZone == .pin,
-                            isFlashing: viewModel.flashedClipId == clip.id,
                             mode: mode,
                             showTimeLabel: false,
                             searchQuery: "",  // TASK-035 — Pin 사이드바는 검색 결과 영역 아님. UX-UI §7-3 적용 범위 제외.

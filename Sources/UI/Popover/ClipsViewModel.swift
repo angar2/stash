@@ -27,7 +27,6 @@ final class ClipsViewModel {
         }
     }
     // TASK-025 — `searchInputActive` 폐기. 검색바 always-active 정책으로 활성 단계 개념 제거.
-    var flashedClipId: UUID?              // paste 직후 플래시 대상
     /// TASK-024 — Accessibility 권한 게이트 state. `PermissionService.statusPublisher` 구독으로 Composition Root 가 갱신. 권한 X 시 ⌘V 비활성 (PopoverPanel.dispatch 게이트) + 힌트바 회색조 (KeyboardHintsView 분기).
     var accessibilityGranted: Bool = false
     var pinSidebarOpen: Bool = false {    // Pin 사이드 펼침 여부
@@ -537,7 +536,6 @@ final class ClipsViewModel {
         let effectiveMode: PasteMode = (accessibilityGranted && autoPasteEnabled) ? .autoPaste : .copyBack
         do {
             try await pasteService.paste(clip: clip, mode: effectiveMode)
-            triggerPasteFlash(for: clip.id)
             publishPasteToast(for: clip, mode: effectiveMode)
         } catch {
             Logger.ui.error("ClipsViewModel.paste error: \(error.localizedDescription, privacy: .public)")
@@ -562,7 +560,6 @@ final class ClipsViewModel {
         Logger.ui.info("Copy invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public) type=\(clip.type.rawValue, privacy: .public)")
         do {
             try await pasteService.paste(clip: clip, mode: .copyBack)
-            triggerPasteFlash(for: clip.id)
             publishCopyToast()
         } catch {
             Logger.ui.error("ClipsViewModel.copy error: \(error.localizedDescription, privacy: .public)")
@@ -745,14 +742,6 @@ final class ClipsViewModel {
         }
         if selectedIdx >= count {
             selectedIdx = count - 1
-        }
-    }
-
-    private func triggerPasteFlash(for id: UUID) {
-        flashedClipId = id
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(DesignTokens.Animation.pasteFlashDuration * 1_000_000_000))
-            if flashedClipId == id { flashedClipId = nil }
         }
     }
 
