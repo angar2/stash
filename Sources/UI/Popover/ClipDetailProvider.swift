@@ -113,6 +113,14 @@ extension Clip {
         }
         return nil // 텍스트 / 메모리 비트맵 이미지
     }
+
+    /// 본 클립의 detail sub-window 가 *메타 라인* (글자수 또는 복사 위치) 박는지 여부 — 단일 진실 소스 (TASK-076 Phase 4 fix).
+    /// `ClipDetailPanelView.contentMaxHeight` + `PopoverWindow.showClipDetailPanel` extraH 계산 둘 다 본 컴퓨티드 호출 → 정책 단일 진실. 짧은 텍스트 panel height 산정 정합 보장.
+    /// 텍스트 클립 (body 있음) → 글자수 라인 / 그 외 → `clipDetailCopyLocationState` 따라감.
+    var hasClipDetailMetaLine: Bool {
+        if type == .text && (body?.isEmpty == false) { return true }
+        return clipDetailCopyLocationState != nil
+    }
 }
 
 /// 복사 위치 라인 (TASK-039) — 단일파일/다중파일/Finder ⌘C 이미지 본문 마지막에 박힘 (ScrollView 밖).
@@ -157,6 +165,50 @@ struct CopyLocationLine: View {
                 .italic()
                 .foregroundStyle(DesignTokens.Colors.toastWarn)
         }
+    }
+}
+
+/// 텍스트 클립 detail sub-window 메타 라인 — 본문 글자수 표시 (TASK-076 Phase 4).
+/// `CopyLocationLine` 시각 구조와 동일 (DesignTokens padding / height / divider 보더 / typography 토큰 정합).
+/// 값 = `String.count` (Swift Character — 이모지·한글 1자 단위) × `NumberFormatter.decimal` 천단위 구분.
+/// 텍스트 클립 전용 — 파일/이미지 클립은 `CopyLocationLine` 사용 (배타).
+struct CharacterCountLine: View {
+    let count: Int
+    /// TASK-073 정합 — 언어 변경 시 body 재평가 → "글자수" / "Characters" 즉시 갱신.
+    @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
+
+    private static let numberFormatter: NumberFormatter = {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        return nf
+    }()
+
+    private var formattedValue: String {
+        let formatted = Self.numberFormatter.string(from: NSNumber(value: count)) ?? "\(count)"
+        return String(format: L10n("clipDetail.characterCount.value"), formatted)
+    }
+
+    var body: some View {
+        let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(L10n("clipDetail.characterCount.label"))
+                .font(DesignTokens.Typography.clipMetaLocationLabel)
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            Text(formattedValue)
+                .font(DesignTokens.Typography.clipMetaLocationPath)
+                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DesignTokens.Spacing.clipMetaPadH)
+        .padding(.vertical, DesignTokens.Spacing.clipMetaPadV)
+        .frame(height: DesignTokens.Spacing.clipMetaLocationBlockHeight)
+        .background(
+            // 상단 점선 보더 — 본문 영역과 시각 분리 (CopyLocationLine 정합)
+            DesignTokens.Colors.divider.opacity(0.6)
+                .frame(height: 0.5)
+                .frame(maxHeight: .infinity, alignment: .top)
+        )
     }
 }
 
@@ -273,34 +325,34 @@ struct TextClipDetailProvider: ClipDetailProvider {
         AnyView(TextDetailContentView(body: clip.body ?? "", searchQuery: searchQuery))
     }
 
-    /// 본문 자체 height raw 추정 — `NSAttributedString.boundingRect` 로 *실제 wrap 후 height* 측정 (TASK-039 fix).
-    /// 기존 `\n` count 기반 추정은 *긴 한 줄 텍스트의 wrap* 미고려로 panel height 가 *제각각* 표시 미흡 → 정확 측정으로 정합.
+    /// 본문 자체 height raw 추정 — `NSLayoutManager.usedRect(for:)` 단독 측정 (TASK-076).
+    /// `ScrollableTextView` 의 NSTextView 렌더 엔진과 동일 path 로 측정/렌더 단일 엔진 일관성 보장. boundingRect 대비 큰 본문 line wrap 정확도 ↑.
     /// padding 가산 X (PanelView 책임).
     func preferredHeight(for clip: Clip) -> CGFloat {
         let body = clip.body ?? ""
         guard !body.isEmpty else { return 0 }
         let contentWidth = DesignTokens.WindowSize.clipDetailWidth
             - 2 * DesignTokens.Spacing.clipDetailPadding
-        // .clipBody = Font.system(size: 13, weight: .medium) — NSFont 정합
+        // .clipBody = Font.system(size: 13, weight: .medium) — NSFont 정합 (ScrollableTextView 와 동일 토큰)
         let font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        let attributes: [NSAttributedString.Key: Any] = [.font: font]
-        let attrString = NSAttributedString(string: body, attributes: attributes)
-        let bounding = attrString.boundingRect(
-            with: CGSize(width: contentWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading]
-        )
-        return ceil(bounding.height)
+        let storage = NSTextStorage(string: body, attributes: [.font: font])
+        let layoutManager = NSLayoutManager()
+        let container = NSTextContainer(size: NSSize(width: contentWidth, height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = 0
+        storage.addLayoutManager(layoutManager)
+        layoutManager.addTextContainer(container)
+        layoutManager.ensureLayout(for: container)
+        return ceil(layoutManager.usedRect(for: container).height)
     }
 }
 
-/// 텍스트 클립 본문 SwiftUI — raw content (자체 ScrollView·외부 padding 박지 X, PanelView 가 책임).
-/// `.textSelection(.enabled)` 로 SwiftUI 시스템 텍스트 선택·복사 활성 (NSTextField 활성화 X — 본체 popover ⌘C/⌘V 동작 영향 X).
-/// TASK-049 — 본문 전체 텍스트의 검색어 매칭 구간을 `ClipRowView.highlightedAttributedString` 으로 시각 강조.
+/// 텍스트 클립 본문 SwiftUI — `ScrollableTextView` (NSViewRepresentable + NSTextView + NSScrollView) wrap (TASK-076).
+/// SwiftUI `Text(AttributedString)` 의 단일 노드 layout 한계 회피 — 대용량 텍스트 (70000자+) lazy glyph layout 으로 freeze 차단.
+/// `ScrollableTextView` 가 자체 NSScrollView 동반 → `ClipDetailPanelView` 의 외부 SwiftUI ScrollView bypass 분기 정합 (`isTextClip` 가드).
+/// TASK-049 — 검색어 매칭 구간은 `ScrollableTextView` 안에서 `NSAttributedString` attribute (foregroundColor + semibold) 로 시각 강조 (SwiftUI 영역 `ClipRowView.highlightedAttributedString` 정합).
 private struct TextDetailContentView: View {
     let body_: String
     let searchQuery: String
-    /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 매칭 하이라이트 색상 즉시 갱신.
-    @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
 
     init(body: String, searchQuery: String) {
         self.body_ = body
@@ -308,14 +360,8 @@ private struct TextDetailContentView: View {
     }
 
     var body: some View {
-        let _ = accentColorModeRaw  // SwiftUI 의존성 등록
-        return Text(ClipRowView.highlightedAttributedString(
-            body_,
-            query: searchQuery,
-            baseFont: DesignTokens.Typography.clipBody
-        ))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .textSelection(.enabled)
+        ScrollableTextView(body: body_, searchQuery: searchQuery)
+            .frame(maxWidth: .infinity)
     }
 }
 

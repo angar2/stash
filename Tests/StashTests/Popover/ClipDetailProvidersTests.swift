@@ -129,6 +129,36 @@ struct ClipDetailProvidersTests {
         #expect(h200 > DesignTokens.WindowSize.clipDetailMaxHeight)
     }
 
+    @Test("Text preferredHeight — 빈 body → 0 반환 (TASK-076 회귀 차단)")
+    func textPreferredHeightEmptyBody() {
+        let provider = TextClipDetailProvider()
+        #expect(provider.preferredHeight(for: makeClip(type: .text, body: "")) == 0)
+        #expect(provider.preferredHeight(for: makeClip(type: .text, body: nil)) == 0)
+    }
+
+    @Test("Text preferredHeight — 70000자 대용량 body 1초 안 반환 (TASK-076 freeze 회귀 차단)")
+    func textPreferredHeightLargeBodyWithinBudget() {
+        let provider = TextClipDetailProvider()
+        // 약 70000자 자연 영문 본문 — wrap 정상 동작 검증.
+        let body = String(repeating: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ", count: 1250)
+        let clip = makeClip(type: .text, body: body)
+        let start = Date()
+        let h = provider.preferredHeight(for: clip)
+        let elapsed = Date().timeIntervalSince(start)
+        #expect(h > 0, "70000자 본문 height > 0 기대 (NSLayoutManager 측정)")
+        #expect(elapsed < 1.0, "70000자 preferredHeight 1초 안 반환 기대 (TASK-076 freeze 회귀 차단). 실제 \(elapsed)s")
+    }
+
+    @Test("Text preferredHeight — body 길이 비례 단조 증가 (TASK-076 — NSLayoutManager 측정 정합)")
+    func textPreferredHeightProportionalToBodySize() {
+        let provider = TextClipDetailProvider()
+        let small = String(repeating: "Lorem ipsum dolor sit amet. ", count: 50)    // ~1400자
+        let large = String(repeating: "Lorem ipsum dolor sit amet. ", count: 500)   // ~14000자
+        let hSmall = provider.preferredHeight(for: makeClip(type: .text, body: small))
+        let hLarge = provider.preferredHeight(for: makeClip(type: .text, body: large))
+        #expect(hLarge > hSmall, "10× 길이 본문 height > 짧은 본문 height 기대. 실제 small=\(hSmall) / large=\(hLarge)")
+    }
+
     @Test("Image preferredHeight — NSImage 로드 실패 시 16:10 fallback aspectRatio (본문 자체 height only — TASK-039 fix2)")
     func imagePreferredHeightAspectRatioFallback() {
         let provider = ImageClipDetailProvider()

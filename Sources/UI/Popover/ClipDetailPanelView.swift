@@ -35,13 +35,20 @@ struct ClipDetailPanelView: View {
         clip.clipDetailCopyLocationState
     }
 
-    /// 본문 ScrollView max height — `clipDetailMaxHeight - clipMetaFooterHeight - 2 × clipDetailPadding (top + bottom) - (locationState 있을 때 clipMetaLocationBlockHeight)`.
+    /// TASK-076 — 텍스트 클립은 `ScrollableTextView` 가 자체 NSScrollView 동반 (NSTextView lazy glyph layout). 외부 SwiftUI ScrollView wrapping bypass 가드 — 중첩 시 스크롤바 2 개 + SwiftUI ScrollView 가 contentSize 전체 측정 트리거로 lazy 효과 무력화.
+    private var isTextClip: Bool {
+        clip.type == .text && (clip.body?.isEmpty == false)
+    }
+
+    /// 본문 ScrollView max height — `clipDetailMaxHeight - clipMetaFooterHeight - 2 × clipDetailPadding (top + bottom) - (메타 라인 있을 때 clipMetaLocationBlockHeight)`.
+    /// 메타 라인 = `copyLocationState != nil` (파일/이미지 — 복사 위치) 또는 `isTextClip` (텍스트 — 글자수 / TASK-076 Phase 4). 동일 블록 height 사용 (시각 폼 정합).
     /// ScrollView.padding(clipDetailPadding) 가 균일 적용되어 *컨테이너 height = ScrollView height + 2 × clipDetailPadding*. PopoverWindow 의 totalH 계산과 정합.
     private var contentMaxHeight: CGFloat {
         var h = DesignTokens.WindowSize.clipDetailMaxHeight
             - DesignTokens.Spacing.clipMetaFooterHeight
             - 2 * DesignTokens.Spacing.clipDetailPadding // top + bottom
-        if copyLocationState != nil {
+        // TASK-076 Phase 4 fix — Clip extension 단일 진실 소스 호출 (PopoverWindow extraH 계산과 정합)
+        if clip.hasClipDetailMetaLine {
             h -= DesignTokens.Spacing.clipMetaLocationBlockHeight
         }
         return max(h, 0)
@@ -58,14 +65,22 @@ struct ClipDetailPanelView: View {
                     .frame(width: DesignTokens.Spacing.clipDetailArrowWidth)
             }
             VStack(spacing: 0) {
-                // 1. 본문 — ScrollView wrapping + max height 클램프 (내부 스크롤). 외부 padding 균일 적용 (상하좌우 clipDetailPadding=12). Provider 본문은 raw content.
-                ScrollView(.vertical, showsIndicators: true) {
+                // 1. 본문 — 텍스트 클립은 ScrollableTextView 자체 NSScrollView (TASK-076) 라 외부 SwiftUI ScrollView bypass. 그 외 (이미지 / 단일파일 / 다중파일) 는 기존 SwiftUI ScrollView wrapping + max height 클램프. 외부 padding 균일 적용 (상하좌우 clipDetailPadding=12).
+                if isTextClip {
                     content
+                        .frame(maxWidth: .infinity, maxHeight: contentMaxHeight)
+                        .padding(DesignTokens.Spacing.clipDetailPadding)
+                } else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        content
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: contentMaxHeight)
+                    .padding(DesignTokens.Spacing.clipDetailPadding)
                 }
-                .frame(maxWidth: .infinity, maxHeight: contentMaxHeight)
-                .padding(DesignTokens.Spacing.clipDetailPadding)
-                // 2. (해당 시) 복사 위치 라인 — ScrollView 밖, 항상 보임. 자체 padding 박힘 (clipMetaPadH).
-                if let state = copyLocationState {
+                // 2. 메타 라인 — ScrollView 밖, 항상 보임. 자체 padding 박힘 (clipMetaPadH). 텍스트 클립 (TASK-076 Phase 4) = 글자수 라인 / 파일·이미지 = 복사 위치 라인 (배타).
+                if isTextClip {
+                    CharacterCountLine(count: clip.body?.count ?? 0)
+                } else if let state = copyLocationState {
                     CopyLocationLine(state: state)
                 }
                 // 3. 메타 footer — 항상 보임. 자체 padding 박힘 (clipMetaPadH / clipMetaPadV).
