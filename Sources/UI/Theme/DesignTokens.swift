@@ -444,6 +444,8 @@ enum DesignTokens {
 
         // popover 내부 (popover.jsx L282 padding: 6 + L315 wordmark padding 8/12/2 + L329 search container padding 4/6/8)
         static let popoverPadding:        CGFloat = 6
+        // TASK-080 — popoverBody 마지막 자식 ↔ popover 외곽 추가 outer bottom spacing. rowOuterHorzInset(6) 좌우 outer 패턴과 정합 (값 동일 6pt). 자식 자체 padding 손대지 X — background 두께 변경 0. hintBar ON/OFF 양쪽 케이스 동시 시각 대칭 (ON: 좌우 16=하단 6+4+6=16 / OFF: 좌우 12=하단 6+6=12).
+        static let popoverPaddingBottomExtra: CGFloat = 6
         /// popover 내부 모든 행(검색·클립·Pin·환경설정)의 *공통* 좌우 outer inset (TASK-018 Phase 7).
         /// hover 시 background 활성 영역의 가로 폭을 4 영역 모두 일관되게 박는 단일 진실 소스. 검색 박스 영역과 일치.
         static let rowOuterHorzInset:     CGFloat = 6

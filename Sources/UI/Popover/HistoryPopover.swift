@@ -70,6 +70,8 @@ struct HistoryPopover: View {
         }
         // TASK-054 fix-2 — root width 고정 (`frame(width: popoverWidth)`) → `maxWidth: .infinity` 로 전환. 시스템 표준 NSWindow resize 도입 (TASK-054 fix-1) 으로 NSPanel width 가 동적이라 *SwiftUI body 가 NSPanel.contentView fill* 되어야 자식들 (검색바·클립행·핀행·환경설정행·힌트바) 의 `Spacer()`·`frame(maxWidth: .infinity, alignment: .leading)` 패턴이 *부모 폭 따라 좌/우 정렬* 자연 적용.
         .padding(DesignTokens.Spacing.popoverPadding)
+        // TASK-080 — popover root 외부 bottom spacing 추가. 마지막 자식 (hintBar OFF=preferencesRow / ON=KeyboardHintsView) ↔ popover 외곽 시각 거리를 좌우 outer 패턴 (popoverPadding + rowOuterHorzInset/hintsBarPaddingHorz) 과 동일하게 정합. 자식 자체 padding 손대지 X → background 두께 변경 0.
+        .padding(.bottom, DesignTokens.Spacing.popoverPaddingBottomExtra)
         .frame(maxWidth: .infinity)
         // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 popoverBody root 에 박음 (ScrollView 박으면 검색바/Pin/환경설정/힌트 offset 어긋남).
         // ClipRowView 의 GeometryReader 가 게시하는 frame 이 NSPanel contentView top 기준 (top-down) 이 되어 NSPanel.frame.height 와 정합.
