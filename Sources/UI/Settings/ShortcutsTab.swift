@@ -223,7 +223,11 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     let onChange: (PopoverShortcut?) -> Void
 
     private let label: NSTextField
-    private var monitor: Any?
+    /// TASK-083 — keyDown / mouseDown 두 monitor 분리. focus-out 패턴 (Recorder 영역 바깥 클릭 시 stop) 위해 mouseDown localMonitor 신규.
+    private var keyMonitor: Any?
+    private var mouseMonitor: Any?
+    /// TASK-083 — Settings 윈도우 비활성 시 자동 stop. localMonitor 가 잡지 못하는 외부 앱/Dock 활성 케이스 보완.
+    nonisolated(unsafe) private var resignKeyObserver: NSObjectProtocol?
     private var isRecording: Bool = false
     /// TASK-082 Phase 9 (P3) — Swift 6 strict concurrency nonisolated deinit 안 property 접근 위해 `nonisolated(unsafe)` 박음. NSObjectProtocol 자체 Sendable 부합 X, NotificationCenter.removeObserver 는 thread-safe (Foundation 표준).
     nonisolated(unsafe) private var observer: NSObjectProtocol?
@@ -272,9 +276,13 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     // TASK-082 Phase 9 (P3) — 명시 cleanup 박음. PreferencesWindow 가 lazy 생성 + 재사용 (`isReleasedWhenClosed = false`) 라 실제 deinit 흐름은 *process termination* 만 — 동작 영향 0 이지만 Swift 정합.
+    // TASK-083 — resignKeyObserver 도 cleanup. NSEvent monitor (keyMonitor/mouseMonitor) 는 recording 활성 상태 view 소멸 케이스에만 잔존 — 정상 흐름 (didResignKey → stopRecording) 자연 정리, process termination 시 시스템 정리.
     deinit {
         if let observer {
             NotificationCenter.default.removeObserver(observer)
+        }
+        if let resignKeyObserver {
+            NotificationCenter.default.removeObserver(resignKeyObserver)
         }
     }
 
@@ -315,11 +323,54 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     private func startRecording() {
         isRecording = true
         updateLabel()
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self else { return event }
             return Self.handleKeyDown(event: event, recorder: self) ? nil : event
         }
+        // TASK-083 — focus-out (Recorder 영역 바깥 클릭) 시 stop. 이벤트는 *그대로 전파* (return event) → 다른 Recorder 클릭 시 B start 자연 흐름 보장.
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self else { return event }
+            let recorderBoundsInWindow = self.convert(self.bounds, to: nil)
+            if Self.isFocusOutClick(
+                eventLocationInWindow: event.locationInWindow,
+                eventWindow: event.window,
+                recorderWindow: self.window,
+                recorderBoundsInWindow: recorderBoundsInWindow
+            ) {
+                Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — outside mouseDown → stop")
+                self.stopRecording()
+            }
+            return event
+        }
+        // TASK-083 — Settings 윈도우 비활성 (Dock / 다른 앱 활성화) 시 자동 stop. localMonitor 가 잡지 못하는 외부 경로 보완.
+        resignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: self.window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.isRecording else { return }
+                Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — window didResignKey → stop")
+                self.stopRecording()
+            }
+        }
         Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — recording started")
+    }
+
+    /// TASK-083 — Recorder 영역 외부 클릭 판정 (localMonitor 핵심 로직 단위 테스트 가능 형태로 분리). 같은 윈도우 안 + Recorder bounds 밖 = focus-out trigger.
+    /// - eventLocationInWindow: `NSEvent.locationInWindow` (윈도우 좌표계)
+    /// - eventWindow: `NSEvent.window` — 이벤트 발생 윈도우
+    /// - recorderWindow: Recorder view 가 박힌 윈도우
+    /// - recorderBoundsInWindow: Recorder bounds 를 윈도우 좌표계로 변환한 rect
+    @MainActor
+    internal static func isFocusOutClick(
+        eventLocationInWindow: CGPoint,
+        eventWindow: NSWindow?,
+        recorderWindow: NSWindow?,
+        recorderBoundsInWindow: CGRect
+    ) -> Bool {
+        guard eventWindow === recorderWindow else { return false }
+        return !recorderBoundsInWindow.contains(eventLocationInWindow)
     }
 
     @MainActor
@@ -343,9 +394,17 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
 
     private func stopRecording() {
         isRecording = false
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
+        }
+        if let mouseMonitor {
+            NSEvent.removeMonitor(mouseMonitor)
+            self.mouseMonitor = nil
+        }
+        if let resignKeyObserver {
+            NotificationCenter.default.removeObserver(resignKeyObserver)
+            self.resignKeyObserver = nil
         }
         updateLabel()
         Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — recording stopped")
