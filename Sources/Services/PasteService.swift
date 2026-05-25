@@ -78,29 +78,33 @@ final class PasteService {
             pasteboard.setString(body, forType: .string)
 
         case .image:
-            guard let filePath = clip.filePath else {
-                Logger.paste.error("Paste failed: image clip has nil filePath, clipId=\(clip.id.uuidString, privacy: .public)")
-                throw PasteError.imageDataLoadFailed
-            }
-            let url = URL(fileURLWithPath: filePath)
-            guard let nsImage = NSImage(contentsOf: url) else {
-                Logger.paste.error("Paste failed: NSImage load failed at \(filePath, privacy: .public)")
-                throw PasteError.imageDataLoadFailed
-            }
-            // TASK-023 사용자 검수 회귀 (d) — Finder 폴더 ⌘V 호환을 위해 fileOriginalPath 있고 *파일 실재* 시 file URL 도 함께 박음.
-            // 메모리 비트맵(스크린샷 / 브라우저 이미지 우클릭 복사) 은 fileOriginalPath nil → image data 만 (기존 동작).
-            let originalFileURL = clip.fileOriginalPath
-                .flatMap { FileManager.default.fileExists(atPath: $0) ? URL(fileURLWithPath: $0) : nil }
+            // TASK-082 Phase 5 — autoreleasepool 안에 박아 NSImage + tiff/png Data 인스턴스 일시 회수 강제.
+            // paste 흐름 끝나면 pool drain 시점에 풀해상도 backing store 즉시 회수 — autorelease 잔존 차단 (100MB+ 이미지 paste 시 메모리 잔존 영향 ↓).
+            try autoreleasepool {
+                guard let filePath = clip.filePath else {
+                    Logger.paste.error("Paste failed: image clip has nil filePath, clipId=\(clip.id.uuidString, privacy: .public)")
+                    throw PasteError.imageDataLoadFailed
+                }
+                let url = URL(fileURLWithPath: filePath)
+                guard let nsImage = NSImage(contentsOf: url) else {
+                    Logger.paste.error("Paste failed: NSImage load failed at \(filePath, privacy: .public)")
+                    throw PasteError.imageDataLoadFailed
+                }
+                // TASK-023 사용자 검수 회귀 (d) — Finder 폴더 ⌘V 호환을 위해 fileOriginalPath 있고 *파일 실재* 시 file URL 도 함께 박음.
+                // 메모리 비트맵(스크린샷 / 브라우저 이미지 우클릭 복사) 은 fileOriginalPath nil → image data 만 (기존 동작).
+                let originalFileURL = clip.fileOriginalPath
+                    .flatMap { FileManager.default.fileExists(atPath: $0) ? URL(fileURLWithPath: $0) : nil }
 
-            // TIFF 우선 — 가장 호환성 높음. 실패 시 PNG fallback.
-            if let tiffData = nsImage.tiffRepresentation {
-                writeImagePasteboard(data: tiffData, dataType: .tiff, originalFileURL: originalFileURL)
-            } else if let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
-                      let pngData = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) {
-                writeImagePasteboard(data: pngData, dataType: .png, originalFileURL: originalFileURL)
-            } else {
-                Logger.paste.error("Paste failed: NSImage neither TIFF nor PNG representation available")
-                throw PasteError.imageDataLoadFailed
+                // TIFF 우선 — 가장 호환성 높음. 실패 시 PNG fallback.
+                if let tiffData = nsImage.tiffRepresentation {
+                    writeImagePasteboard(data: tiffData, dataType: .tiff, originalFileURL: originalFileURL)
+                } else if let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
+                          let pngData = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) {
+                    writeImagePasteboard(data: pngData, dataType: .png, originalFileURL: originalFileURL)
+                } else {
+                    Logger.paste.error("Paste failed: NSImage neither TIFF nor PNG representation available")
+                    throw PasteError.imageDataLoadFailed
+                }
             }
 
         case .file:
