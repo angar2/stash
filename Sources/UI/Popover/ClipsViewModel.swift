@@ -428,6 +428,17 @@ final class ClipsViewModel {
         }
     }
 
+    /// TASK-078 — `PopoverWindow.windowWillResize` 의 estimatedHeight 분기 *visual delta* 계산 (순수 함수, NSWindow 의존 X — 단위 테스트 진입점).
+    /// 사용자 인식 = *1 행 단위 시각 변화*. raw 변화량 (`newRaw - current`) 과 별개.
+    /// TASK-057 의도 (raw>cap 축소 jump 시 1 행 시각 축소) + TASK-071 Phase 7 의도 (min/max cap 도달 시 frame 유지) 동시 정합.
+    /// 분기:
+    /// - `newRaw == current` (min/max cap 도달 — `resolveNewClipsPerPageForResize` clamp 결과 변동 X): `0` 반환 → estimatedHeight 유지 (시스템 표준 minSize/maxSize 도달 패턴).
+    /// - else: `signDelta` 반환 → 사용자 인식 ±signDelta 행 시각 변화 (raw>cap 축소 jump 케이스 포함 — newRaw 가 capRows-1 로 jump 동기화 박혀도 시각상 1 행 축소가 사용자 인식 정합).
+    /// 회귀 fix 배경: TASK-071 Phase 7 이 estimatedHeight 를 `(newRaw - current) * snap` 박은 후 raw>cap 축소 jump 케이스 (예: current=50, newRaw=25, signDelta=-1) 에서 estimatedHeight = current_frame + (-25) * 46 = *너무 작은 값* (음수 가능) → NSWindow contentMinSize 박혀 frame 안 줄어듦 → 사용자 들썩거림 회귀. visual delta 분리로 TASK-057 의도 복원.
+    static func resolveVisualResizeDelta(current: Int, newRaw: Int, signDelta: Int) -> Int {
+        return (newRaw == current) ? 0 : signDelta
+    }
+
     /// TASK-037 — UserDefaults 직접 조회 wrapper. SwiftUI 외부 호출용.
     /// TASK-052 — `hintBarVisible` UserDefaults 조회 추가 (default true — 사용자 미설정 시 시각 ON 유지).
     static func effectiveClipListHeightFromUserDefaults(visibleCount: Int, hasPinned: Bool) -> CGFloat {
