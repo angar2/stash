@@ -928,9 +928,12 @@ extension PopoverWindow: NSWindowDelegate {
             Logger.ui.info("PopoverWindow.windowWillResize — clipsPerPage resize sync current=\(current, privacy: .public) signDelta=\(signDelta, privacy: .public) capRows=\(capRows, privacy: .public) newRaw=\(newRaw, privacy: .public)")
             settingsViewModel.setClipsPerPage(newRaw)
         }
-        // TASK-071 Phase 7 — estimatedHeight 박을 때 *실효 변경량* `(newRaw - current)` 박음. 이전 코드 `signDelta` 박혀 clipsPerPage min cap (= Constants.clipsPerPageMin = 1) 도달 후에도 사용자 드래그 따라 frame.height 계속 줄어듦 → popover 시각 깨짐 회귀. min cap 도달 시 newRaw == current → 실효 변경량 0 → frame.height 유지 → 시스템 표준 *maxSize/minSize 도달 후 더 안 줄음* 패턴 정합 (TASK-063 *autoFit ON height 드래그 비활성* 패턴 동일).
-        let effectiveDelta = newRaw - current
-        let estimatedHeight = panel.frame.size.height + CGFloat(effectiveDelta) * snap
+        // TASK-078 — estimatedHeight = *visual delta* × snap. `ClipsViewModel.resolveVisualResizeDelta` 위임.
+        // TASK-057 의도 (raw>cap 축소 jump 시 1 행 시각 축소) + TASK-071 Phase 7 의도 (min/max cap 도달 시 frame 유지) 동시 정합.
+        // 회귀 fix: TASK-071 Phase 7 이 `effectiveDelta = newRaw - current` 박은 후 raw>cap 축소 jump 케이스 (current=50, newRaw=25, signDelta=-1) 에서 estimatedHeight = current_frame + (-25) * 46 = *너무 작은 값* → NSWindow contentMinSize 박혀 frame 안 줄어듦 → 사용자 들썩거림 (raw 50→49→...→26 까지 시각 변화 0, 27 이하부터 1 행씩 줄어듦).
+        // 분기: newRaw == current (min/max cap 도달) → 0 / else → signDelta (사용자 인식 ±1 행 단위, raw jump 무관).
+        let visualDelta = ClipsViewModel.resolveVisualResizeDelta(current: current, newRaw: newRaw, signDelta: signDelta)
+        let estimatedHeight = panel.frame.size.height + CGFloat(visualDelta) * snap
         return NSSize(width: clampedWidth, height: estimatedHeight)
     }
 

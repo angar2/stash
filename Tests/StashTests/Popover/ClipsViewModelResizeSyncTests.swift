@@ -80,4 +80,36 @@ struct ClipsViewModelResizeSyncTests {
         let hidden = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: false, hintBarVisible: false)
         #expect(hidden >= visible)
     }
+
+    // MARK: - TASK-078 — resolveVisualResizeDelta 분기 5종
+
+    @Test("Case V1: raw>cap 축소 jump (current=50, newRaw=25, signDelta=-1 → -1, 핵심 fix 대상)")
+    func testResolveVisualResizeDelta_rawOverCapShrinkJump() {
+        let result = ClipsViewModel.resolveVisualResizeDelta(current: 50, newRaw: 25, signDelta: -1)
+        #expect(result == -1)
+    }
+
+    @Test("Case V2: 다단 step raw>cap 축소 (current=50, newRaw=23, signDelta=-3 → -3)")
+    func testResolveVisualResizeDelta_multiStepShrinkJump() {
+        let result = ClipsViewModel.resolveVisualResizeDelta(current: 50, newRaw: 23, signDelta: -3)
+        #expect(result == -3)
+    }
+
+    @Test("Case V3: cap 미달 정상 축소 (current=20, newRaw=19, signDelta=-1 → -1, 회귀 가드)")
+    func testResolveVisualResizeDelta_normalShrink() {
+        let result = ClipsViewModel.resolveVisualResizeDelta(current: 20, newRaw: 19, signDelta: -1)
+        #expect(result == -1)
+    }
+
+    @Test("Case V4: min cap 도달 (current=1, newRaw=1, signDelta=-1 → 0, TASK-071 의도)")
+    func testResolveVisualResizeDelta_minCapReached() {
+        let result = ClipsViewModel.resolveVisualResizeDelta(current: 1, newRaw: 1, signDelta: -1)
+        #expect(result == 0)
+    }
+
+    @Test("Case V5: max cap 도달 (current=50, newRaw=50, signDelta=+1 → 0, clamp 결과 newRaw==current)")
+    func testResolveVisualResizeDelta_maxCapReached() {
+        let result = ClipsViewModel.resolveVisualResizeDelta(current: 50, newRaw: 50, signDelta: +1)
+        #expect(result == 0)
+    }
 }
