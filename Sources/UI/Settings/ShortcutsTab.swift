@@ -225,7 +225,8 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
     private let label: NSTextField
     private var monitor: Any?
     private var isRecording: Bool = false
-    private var observer: NSObjectProtocol?
+    /// TASK-082 Phase 9 (P3) — Swift 6 strict concurrency nonisolated deinit 안 property 접근 위해 `nonisolated(unsafe)` 박음. NSObjectProtocol 자체 Sendable 부합 X, NotificationCenter.removeObserver 는 thread-safe (Foundation 표준).
+    nonisolated(unsafe) private var observer: NSObjectProtocol?
     /// TASK-065 — hover state. NSTrackingArea 로 mouseEntered/exited 감지 → borderColor + bg 색 분기.
     private var isHovered: Bool = false
     private var trackingArea: NSTrackingArea?
@@ -270,7 +271,12 @@ final class PopoverShortcutRecorderViewCocoa: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // 메뉴바 앱 (LSUIElement) — process termination 시 NotificationCenter 자동 정리. 별도 deinit 불필요 (Swift 6 strict concurrency 회피).
+    // TASK-082 Phase 9 (P3) — 명시 cleanup 박음. PreferencesWindow 가 lazy 생성 + 재사용 (`isReleasedWhenClosed = false`) 라 실제 deinit 흐름은 *process termination* 만 — 동작 영향 0 이지만 Swift 정합.
+    deinit {
+        if let observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
 
     override func mouseDown(with event: NSEvent) {
         if isRecording {
