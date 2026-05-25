@@ -395,6 +395,26 @@ final class ClipsViewModel {
         return max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
     }
 
+    /// TASK-077 — autoFit ON 시 popover 높이 cap 계산.
+    /// 사용자 요구: popover 사이즈 변경 언제나 가능. autoFit ON + *visibleClips.count 기반 추적 높이* 초과 시도만 차단.
+    /// `measured` = 현재 clipsPerPage 기반 SwiftUI body fitting (`measuredFittingHeight`). 이 값에 *추가 행 분량* 더해 cap 산출.
+    /// 추가 행 = `min(visibleCount, capRows) - min(visibleCount, clipsPerPage)` — 화면 cap 도달 시 그 안에서 멈춤.
+    /// 예시: visibleCount=10, clipsPerPage=6, capRows=15 → currentRows=6, targetRows=10, extraRows=4 → cap = measured + 4*46pt.
+    static func computeAutoFitCap(
+        measured: CGFloat,
+        visibleCount: Int,
+        clipsPerPage: Int,
+        capRows: Int,
+        rowHeight: CGFloat = DesignTokens.Spacing.rowMinHeight,
+        rowGap: CGFloat = DesignTokens.Spacing.rowGap
+    ) -> CGFloat {
+        let currentRowsShown = min(visibleCount, clipsPerPage)
+        let targetRowsShown = min(visibleCount, capRows)
+        let extraRows = max(0, targetRowsShown - currentRowsShown)
+        let snap = rowHeight + rowGap
+        return measured + CGFloat(extraRows) * snap
+    }
+
     /// TASK-057 — `PopoverWindow.windowWillResize` 드래그 시 raw `clipsPerPage` 와 화면 cap 정합 보정.
     /// 사용자가 환경설정에서 raw 50 같이 *화면 cap 초과* 설정한 상태에서 popover 테두리 드래그로 축소 시도 → 시각 상 보이는 클립 수 (effective = capRows) 기준 ±1 진행이 사용자 인식과 정합.
     /// 분기:
