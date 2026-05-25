@@ -152,7 +152,8 @@ final class PopoverWindow: NSObject {
 
         // TASK-027 — 클립 상세 sub-window 별도 NSPanel. popover (또는 PinSidebar) 좌측 floating. height 는 Provider.preferredHeight 동적 계산.
         // width = clipDetailWidth (본문) + clipDetailArrowWidth (꼭지 외부 튀어나옴 영역). NSVisualEffectView.maskImage 가 panel 자체를 말풍선 모양으로 잘라냄 (TASK-027 fix).
-        let (dp, dve) = PopoverPanel.make(
+        // TASK-075 — `make` 의 시스템 .titled chrome 이 panel.frame 직사각형 외곽 (본문 + 꼭지 확장 영역 포함) 에 박혀 꼭지가 outline 안쪽에 갇히는 시각 어색 fix. detailPanel 만 borderless 패턴 `makeBubble` 분리. 메인 popover / 핀 사이드바는 `make` 그대로 유지.
+        let (dp, dve) = PopoverPanel.makeBubble(
             width: Self.clipDetailTotalWidth,
             height: DesignTokens.WindowSize.clipDetailMaxHeight
         )

@@ -125,6 +125,39 @@ enum PopoverPanel {
         return (p, ve)
     }
 
+    /// TASK-075 — bubble + arrow 시각 paradigm 패널 헬퍼. 상세 sub-window 전용.
+    /// `make` 와 분리 사유: `make` 는 TASK-070 에서 `.titled` styleMask + 시스템 chrome (corner + border + shadow) 박는 패턴 채택. 메인 popover / 핀 사이드바는 직사각형이라 정합, 그러나 상세 sub-window 는 `NSVisualEffectView.maskImage` 로 panel 자체를 bubble + arrow 모양으로 잘라내는 paradigm (TASK-027) — panel.frame 직사각형 외곽에 시스템 chrome 직사각형 outline 이 박히면 꼭지(arrow) 가 outline 안쪽에 갇혀 시각 어색.
+    /// 해결: styleMask `.borderless + .nonactivatingPanel + .fullSizeContentView` (`.titled` / `.resizable` 제거) + `isOpaque=false` + `backgroundColor=.clear` → 시스템 chrome 박지 않음. `hasShadow=true` 는 transparent panel + alpha mask 기반 → bubble + arrow shape 따라 그림자 자연 정합.
+    /// 공통 정책 (level / hidesOnDeactivate / collectionBehavior / becomesKeyOnlyIfNeeded / acceptsMouseMovedEvents) 은 `make` 와 동등 — popover 동반 시각 컴패니언으로 동일 동작 정책 필요.
+    static func makeBubble(width: CGFloat, height: CGFloat) -> (panel: KeyablePanel, visualEffectView: NSVisualEffectView) {
+        let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
+        let p = KeyablePanel(
+            contentRect: contentRect,
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        p.isOpaque = false
+        p.backgroundColor = .clear
+        p.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.dockWindow)) + 1)
+        p.hasShadow = true
+        p.hidesOnDeactivate = false
+        p.collectionBehavior = [.transient, .fullScreenAuxiliary, .canJoinAllSpaces]
+        p.becomesKeyOnlyIfNeeded = true
+        p.acceptsMouseMovedEvents = true
+
+        // VE 는 maskImage 단독 책임 (PopoverWindow.makeBubbleMaskImage) — cornerRadius / border 박지 않음. mask 영역 밖은 transparent (panel backgroundColor=.clear + isOpaque=false 와 정합) → bubble + arrow shape 가 시각 결과.
+        let ve = NSVisualEffectView(frame: contentRect)
+        ve.material = .popover
+        ve.blendingMode = .behindWindow
+        ve.state = .active
+        ve.isEmphasized = true
+        ve.autoresizingMask = [.width, .height]
+        p.contentView = ve
+
+        return (p, ve)
+    }
+
     /// SwiftUI rootView를 NSVisualEffectView 안 subview로 박음 (autoresizing — NSHostingView intrinsic 영향 차단).
     /// TASK-037 fix-10 — fix-9 의 4-edge constraint + fittingSize 조합이 *경쟁 사이클* 만듦 (NSHostingView intrinsic → NSPanel 자동 contentSize fit ↔ 우리 setFrame). autoresizing 박으면 NSHostingView 가 visualEffectView frame 단순 fill — intrinsic 가 NSPanel.frame 영향 X. PopoverWindow.refreshFrame 의 fittingSize 측정 + setFrame 으로 SwiftUI body intrinsic 과 NSPanel.frame 정확 일치 보장 (fix-7 의 mismatch 해소).
     /// TASK-058 fix-1 — `FirstMouseHostingView` 서브클래스 사용 → popover 전체 영역 *acceptsFirstMouse* 활성. 외부 앱 활성 상태에서 popover 의 클립 행 / 검색바 / 자물쇠 / 일시정지 / 핀 사이드바 등 *모든 view 클릭* 시 첫 클릭에 즉시 액션 처리 (panel key 활성 흡수 차단). 잠금 모드 ON 시 외부 앱 작업 후 popover 복귀 시나리오 정합.
