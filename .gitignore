@@ -2,3 +2,6 @@
 .project/.env
 .temp/
 uninstall.sh
+build/
+*.dmg
+*.xcarchive
