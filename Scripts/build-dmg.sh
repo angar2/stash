@@ -67,7 +67,10 @@ hdiutil create \
 MOUNT_POINT="/Volumes/${APP_NAME}"
 hdiutil attach build/temp.dmg -mountpoint "$MOUNT_POINT"
 ln -s /Applications "$MOUNT_POINT/Applications"
-hdiutil detach "$MOUNT_POINT"
+# Spotlight indexing / Finder 자동 열기 등으로 detach 실패 가능 → 잠시 대기 후 -force 박음
+sync
+sleep 2
+hdiutil detach "$MOUNT_POINT" -force
 
 # 4-3. read-write .dmg → 압축 read-only .dmg 변환
 #   -format UDZO = zlib 압축 read-only (배포용 표준 형식 + 파일 크기 감소)
