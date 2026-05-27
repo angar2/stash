@@ -170,4 +170,29 @@ struct MemorySnapshotTests {
 
         #expect(true)
     }
+
+    /// TASK-091 Phase 3 — 200건 ThumbnailCache 경유 시나리오 (UX-UI §9 + ROADMAP §2-2 정합).
+    /// `ThumbnailCache.totalCostLimit = 50MB` 박힘 후 200건 캐시 풀로드 시 `baseline + 50MB 이하` 도달 검증.
+    /// 1920×1080 PNG 200건 fixture 생성 + `phase3_thumbnailCache` 와 동일 패턴 5회 반복 평균.
+    @Test("TASK-091 — 200 images ThumbnailCache (5-iter mean, < 50MB)")
+    func task091_thumbnailCache200() async {
+        let (folder, paths) = createTestImages(count: 200)
+        defer { cleanup(folder: folder) }
+
+        var deltas: [Int64] = []
+        for iter in 1...5 {
+            let delta = measureViaThumbnailCache(paths: paths)
+            deltas.append(delta)
+            let deltaMB = Double(delta) / 1_048_576
+            print(String(format: "[memory-snapshot 200-thumb-cache] iter=%d delta=%+.1fMB", iter, deltaMB))
+        }
+
+        let avg = deltas.reduce(0, +) / Int64(deltas.count)
+        let avgMB = Double(avg) / 1_048_576
+        print(String(format: "[memory-snapshot 200-thumb-cache] avg-delta=%+.1fMB (5-iter mean, n=%d, pattern=thumbnail-cache)", avgMB, paths.count))
+
+        // 임계 검증 — `ThumbnailCache.totalCostLimit = 50MB` LRU 한도 안 동작 시 평균 delta < 50MB 도달.
+        // delta 음수 (이전 iter cache evict 효과) 시에도 PASS — 절대값 50 비교.
+        #expect(abs(avgMB) < 50.0, "200건 ThumbnailCache delta 50MB 초과 — totalCostLimit LRU 회귀 의심")
+    }
 }
