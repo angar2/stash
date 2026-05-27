@@ -26,6 +26,7 @@ struct WelcomeStep: View {
                 .padding(.bottom, 28)
 
             OnboardingPrimaryButton(L10n("onboarding.welcome.next"), action: onNext)
+                .accessibilityIdentifier("onboarding.welcome.next")
                 .padding(.bottom, 36)
         }
         .padding(.horizontal, DesignTokens.Spacing.onboardingPadH)

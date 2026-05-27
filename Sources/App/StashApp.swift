@@ -45,6 +45,11 @@ struct StashApp: App {
     let permissionRefresherObserver: NSObjectProtocol
 
     init() {
+        // TASK-089 Phase 1 — XCUITest launch argument 사전 처리. 일반 사용자 launch (`--ui-test` 미주입) 시 no-op.
+        // 본 호출은 UserDefaults register / AppLanguageService.applyOnLaunch 이전 실행 — onboarding flag reset / language override 가 후속 흐름에 즉시 반영.
+        LaunchArguments.applyEarlyEnvironment()
+        let launchArgs = LaunchArguments.parse()
+
         // TASK-033 — UserDefaults default values 등록. 사용자 설정 없을 때 기본값. autoPasteEnabled default true (자동 paste 기본 ON).
         // TASK-037 — 디스플레이 탭 신규 — clipsPerPage default 6 (TASK-036 토큰 추정값 인계), autoFitClipListHeight default false.
         // TASK-052 — 디스플레이 탭 *단축키 설명 표시* 토글 default true (신규 사용자 학습 보조 — 사용자가 숙지 후 명시적 OFF).
@@ -230,9 +235,14 @@ struct StashApp: App {
         }
 
         // ⑧ Startup — async 작업은 Task로 위임 (ARCHITECTURE §9-4 step 8-9)
+        // TASK-089 Phase 4 fix — UI 테스트 모드에서 watcher.start() skip. 시스템 클립보드 외부 변경이 시드 외 추가 row 캡쳐하는 flaky 차단.
         Task {
-            await watcher.start()
-            Logger.appLifecycle.info("ClipboardWatcher started")
+            if !launchArgs.isUITest {
+                await watcher.start()
+                Logger.appLifecycle.info("ClipboardWatcher started")
+            } else {
+                Logger.appLifecycle.info("ClipboardWatcher start skipped — UI test mode")
+            }
         }
         Task { @MainActor in
             await permSvc.recheck()
@@ -269,13 +279,67 @@ struct StashApp: App {
         }
 
         // TASK-070 — 첫 실행 시 자동 표시 (원래 정책). 윈도우 정책 (X 버튼 제거 + ESC 차단 + 완료 버튼 only) 으로 1회 보장.
-        if !onboardingVM.hasCompleted {
+        // TASK-089 Phase 4 — UI 테스트에서 popover/settings 즉시 표시 박힐 때는 onboarding 자동 표시 skip (윈도우 간섭 회피).
+        let suppressOnboardingForUITest = launchArgs.isUITest && (launchArgs.showPopover || launchArgs.showSettings)
+        if !onboardingVM.hasCompleted && !suppressOnboardingForUITest {
             Task { @MainActor in
                 Self.presentOnboarding(viewModel: onboardingVM)
             }
         }
 
+        // TASK-089 Phase 1 — UI 테스트 모드: 시드 클립 박음 + popover/settings 즉시 표시 분기.
+        if launchArgs.isUITest {
+            if launchArgs.seedClipsCount > 0 {
+                let count = launchArgs.seedClipsCount
+                Task { [grdbRepo, clipsVM] in
+                    await Self.seedClipsForUITest(count: count, repository: grdbRepo)
+                    await clipsVM.reload()
+                    Logger.appLifecycle.info("UI test: seeded \(count) clips")
+                }
+            }
+            if launchArgs.showPopover {
+                Task { @MainActor [popover, clipsVM] in
+                    // popover 즉시 표시 — 시드 반영 대기 후. 짧은 지연 (300ms) 으로 init 부수 작업 + seed insert 완료 보장.
+                    try? await Task.sleep(for: .milliseconds(300))
+                    await clipsVM.reload()
+                    popover.show(mode: .method2)
+                    // TASK-089 Phase 4 — UI 테스트 한정 NSApp.activate. popover panel `nonactivatingPanel` 이라 XCUI hit testing 도달 X — 일반 사용자 흐름 (TASK-020 정합) 영향 0.
+                    NSApp.activate(ignoringOtherApps: true)
+                    Logger.appLifecycle.info("UI test: popover shown (method2) + activated")
+                }
+            }
+            if launchArgs.showSettings {
+                Task { @MainActor [prefsController] in
+                    try? await Task.sleep(for: .milliseconds(200))
+                    prefsController.show()
+                    prefsController.recenterOnPrimaryScreenForUITest()
+                    Logger.appLifecycle.info("UI test: settings window shown + recentered")
+                }
+            }
+        }
+
         Logger.appLifecycle.info("StashApp init complete — all services wired")
+    }
+
+    /// XCUITest 시드 클립 박음 헬퍼 — text 타입 단순 시퀀스. Phase 4 popover 시나리오용 데이터 베이스.
+    private static func seedClipsForUITest(count: Int, repository: any ClipRepository) async {
+        let baseDate = Date()
+        for i in 0..<count {
+            let clip = Clip(
+                id: UUID(),
+                type: .text,
+                body: "UITest seed clip #\(i + 1)",
+                filePath: nil,
+                isFileExternal: false,
+                fileOriginalPath: nil,
+                fileBookmark: nil,
+                sourceAppBundleId: "com.angar2.stash.uitest",
+                isPinned: false,
+                createdAt: baseDate.addingTimeInterval(TimeInterval(-i)),
+                lastUsedAt: baseDate.addingTimeInterval(TimeInterval(-i))
+            )
+            _ = try? await repository.insert(clip)
+        }
     }
 
     /// TASK-070 — onboarding 윈도우 표시. 시스템 표준 NSWindow (titled + fullSizeContentView + transparent titlebar) — 시스템 자체가 둥근 corner + 보더 + 그림자 박음. 종료 = 완료 버튼 only (closable 버튼 3종 hidden + ESC 차단 = OnboardingNSWindow.cancelOperation no-op).

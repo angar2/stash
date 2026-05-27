@@ -59,6 +59,7 @@ struct HistoryPopover: View {
             // 1·2·3 동일 form — 방식 2도 검색바·환경설정 노출 (입력 비활성, TASK-018).
             PopoverHeaderView(viewModel: viewModel, mode: mode)
             clipsArea
+                .accessibilityIdentifier("popover.clipsArea")
             if hasPinned {
                 pinRow
             }
@@ -149,6 +150,8 @@ struct HistoryPopover: View {
                         // TASK-037 fix-15b — Equatable conformance + .equatable() → SwiftUI 가 변경된 행만 re-render. 호버 응답 빠름.
                         .equatable()
                         .id(clip.id)
+                        // TASK-089 Phase 4 — XCUITest 클립 행 식별 (idx 기반 — clip.id 는 UUID 라 매번 변동).
+                        .accessibilityIdentifier("popover.clip.row.\(idx)")
                     }
                 }
                 // TASK-018 Phase 7 — 검색·Pin·환경설정 행과 동일 좌우 outer inset.

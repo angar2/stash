@@ -34,6 +34,7 @@ struct PermissionStep: View {
                     OnboardingPrimaryButton(L10n("onboarding.permission.openSystemSettings")) {
                         viewModel.openSystemSettingsForAccessibility()
                     }
+                    .accessibilityIdentifier("onboarding.permission.openSystemSettings")
 
                     // 수동 "다음으로" 버튼 — polling 자동 감지 안 될 때 안전망
                     Button(action: { viewModel.advanceToTutorial() }) {
@@ -42,6 +43,7 @@ struct PermissionStep: View {
                             .foregroundStyle(DesignTokens.Colors.accent)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("onboarding.permission.next")
 
                     Button(action: { viewModel.skipPermissionWithCopyBack() }) {
                         Text(L10n("onboarding.permission.skip"))
@@ -49,12 +51,14 @@ struct PermissionStep: View {
                             .foregroundStyle(DesignTokens.Colors.labelSecondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("onboarding.permission.skip")
                 }
                 .padding(.bottom, 28)
             } else {
                 OnboardingPrimaryButton(L10n("onboarding.tutorial.complete.alt")) {
                     viewModel.advanceToTutorial()
                 }
+                .accessibilityIdentifier("onboarding.permission.advanceGranted")
                 .padding(.bottom, 28)
             }
         }

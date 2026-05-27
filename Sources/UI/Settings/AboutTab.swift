@@ -27,11 +27,13 @@ struct AboutTab: View {
                 .font(.system(size: 22, weight: .bold))
                 .tracking(-0.4)
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                .accessibilityIdentifier("about.appName")
 
             // TASK-033 — *"버전"* 단어 제거. *"X.X.X (build Y)"* 형식만.
             Text("\(appVersion) (build \(appBuild))")
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .accessibilityIdentifier("about.version")
 
             Text(L10n("about.description"))
                 .font(.system(size: 11.5, weight: .regular))
