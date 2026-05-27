@@ -53,6 +53,7 @@ struct TutorialStep: View {
             .padding(.bottom, 22)
 
             OnboardingPrimaryButton(L10n("onboarding.tutorial.complete"), horizontalPadding: 32, action: onComplete)
+                .accessibilityIdentifier("onboarding.tutorial.complete")
                 .padding(.bottom, 28)
         }
         .padding(.horizontal, 28)

@@ -24,6 +24,19 @@ final class PreferencesWindowController {
         target.makeKeyAndOrderFront(nil)
     }
 
+    /// TASK-089 Phase 2 — XCUITest 격리용 헬퍼. UI 테스트 진입 시 윈도우를 primary screen 중앙 박음.
+    /// 일반 사용자 흐름 호출 X — 다중 모니터 환경에서 background 앱 activate 시 active screen 임의 선택으로 윈도우가 화면 밖 박힐 수 있는 케이스 (XCUI hittable false) 회피.
+    func recenterOnPrimaryScreenForUITest() {
+        guard let target = window, let screen = NSScreen.screens.first else { return }
+        let frame = target.frame
+        let screenFrame = screen.visibleFrame
+        target.setFrameOrigin(NSPoint(
+            x: screenFrame.midX - frame.width / 2,
+            y: screenFrame.midY - frame.height / 2 + 60
+        ))
+        Logger.ui.info("PreferencesWindowController.recenterOnPrimaryScreenForUITest — frame=\(NSStringFromRect(target.frame), privacy: .public)")
+    }
+
     private func ensureWindow() -> PreferencesWindow {
         if let window { return window }
         let hosting = NSHostingController(rootView: SettingsWindow(viewModel: viewModel))

@@ -131,5 +131,7 @@ struct SettingsWindow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // TASK-089 Phase 2 — XCUITest 탭 식별자.
+        .accessibilityIdentifier("settings.tab.\(tab.rawValue)")
     }
 }
