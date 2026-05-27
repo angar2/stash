@@ -15,8 +15,8 @@ cd "$PROJECT_ROOT"
 # raw 옵션 = 따옴표 없이 값만 (예: 1.0.0)
 VERSION=$(plutil -extract CFBundleShortVersionString raw Sources/Resources/Info.plist)
 
-APP_NAME="stash"
-SCHEME="stash"
+APP_NAME="Stash"
+SCHEME="Stash"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 
 # ── 1. 이전 산출물 정리 ───────────────────────────────────

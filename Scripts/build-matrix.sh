@@ -7,7 +7,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SCHEME="stash"
+SCHEME="Stash"
 DESTINATION="platform=macOS,arch=arm64"
 TARGETS=("14.0" "15.0" "26.0")
 

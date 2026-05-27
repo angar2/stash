@@ -1,4 +1,4 @@
-name: stash
+name: Stash
 options:
   deploymentTarget:
     macOS: "14.0"
@@ -22,7 +22,7 @@ packages:
     from: "7.0.0"
 
 targets:
-  stash:
+  Stash:
     type: application
     platform: macOS
     deploymentTarget: "14.0"
@@ -52,7 +52,7 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
-      - target: stash
+      - target: Stash
       - package: GRDB
         product: GRDB
 
@@ -67,4 +67,4 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
-      - target: stash
+      - target: Stash
