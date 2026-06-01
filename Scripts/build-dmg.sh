@@ -15,6 +15,11 @@ cd "$PROJECT_ROOT"
 # raw 옵션 = 따옴표 없이 값만 (예: 1.0.0)
 VERSION=$(plutil -extract CFBundleShortVersionString raw Sources/Resources/Info.plist)
 
+# build 번호 = git 커밋 수 (TASK-096)
+# Info.plist CFBundleVersion 은 $(CURRENT_PROJECT_VERSION) 변수 참조 → 아래 archive 인자로 주입
+# 누적 단조 증가 (마케팅 버전 무관) — 매 릴리스 시점 커밋 수가 산출물 .app 에 박힘
+BUILD_NUMBER=$(git rev-list --count HEAD)
+
 APP_NAME="Stash"
 SCHEME="Stash"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
@@ -29,10 +34,12 @@ rm -rf build/
 #   -scheme         = Xcode 스킴 이름 (project.yml 정합)
 #   -configuration  = Release (최적화 빌드 — Debug 와 분리)
 #   -archivePath    = .xcarchive 출력 위치
+#   CURRENT_PROJECT_VERSION = 커맨드라인 오버라이드. project 기본값(1)을 덮어 git 커밋 수 주입
 xcodebuild \
   -scheme "$SCHEME" \
   -configuration Release \
   -archivePath "build/${APP_NAME}.xcarchive" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   archive
 
 # ── 3. .xcarchive → .app 추출 ────────────────────────────
@@ -84,5 +91,5 @@ rm build/temp.dmg
 # ── 완료 ─────────────────────────────────────────────────
 echo ""
 echo "✓ build/${DMG_NAME}"
-echo "  버전: ${VERSION}"
+echo "  버전: ${VERSION} (build ${BUILD_NUMBER})"
 echo "  크기: $(du -h "build/${DMG_NAME}" | cut -f1)"
