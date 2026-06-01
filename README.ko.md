@@ -69,6 +69,16 @@
 - **특정 앱 무시** — 어떤 앱에서 복사된 내용을 수집하기 싫다면, `⛯` 설정에서 그 앱을 무시하도록 목록에 추가할 수 있어요.
 - **데이터 저장 위치** — 로컬에 지정된 폴더 안에만 저장됩니다. 백업이 필요하면 이 폴더를 그대로 복사해두세요.
 
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 어떻게 삭제하나요?
+
+앱을 완전히 삭제하려면 [`uninstall.sh`](uninstall.sh) 스크립트를 터미널에서 직접 실행하거나 아래 명령어로 실행해주세요.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/angar2/stash/main/uninstall.sh | bash
+```
+
+> ⚠ 'Stash'라는 동일 이름의 다른 앱이 설치돼 있으면, 그 앱의 크래시 리포트가 함께 삭제될 수 있으니 주의해주세요.
+
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 알려주세요!
 
 Stash를 쓰다가 이상한 점, 안 되는 점, 더 있었으면 하는 기능이 있다면 알려주세요. [GitHub Issues](https://github.com/angar2/stash/issues)에 자유롭게 등록해주세요.

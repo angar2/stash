@@ -75,6 +75,17 @@ Yes — Stash never sends your data anywhere.
 - **Where data lives** — Everything is stored in a local folder you choose. Need a backup? Just copy that folder.
 
 
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I remove it?
+
+To completely remove the app, run the [`uninstall.sh`](uninstall.sh) script directly in your terminal, or use the command below.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/angar2/stash/main/uninstall.sh | bash
+```
+
+> ⚠ If another app is also named 'Stash', its crash reports may be removed as well.
+
+
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> Let me know!
 
 Found something weird, broken, or a feature you wish Stash had? Drop it on [GitHub Issues](https://github.com/angar2/stash/issues) — no formality needed.
