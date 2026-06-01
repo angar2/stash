@@ -36,6 +36,8 @@ targets:
         INFOPLIST_FILE: Sources/Resources/Info.plist
         GENERATE_INFOPLIST_FILE: "NO"
         ENABLE_PREVIEWS: "NO"
+        # build 번호 디버그 빌드 기본값 — 릴리스(build-dmg.sh)는 git 커밋 수로 오버라이드 (TASK-096)
+        CURRENT_PROJECT_VERSION: "1"
     dependencies:
       - package: KeyboardShortcuts
         product: KeyboardShortcuts
