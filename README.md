@@ -1,6 +1,6 @@
 <img src="Sources/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Stash icon" />
 
-# Stash <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" />
+# Stash <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture>
 
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 
@@ -15,7 +15,7 @@ Like a squirrel hoarding acorns, it keeps everything you copy so you never lose 
 <img src="docs/screenshots/popover-en.png" width="320" alt="Stash popover" />
 
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> Here's what you can do
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> Here's what you can do
 
 - `Auto-stash`: Anything you copy — text, images, files — piles up in your stash automatically.
 - `Quick access`: Pull up your stash with a shortcut while typing, without breaking your flow.
@@ -25,7 +25,7 @@ Like a squirrel hoarding acorns, it keeps everything you copy so you never lose 
 - `Flexible layout`: Resize and move the stash window however you like — keep it open all the time if you want.
 
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> When it comes in handy
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> When it comes in handy
 
 - Worried your latest copy might disappear, so you paste it into Notes just in case? ⮕ `Just keep copying — it's all saved in your stash.`
 - Tired of retyping the same phrases in messages? ⮕ `Look it up in your stash. Search works too.`
@@ -37,27 +37,17 @@ Like a squirrel hoarding acorns, it keeps everything you copy so you never lose 
 
 ## ☻ Getting Started
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> How do I install it?
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I install it?
 
 1. Download `Stash.dmg` from the [GitHub Releases](https://github.com/angar2/stash/releases) page.
 2. Open the .dmg and drag Stash.app into your `Applications` folder.
-3. On first launch, macOS may block it with an *"unidentified developer"* warning. Unblock it one of two ways:
 
-    - **From Finder**  
-      > In your `Applications` folder, *right-click Stash.app → Open* → choose *Open* in the confirmation dialog.
-
-    - **From Terminal**
-
-      ```sh   
-      xattr -cr /Applications/Stash.app
-      ```
-
-    Once unblocked, it'll launch like any other app from then on.
+For detailed installation notes, see the description on the Releases page above.
 
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> How do I use it?
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I use it?
 
-Once you launch the app, the Stash acorn icon ( <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> ) shows up in your menu bar. Click it or hit your shortcut to open the stash.
+Once you launch the app, the Stash acorn icon ( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> ) shows up in your menu bar. Click it or hit your shortcut to open the stash.
 
 First, just copy things like you normally would.
 
@@ -75,7 +65,7 @@ All shortcuts are customizable, and you can use mouse clicks too.
 
 ## ☻ Good to Know
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> Is it safe?
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> Is it safe?
 
 Yes — Stash never sends your data anywhere.
 
@@ -85,7 +75,7 @@ Yes — Stash never sends your data anywhere.
 - **Where data lives** — Everything is stored in a local folder you choose. Need a backup? Just copy that folder.
 
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> Let me know!
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> Let me know!
 
 Found something weird, broken, or a feature you wish Stash had? Drop it on [GitHub Issues](https://github.com/angar2/stash/issues) — no formality needed.
 

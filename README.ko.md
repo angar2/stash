@@ -1,6 +1,6 @@
 <img src="Sources/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Stash icon" />
 
-# Stash <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" />
+# Stash <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture>
 
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 
@@ -14,7 +14,7 @@
 
 <img src="docs/screenshots/popover-ko.png" width="320" alt="Stash 보관함" />
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 이런 것들을 할 수 있어요
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 이런 것들을 할 수 있어요
 
 - `자동 쟁여두기`: 복사한 텍스트·이미지·파일이 자동으로 보관함에 쌓여요.
 - `빠른 호출`: 키보드 타이핑 중에도 단축키로 빠르게 보관함을 열어 데이터를 가져올 수 있어요.
@@ -23,7 +23,7 @@
 - `상세한 정보 확인`: 보관함에서 각 데이터마다 복사한 위치, 시간, 글자수, 이미지 미리보기 등 다양한 정보를 보여줘요.
 - `자유로운 레이아웃`: 보관함의 크기와 위치를 마음대로 조절하고, 필요한 땐 항상 켜놓고 바로 사용할 수 있어요.
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 이런 상황에서 유용해요
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 이런 상황에서 유용해요
 
 - 방금 복사한 내용이 사라질까봐 메모장에 잠시 붙여넣을 때 ⮕ `걱정말고 또 복사해보세요. 보관함에 저장되니 걱정 x`
 - 메시지에서 자주 쓰는 말을 매번 다시 입력하기 귀찮을 때 ⮕ `보관함에서 저장한 문구를 찾아보세요. 검색도 가능 o`
@@ -34,26 +34,16 @@
 
 ## ☻ 시작하기
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 어떻게 설치하나요?
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 어떻게 설치하나요?
 
 1. [GitHub Releases](https://github.com/angar2/stash/releases) 페이지에서 `Stash.dmg` 파일을 다운로드해주세요.
 2. .dmg를 열고 Stash.app을 `Applications` 폴더로 드래그해주세요.
-3. 첫 실행 시 macOS가 *"확인되지 않은 개발자"* 라며 차단합니다. 아래 두 가지 중 하나로 풀어주세요.
 
-    - **Finder에서 열기**  
-      > `Applications` 폴더에서 Stash.app을 *우클릭 → 열기* → 확인 다이얼로그에서 *열기* 선택.
+설치에 관한 자세한 내용은 위 릴리즈 페이지의 설명을 참고해주세요.
 
-    - **터미널 명령**
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 어떻게 사용하나요?
 
-      ```sh   
-      xattr -cr /Applications/Stash.app
-      ```
-
-    한 번 풀어두면 다음부터는 일반 앱처럼 실행돼요.
-
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 어떻게 사용하나요?
-
-앱을 실행하면 메뉴바에 Stash 땅콩 아이콘( <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> )이 나타나요. 아이콘을 클릭하거나 보관함 열기 단축키를 누르면 보관함이 열립니다.
+앱을 실행하면 메뉴바에 Stash 땅콩 아이콘( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> )이 나타나요. 아이콘을 클릭하거나 보관함 열기 단축키를 누르면 보관함이 열립니다.
 
 먼저, 평상시 처럼 데이터를 복사하세요.
 
@@ -70,7 +60,7 @@
 
 ## ☻ 알리기
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 안전한가요?
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 안전한가요?
 
 네, Stash는 사용자 데이터를 외부로 절대 내보내지 않아요.
 
@@ -79,7 +69,7 @@
 - **특정 앱 무시** — 어떤 앱에서 복사된 내용을 수집하기 싫다면, `⛯` 설정에서 그 앱을 무시하도록 목록에 추가할 수 있어요.
 - **데이터 저장 위치** — 로컬에 지정된 폴더 안에만 저장됩니다. 백업이 필요하면 이 폴더를 그대로 복사해두세요.
 
-### <img src="Sources/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle; filter: invert(1); mix-blend-mode: lighten;" /> 알려주세요!
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 알려주세요!
 
 Stash를 쓰다가 이상한 점, 안 되는 점, 더 있었으면 하는 기능이 있다면 알려주세요. [GitHub Issues](https://github.com/angar2/stash/issues)에 자유롭게 등록해주세요.
 
