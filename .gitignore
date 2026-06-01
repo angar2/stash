@@ -4,7 +4,6 @@
 CLAUDE.md
 .taskery-manifest.json
 .temp/
-uninstall.sh
 build/
 *.dmg
 *.xcarchive
