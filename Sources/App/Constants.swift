@@ -102,7 +102,7 @@ enum Constants {
         // TASK-054 fix-1 popover width 영속 — 사용자 freeform 변경 + 항상 영속.
         static let popoverWidth: String = "popoverWidth"
 
-        // FEATURES F-007 차단 앱 (Settings PrivacyTab).
+        // FEATURES F-007 차단 앱 (Settings CollectionTab).
         static let blockedAppBundleIds: String = "blockedAppBundleIds"
 
         // PermissionToastNotifier — 권한 부여 첫 알림 1회 발화 추적.

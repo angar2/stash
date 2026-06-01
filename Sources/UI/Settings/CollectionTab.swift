@@ -1,8 +1,8 @@
-// 설정 개인정보 탭 — TASK-033 정합 (*비밀번호 자동 제외 안내 박스* 폐기 + *저장하지 않을 앱* 텍스트 / 아이콘+한글 이름 표시)
+// 설정 수집 탭 — TASK-033 정합 (*저장하지 않을 앱* 텍스트 / 아이콘+한글 이름 표시) · TASK-093 명칭 정합 (개인정보→수집)
 import SwiftUI
 import AppKit
 
-struct PrivacyTab: View {
+struct CollectionTab: View {
     @Bindable var viewModel: SettingsViewModel
     /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
     @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
