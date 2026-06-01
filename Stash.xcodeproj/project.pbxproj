@@ -1123,6 +1123,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.stash;
+				PRODUCT_MODULE_NAME = stash;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
@@ -1199,6 +1200,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.stash;
+				PRODUCT_MODULE_NAME = stash;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
