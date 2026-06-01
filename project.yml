@@ -31,6 +31,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.angar2.stash
+        PRODUCT_MODULE_NAME: stash
         SWIFT_VERSION: "6.0"
         INFOPLIST_FILE: Sources/Resources/Info.plist
         GENERATE_INFOPLIST_FILE: "NO"
