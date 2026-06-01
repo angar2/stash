@@ -1,4 +1,4 @@
-// Onboarding 3단계 — 호출 모델 안내. TASK-070 — 카드 1개 → 카드 2개 (방식 1 메뉴바 아이콘 클릭 + 방식 2 ⇧⌘V 단축키). 카드 1 keycap = 메뉴바 아이콘 Image + 라벨 세로 배치 / 카드 2 = 기존 키캡 모노 텍스트.
+// Onboarding 3단계 — 호출 모델 안내. TASK-070 — 카드 1개 → 카드 2개 (방식 1 메뉴바 아이콘 클릭 + 방식 2 ⇧⌘C 단축키). 카드 1 keycap = 메뉴바 아이콘 Image + 라벨 세로 배치 / 카드 2 = 기존 키캡 모노 텍스트.
 import SwiftUI
 
 struct TutorialStep: View {
@@ -35,7 +35,7 @@ struct TutorialStep: View {
             }
             .padding(.bottom, 22)
 
-            // 2 카드 — 방식 1 (메뉴바 아이콘 클릭) + 방식 2 (⇧⌘V SPM 단축키)
+            // 2 카드 — 방식 1 (메뉴바 아이콘 클릭) + 방식 2 (⇧⌘C SPM 단축키)
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
                     icon:  Image("MenuBarIcon"),
@@ -107,7 +107,7 @@ struct TutorialStep: View {
             .frame(width: 64, height: 36)
             .background(keycapBackground)
         } else {
-            // 키캡 모노 텍스트 (방식 2 — ⇧⌘V)
+            // 키캡 모노 텍스트 (방식 2 — ⇧⌘C)
             Text(keys)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
