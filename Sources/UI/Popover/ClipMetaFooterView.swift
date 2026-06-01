@@ -76,7 +76,7 @@ struct ClipMetaFooterView: View {
         }
     }
 
-    // MARK: - 앱 아이콘 / 이름 lookup (PrivacyTab 패턴 정합)
+    // MARK: - 앱 아이콘 / 이름 lookup (CollectionTab 패턴 정합)
 
     /// 번들 ID → 앱 아이콘. `NSWorkspace.urlForApplication` → `icon(forFile:)`. nil / 미설치 → nil.
     static func appIcon(for bundleId: String?) -> NSImage? {

@@ -8,7 +8,7 @@ final class SettingsWindowTests: XCUITestBase {
         launchWithSettings()
         waitForAppReady(seconds: 1.5)
 
-        let tabs = ["general", "display", "shortcuts", "privacy", "about"]
+        let tabs = ["general", "display", "shortcuts", "collection", "about"]
         for tab in tabs {
             let tabButton = app.buttons["settings.tab.\(tab)"]
             XCTAssertTrue(
@@ -48,7 +48,7 @@ final class SettingsWindowTests: XCUITestBase {
         launchWithSettings()
         waitForAppReady(seconds: 1.5)
 
-        let tabs = ["general", "display", "shortcuts", "privacy", "about"]
+        let tabs = ["general", "display", "shortcuts", "collection", "about"]
         for tab in tabs {
             let tabButton = app.buttons["settings.tab.\(tab)"]
             expectExists(tabButton, message: "탭 \(tab) 미존재")
