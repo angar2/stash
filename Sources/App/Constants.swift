@@ -63,6 +63,12 @@ enum Constants {
     static let popoverWidthMin: CGFloat = 280
     static let popoverWidthMax: CGFloat = 600
 
+    // TASK-097 Pin 사이드바 너비 clamp 범위 + 항상 영속 — popoverWidth 정책 미러링.
+    // 주의(TASK-097 검수 결과): 사이드바 패널은 `becomesKeyOnlyIfNeeded` + `orderFrontRegardless` 로 항상 non-key 라 styleMask `.resizable` 만으로는 *엣지 리사이즈 커서·드래그가 동작하지 않음*(실기 확인). 즉 현재 사용자 리사이즈 진입점은 없고, 본 상수·영속 인프라는 *저장 너비 복원* 경로에서만 실효. 사용자 조작 UX 는 별도 접근 필요.
+    // 최소 180 = 타입 아이콘 + 본문 truncate 하한 / 최대 400 = popover 본체 압도 방지 상한. 기본값은 DesignTokens.WindowSize.pinSidebarWidth(220).
+    static let pinSidebarWidthMin: CGFloat = 180
+    static let pinSidebarWidthMax: CGFloat = 400
+
     // TASK-055 클립 상세 sub-window hover 트리거 임계.
     // 클립 행 위에 마우스 커서 본 시간 이상 머무름 → ClipsViewModel.triggerClipDetail() 자동 발화.
     // 같은 행 안 미세 움직임은 누적 보존 (hoverEnterRow 가 같은 row.id 추적 중이면 task 유지). 다른 행 이탈 시 cancel + 새 행 재시작.
@@ -101,6 +107,9 @@ enum Constants {
 
         // TASK-054 fix-1 popover width 영속 — 사용자 freeform 변경 + 항상 영속.
         static let popoverWidth: String = "popoverWidth"
+
+        // TASK-097 Pin 사이드바 width 영속 — 항상 영속 (위치 토글과 무관). 조회는 PopoverWindow.storedPinSidebarWidth.
+        static let pinSidebarWidth: String = "pinSidebarWidth"
 
         // FEATURES F-007 차단 앱 (Settings CollectionTab).
         static let blockedAppBundleIds: String = "blockedAppBundleIds"
