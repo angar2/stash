@@ -280,8 +280,9 @@ final class PopoverWindow: NSObject {
         self.panel = p
         self.visualEffectView = ve
         // TASK-019 — Pin 사이드바 별도 NSPanel. popover 좌측 floating. height 는 PinSidebarView 의 자연 사이즈를 따르되 popover height 상한.
+        // TASK-097 — 초기 너비 = UserDefaults 저장값(clamp) 또는 기본 220.
         let (sp, sve) = PopoverPanel.make(
-            width: DesignTokens.WindowSize.pinSidebarWidth,
+            width: Self.storedPinSidebarWidth(),
             height: DesignTokens.WindowSize.popoverHeight
         )
         self.pinSidebarPanel = sp
@@ -301,6 +302,8 @@ final class PopoverWindow: NSObject {
 
         // TASK-054 — NSWindowDelegate 부합. `windowDidMove` 발화 → 사이드바·상세 sub-window 동반 추종.
         panel.delegate = self
+        // TASK-097 — Pin 사이드바 패널도 delegate 부합. windowWillResize(너비 clamp + 높이 고정) + windowDidEndLiveResize(너비 영속) 수신.
+        pinSidebarPanel.delegate = self
 
         // ClipsViewModel.pinSidebarOpen 변경 콜백 등록 — true → show / false → hide.
         viewModel.onPinSidebarOpenChange = { [weak self] isOpen in
@@ -450,7 +453,7 @@ final class PopoverWindow: NSObject {
         guard pinSidebarPanel.isVisible else { return }
         let popoverFrame = panel.frame
         let gap = DesignTokens.Spacing.pinSidebarGap
-        let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
+        let sidebarWidth = Self.storedPinSidebarWidth()  // TASK-097 — 저장 너비(clamp) 사용. 220 하드코딩 clobber 제거.
         let sidebarHeight = computePinSidebarHeight()
         let (originX, direction) = computePinSidebarOrigin(popoverFrame: popoverFrame, sidebarWidth: sidebarWidth, gap: gap)
         let originY = popoverFrame.origin.y  // bottom-aligned
@@ -549,7 +552,7 @@ final class PopoverWindow: NSObject {
 
         let popoverFrame = panel.frame
         let gap = DesignTokens.Spacing.pinSidebarGap
-        let sidebarWidth = DesignTokens.WindowSize.pinSidebarWidth
+        let sidebarWidth = Self.storedPinSidebarWidth()  // TASK-097 — 저장 너비(clamp) 사용. 220 하드코딩 clobber 제거.
         let sidebarHeight = computePinSidebarHeight()
         // TASK-055 — 좌/우 fallback + 본체 popover screen 기준 visibleFrame 흐름은 computePinSidebarOrigin 헬퍼 단일화.
         let (originX, direction) = computePinSidebarOrigin(popoverFrame: popoverFrame, sidebarWidth: sidebarWidth, gap: gap)
@@ -582,6 +585,30 @@ final class PopoverWindow: NSObject {
         let contentH = DesignTokens.Spacing.pinSidebarHeaderHeight + rowsBlock + outerPad
         let upperBound = DesignTokens.WindowSize.popoverHeight - DesignTokens.Spacing.pinSidebarHeightBottomMargin
         return min(contentH, upperBound)
+    }
+
+    // MARK: - Pin 사이드바 너비 리사이즈 (TASK-097)
+
+    /// TASK-097 — Pin 사이드바 너비 clamp [pinSidebarWidthMin, pinSidebarWidthMax]. pure helper (테스트 진입점).
+    static func clampPinSidebarWidth(_ width: CGFloat) -> CGFloat {
+        max(Constants.pinSidebarWidthMin, min(Constants.pinSidebarWidthMax, width))
+    }
+
+    /// TASK-097 — 저장 raw(Double?) → 표시 너비. 저장값 있으면 clamp, 없으면 기본(pinSidebarWidth=220). pure helper (UserDefaults 미의존 — 테스트 진입점).
+    static func resolveStoredPinSidebarWidth(stored: Double?) -> CGFloat {
+        guard let stored else { return DesignTokens.WindowSize.pinSidebarWidth }
+        return clampPinSidebarWidth(CGFloat(stored))
+    }
+
+    /// TASK-097 — UserDefaults 조회 wrapper. pinSidebarPanel make / show / resize 공통 진입점. 220 하드코딩 대체.
+    static func storedPinSidebarWidth() -> CGFloat {
+        let stored = UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.pinSidebarWidth) as? Double
+        return resolveStoredPinSidebarWidth(stored: stored)
+    }
+
+    /// TASK-097 — 사이드바 라이브 리사이즈 제안 크기 해석: 너비만 clamp, 높이는 현재값 고정(높이 변경 거부). pure helper (테스트 진입점).
+    static func resolvePinSidebarResize(proposedWidth: CGFloat, currentHeight: CGFloat) -> NSSize {
+        NSSize(width: clampPinSidebarWidth(proposedWidth), height: currentHeight)
     }
 
     private func hidePinSidebar() {
@@ -940,6 +967,10 @@ extension PopoverWindow: NSWindowDelegate {
     /// 흐름: autoFit ON/OFF 무관 *동일 흐름* 진입 (1행 snap + clipsPerPage 동기화). 단 autoFit ON 시 proposedHeight 에 cap (= measuredFittingHeight) 미리 적용해 *cap 초과 시도 자동 차단*.
     /// autoFit ON 일 때도 height drag 시 clipsPerPage 동기화 활성 — effectiveClipListHeight 자동 정합 → SwiftUI body 시각 정합 자동 유지.
     func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        // TASK-097 — Pin 사이드바 리사이즈: 너비만 clamp(180~400), 높이는 현재값 고정(높이 변경 거부).
+        if sender === pinSidebarPanel {
+            return Self.resolvePinSidebarResize(proposedWidth: frameSize.width, currentHeight: pinSidebarPanel.frame.size.height)
+        }
         guard sender === panel else { return frameSize }
         // width clamp.
         let clampedWidth = max(Constants.popoverWidthMin, min(Constants.popoverWidthMax, frameSize.width))
@@ -1032,5 +1063,16 @@ extension PopoverWindow: NSWindowDelegate {
         // (panel.inLiveResize 는 라이브 resize 진행 중 true, 종료 직후 false. 종료 직후 발화 1회 정도는 통과.)
         // 휴리스틱: panel.styleMask 가 .resizable 이고 *최근 windowWillResize 발화* 박혔는지 추적 필요. 단순화 — 그냥 refreshFrame 호출 제거. windowWillResize 흐름이 setClipsPerPage 호출 + displayLayoutDidChange notification 발행 → refreshFrame 자체 호출됨.
         // refreshFrame()  // TASK-061 제거 — windowWillResize → displayLayoutDidChange → refreshFrame 경로로 자연 호출.
+    }
+
+    /// TASK-097 — Pin 사이드바 라이브 리사이즈 종료 시점: 조정된 너비를 UserDefaults 에 영속(항상 저장) + origin 재계산(안쪽 엣지 popover 밀착).
+    /// 본체 popover 는 별도 처리(windowWillResize → clipsPerPage 동기화)라 여기선 사이드바 패널만 담당.
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === pinSidebarPanel else { return }
+        let newWidth = Self.clampPinSidebarWidth(pinSidebarPanel.frame.size.width)
+        UserDefaults.standard.set(Double(newWidth), forKey: Constants.UserDefaultsKeys.pinSidebarWidth)
+        Logger.ui.info("Pin sidebar width persisted = \(newWidth, privacy: .public)")
+        // 저장 너비 기준으로 프레임 재적용 — 안쪽 엣지를 popover 에 재밀착(방향별 originX 재계산).
+        resizePinSidebarPanel()
     }
 }

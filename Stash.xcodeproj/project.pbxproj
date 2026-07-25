@@ -156,6 +156,7 @@
 		E8D7AF8AB20EC79EE0E57FBA /* PopoverWindowFirstResponderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FADCBC1EB1D8AA64A3D436D /* PopoverWindowFirstResponderTests.swift */; };
 		E8DE9B7D8A74FD2D5BAA917B /* ShortcutsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB543C318C1A624AEC1C40C /* ShortcutsTab.swift */; };
 		EA80886FFAE23D276D4F33B5 /* ClipType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF821DED6B3014C09C31264 /* ClipType.swift */; };
+		F26800B1584BEE3FE717B396 /* PinSidebarWidthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B636E57CB6F7F723D1B214 /* PinSidebarWidthTests.swift */; };
 		F27628E846B3EA564050AE8E /* SearchBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE163370A8ED859553A79FF /* SearchBenchmarkTests.swift */; };
 		F42AE53A7E26C4C169C0E739 /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3ACCEF00C47ED5471F7BF70 /* SearchBarView.swift */; };
 		F46B0406BC58A72AB7BF3087 /* StoredFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF4F389DF9707F82DFC4273 /* StoredFile.swift */; };
@@ -195,6 +196,7 @@
 /* Begin PBXFileReference section */
 		00A20887B1AEE736B7354E06 /* AccentColorModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorModeTests.swift; sourceTree = "<group>"; };
 		01B5FD0CD10BDF0BF3D16D71 /* ClipMetaFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipMetaFooterView.swift; sourceTree = "<group>"; };
+		02B636E57CB6F7F723D1B214 /* PinSidebarWidthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinSidebarWidthTests.swift; sourceTree = "<group>"; };
 		034B3EC00E50CB56C0CC7A4D /* MockLoginItemRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLoginItemRegistrar.swift; sourceTree = "<group>"; };
 		03F5845829B3E1028304304D /* ClipMetaFooterFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipMetaFooterFormatTests.swift; sourceTree = "<group>"; };
 		041E0C8D498A4653E7A45160 /* MockPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPermissionChecker.swift; sourceTree = "<group>"; };
@@ -662,6 +664,7 @@
 				2CEE8AF4F17C0AFFE5F3A186 /* HoverTooltipControllerTests.swift */,
 				A7CF9DAEFBA4CA49A9CBD43F /* KeyboardHintsViewTests.swift */,
 				8BAB747129716C2AEF5D4CD6 /* PinSidebarHeightTests.swift */,
+				02B636E57CB6F7F723D1B214 /* PinSidebarWidthTests.swift */,
 				8515360475C55170C80AF3C7 /* PopoverAnchorTests.swift */,
 				1FC757344810149DD9BBE5F5 /* PopoverDragTests.swift */,
 				78FE81E15ABDB6E4C6B76EEB /* PopoverHotkeyTests.swift */,
@@ -1072,6 +1075,7 @@
 				BA22E8A22F5175286804E2A6 /* PasteServiceTests.swift in Sources */,
 				DC36A097DE22A674C7BA3EDA /* PermissionServiceTests.swift in Sources */,
 				E1EFEE0923C6A675962311DC /* PinSidebarHeightTests.swift in Sources */,
+				F26800B1584BEE3FE717B396 /* PinSidebarWidthTests.swift in Sources */,
 				9D9B5109CD30139440D3F4D1 /* PopoverAnchorTests.swift in Sources */,
 				AC963456505542A8D51D72E0 /* PopoverDragTests.swift in Sources */,
 				1F2871551F156AF43C72511E /* PopoverHotkeyTests.swift in Sources */,
