@@ -1,5 +1,5 @@
 // Pin 사이드 메뉴 — popover.jsx L539-602 100% 정합 + TASK-019 fix 2차 (ClipRowView 재사용)
-// 220 width / Liquid Glass / "핀 목록 · N" UPPERCASE 헤더 + 항목은 본체 클립 행과 동일 ClipRowView 형태
+// 가변 너비(기본 220, TASK-097 저장 너비 180~400 복원) / Liquid Glass / "핀 목록 · N" 헤더 + 항목은 본체 클립 행과 동일 ClipRowView 형태
 import SwiftUI
 
 struct PinSidebarView: View {
@@ -75,7 +75,8 @@ struct PinSidebarView: View {
             }
         }
         .padding(DesignTokens.Spacing.pinSidebarPadding)
-        .frame(width: DesignTokens.WindowSize.pinSidebarWidth)
+        // TASK-097 — 고정 너비 제거. 패널(NSPanel) 너비가 뷰를 구동하도록 maxWidth 확장 (메인 popover body 패턴 정합). 저장 너비 복원 시 뷰가 패널 너비를 그대로 채우게 함.
+        .frame(maxWidth: .infinity)
         .background(Color.clear)
         // TASK-027 fix — coordinateSpace + ActiveRowFramePreferenceKey 수신을 PinSidebarView root 에 박음 (ScrollView 박으면 헤더 offset 어긋남).
         .popoverClipDetailHook(viewModel: viewModel, activeZone: .pin)
