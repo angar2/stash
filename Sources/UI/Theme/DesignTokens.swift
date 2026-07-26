@@ -306,6 +306,37 @@ enum DesignTokens {
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
             dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.10)
         )
+        /// TASK-098 — PIN 단축키 행 인라인 인풋(명칭·값 공통) 배경. 다크는 승인 목업 톤 그대로,
+        /// 라이트는 같은 *들어간 느낌* 을 옅은 음영으로 만든다 — 다크 값(검정 24%)을 라이트에 그대로 쓰면
+        /// 밝은 배경 위에 탁한 회색 박스가 얹힌다.
+        static let settingsInputBg = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.045),
+            dark:  Color(red: 0, green: 0, blue: 0, opacity: 0.24)
+        )
+        /// TASK-098 — 저장/취소 원형 버튼 기본 배경 (hover 시엔 각 버튼 tint 를 얹는다).
+        /// 라이트에서 흰색 오버레이는 흰 카드에 묻혀 버튼 자체가 사라지므로 방향을 뒤집는다.
+        static let settingsCircleButtonBg = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.045),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.06)
+        )
+        /// TASK-098 — Pin 사이드바 조합 키캡 배경 (다크 = 목업 `--keycap-bg` 그대로).
+        static let pinKeycapBg = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.055),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.10)
+        )
+        /// TASK-098 — PIN 단축키 행 편집 *핀 해제* 원형 버튼 tint. 저장(초록)·취소(보조 색)와 구분되는 경고 톤.
+        /// 항목이 사라지지 않는 동작(히스토리에 남고 값 수정분도 유지 — 초기화되는 건 명칭뿐)이라
+        /// 삭제용 빨강(`255,56,60`)보다 한 단계 낮은 주황을 쓴다.
+        static let pinUnpinButton = Color(
+            light: Color(red: 199/255, green: 105/255, blue: 0/255,   opacity: 1.0),
+            dark:  Color(red: 255/255, green: 175/255, blue: 82/255,  opacity: 1.0)
+        )
+        /// TASK-098 — PIN 단축키 행 편집 *저장* 원형 버튼 tint (취소는 `labelSecondary` 재사용).
+        /// accent(파랑)를 쓰지 않는 이유 — 같은 행의 조합 입력 focus 강조가 accent 라 저장 버튼과 시각적으로 구분되지 않는다.
+        static let pinSaveButton = Color(
+            light: Color(red: 26/255,  green: 143/255, blue: 87/255,  opacity: 1.0),
+            dark:  Color(red: 126/255, green: 226/255, blue: 168/255, opacity: 1.0)
+        )
         // 탭 selection bg
         static let settingsTabSelectedBg = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),

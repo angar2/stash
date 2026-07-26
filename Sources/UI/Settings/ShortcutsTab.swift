@@ -1,463 +1,96 @@
-// 설정 단축키 탭 — 환경설정 노출 7항목 (보관함 열기 / 복사 / 붙여넣기 / 핀 고정·해제 / 핀 목록 열기·닫기 / 선택 삭제 / 전체 삭제)
-// TASK-033 fix-2: SPM `setShortcut` 이 Carbon RegisterEventHotKey 글로벌 등록을 자동 트리거 → ⌘V/⌘C 같은 시스템 표준 단축키 매핑 시 시스템 paste/copy 무력화 + popover localMonitor 도달 X.
-// → popover 안 6종 단축키는 SPM 사용 X. 자체 `PopoverShortcutStore` (UserDefaults JSON storage) + 자체 `PopoverShortcutRecorder` (NSEvent monitor 기반 NSViewRepresentable). `.popoverOpen` 만 SPM 유지 (글로벌 진입 hotkey 본질).
+// 설정 단축키 탭 — *기본 단축키* 7항목 + *PIN 단축키* 10항목(순번·명칭·값·조합) 두 묶음의 접힘 화면.
+// 단축키 모델·저장 계층은 `PopoverShortcutStore.swift`, 조합 입력 Recorder 는 `PopoverShortcutRecorder.swift` 참조 (TASK-098 리팩토링에서 분리).
 import SwiftUI
 import AppKit
 import KeyboardShortcuts
 import OSLog
 
-// MARK: - SPM Name (.popoverOpen 전용 — TASK-032 글로벌 진입)
-
-extension KeyboardShortcuts.Name {
-    // TASK-032 — popover 진입용 글로벌 단축키 (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관).
-    // TASK-065 — default ⌘⇧V → ⌘⇧C (사용자 혼동 회피, PopoverShortcutStore.defaults 진실 소스).
-    static let popoverOpen = Self("stash.popoverOpen")
-}
-
-// MARK: - PopoverShortcut model + Store (TASK-033 fix-2)
-
-/// 단축키 식별자. `.popoverOpen` 만 SPM `KeyboardShortcuts.Name` Carbon 글로벌 hotkey 등록 (글로벌 진입 본질). 나머지 6종은 popover localMonitor 매칭 (Carbon 등록 회피).
-enum PopoverShortcutID: String, CaseIterable, Sendable {
-    case popoverOpen
-    case copy
-    case paste
-    case pinToggle
-    case pinSidebarToggle
-    case deleteOne
-    case deleteAll
-
-    /// 사용자 라벨 i18n 키.
-    var labelKey: String {
-        switch self {
-        case .popoverOpen: return "shortcuts.popoverOpen"
-        case .copy: return "shortcuts.copy"
-        case .paste: return "shortcuts.paste"
-        case .pinToggle: return "shortcuts.pinToggle"
-        case .pinSidebarToggle: return "shortcuts.pinSidebarToggle"
-        case .deleteOne: return "shortcuts.deleteOne"
-        case .deleteAll: return "shortcuts.deleteAll"
-        }
-    }
-}
-
-/// popover 안 단축키 모델 — `keyCode` + meaningful modifier (`.command/.shift/.option/.control`) raw value 저장.
-struct PopoverShortcut: Codable, Equatable, Hashable, Sendable {
-    let keyCode: UInt16
-    let modifiersRawValue: UInt
-
-    var modifiers: NSEvent.ModifierFlags { NSEvent.ModifierFlags(rawValue: modifiersRawValue) }
-
-    init(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
-        self.keyCode = keyCode
-        let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
-        self.modifiersRawValue = modifiers.intersection(meaningful).rawValue
-    }
-
-    /// `NSEvent` 에서 단축키 추출. modifier 없으면 nil (modifier 검증).
-    static func from(event: NSEvent) -> PopoverShortcut? {
-        let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
-        let mods = event.modifierFlags.intersection(meaningful)
-        guard !mods.isEmpty else { return nil }
-        return PopoverShortcut(keyCode: event.keyCode, modifiers: mods)
-    }
-
-    /// `NSEvent` 와 매칭. `keyCode` + meaningful modifier raw value 정확 일치 (OptionSet `==` 비교 대신 rawValue 직접 비교로 robust).
-    func matches(event: NSEvent) -> Bool {
-        let meaningful: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
-        let eventMods = event.modifierFlags.intersection(meaningful).rawValue
-        let match = event.keyCode == keyCode && eventMods == modifiersRawValue
-        if event.keyCode == keyCode {
-            Logger.ui.debug("PopoverShortcut.matches keyCode=\(self.keyCode) self.mods=\(self.modifiersRawValue) event.mods=\(eventMods) match=\(match)")
-        }
-        return match
-    }
-
-    /// 시각 표시 (⌘⇧⌥⌃ + key character).
-    var displayText: String {
-        var s = ""
-        if modifiers.contains(.control) { s += "⌃" }
-        if modifiers.contains(.option) { s += "⌥" }
-        if modifiers.contains(.shift) { s += "⇧" }
-        if modifiers.contains(.command) { s += "⌘" }
-        s += Self.keyDisplay(for: keyCode)
-        return s
-    }
-
-    /// `keyCode` → 키 라벨 매핑. macOS Carbon `kVK_*` 기준. 일반 키 + 화이트 화살표 / Delete 등 특수 키.
-    static func keyDisplay(for keyCode: UInt16) -> String {
-        switch keyCode {
-        case 0: return "A"; case 11: return "B"; case 8: return "C"; case 2: return "D"
-        case 14: return "E"; case 3: return "F"; case 5: return "G"; case 4: return "H"
-        case 34: return "I"; case 38: return "J"; case 40: return "K"; case 37: return "L"
-        case 46: return "M"; case 45: return "N"; case 31: return "O"; case 35: return "P"
-        case 12: return "Q"; case 15: return "R"; case 1: return "S"; case 17: return "T"
-        case 32: return "U"; case 9: return "V"; case 13: return "W"; case 7: return "X"
-        case 16: return "Y"; case 6: return "Z"
-        case 18: return "1"; case 19: return "2"; case 20: return "3"; case 21: return "4"
-        case 23: return "5"; case 22: return "6"; case 26: return "7"; case 28: return "8"
-        case 25: return "9"; case 29: return "0"
-        case 51: return "⌫"        // Backspace
-        case 117: return "⌦"       // Forward Delete
-        case 36: return "↩"        // Return
-        case 76: return "⌤"        // Enter
-        case 48: return "⇥"        // Tab
-        case 49: return "Space"
-        case 53: return "⎋"        // Escape
-        case 123: return "←"; case 124: return "→"; case 125: return "↓"; case 126: return "↑"
-        case 122: return "F1"; case 120: return "F2"; case 99: return "F3"; case 118: return "F4"
-        case 96: return "F5"; case 97: return "F6"; case 98: return "F7"; case 100: return "F8"
-        case 101: return "F9"; case 109: return "F10"; case 103: return "F11"; case 111: return "F12"
-        case 27: return "-"; case 24: return "="; case 33: return "["; case 30: return "]"
-        case 41: return ";"; case 39: return "'"; case 43: return ","; case 47: return "."
-        case 44: return "/"; case 42: return "\\"; case 50: return "`"
-        default: return "?"
-        }
-    }
-}
-
-/// 단축키 storage.
-/// - `.popoverOpen` — SPM `KeyboardShortcuts.Shortcut` 진실 소스 (Carbon 글로벌 hotkey 등록 필수, 글로벌 진입 본질).
-/// - 나머지 6종 — 자체 UserDefaults JSON storage (Carbon 글로벌 등록 회피 — 시스템 표준 단축키 무력화 방지).
-enum PopoverShortcutStore {
-    private static let prefix = "stash.popoverShortcut."
-
-    static func get(_ id: PopoverShortcutID) -> PopoverShortcut? {
-        if id == .popoverOpen {
-            // .popoverOpen 은 SPM 단일 진실 소스 (Carbon 글로벌 hotkey)
-            guard let spm = KeyboardShortcuts.getShortcut(for: .popoverOpen) else { return nil }
-            return PopoverShortcut(keyCode: UInt16(spm.carbonKeyCode), modifiers: spm.modifiers)
-        }
-        guard let data = UserDefaults.standard.data(forKey: prefix + id.rawValue),
-              let shortcut = try? JSONDecoder().decode(PopoverShortcut.self, from: data) else {
-            return nil
-        }
-        return shortcut
-    }
-
-    static func set(_ shortcut: PopoverShortcut, for id: PopoverShortcutID) {
-        if id == .popoverOpen {
-            // .popoverOpen 은 SPM Carbon 등록 (글로벌 진입 hotkey)
-            let key = KeyboardShortcuts.Key(rawValue: Int(shortcut.keyCode))
-            KeyboardShortcuts.setShortcut(KeyboardShortcuts.Shortcut(key, modifiers: shortcut.modifiers), for: .popoverOpen)
-            Logger.ui.info("PopoverShortcutStore set .popoverOpen (SPM) = \(shortcut.displayText, privacy: .public)")
-            NotificationCenter.default.post(name: .popoverShortcutDidChange, object: nil, userInfo: ["id": id.rawValue])
-            return
-        }
-        guard let data = try? JSONEncoder().encode(shortcut) else { return }
-        UserDefaults.standard.set(data, forKey: prefix + id.rawValue)
-        Logger.ui.info("PopoverShortcutStore set \(id.rawValue, privacy: .public) = \(shortcut.displayText, privacy: .public)")
-        NotificationCenter.default.post(name: .popoverShortcutDidChange, object: nil, userInfo: ["id": id.rawValue])
-    }
-
-    /// default 단축키 매핑 (단일 진실 소스). 사용자 변경 없을 시 fallback.
-    /// TASK-065 — `.popoverOpen` default `⌘⇧V` (keyCode 9) → `⌘⇧C` (keyCode 8). 시스템 paste 키와 modifier 겹쳐 사용자 혼동 회피 + 시스템 copy `⌘C` 에 ⇧ 1 modifier 추가가 학습 부담 최소.
-    static let defaults: [PopoverShortcutID: PopoverShortcut] = [
-        .popoverOpen:      PopoverShortcut(keyCode: 8, modifiers: [.command, .shift]),       // ⌘⇧C (TASK-065)
-        .copy:             PopoverShortcut(keyCode: 8, modifiers: [.command]),               // ⌘C
-        .paste:            PopoverShortcut(keyCode: 9, modifiers: [.command]),               // ⌘V
-        .pinToggle:        PopoverShortcut(keyCode: 35, modifiers: [.command]),              // ⌘P
-        .pinSidebarToggle: PopoverShortcut(keyCode: 11, modifiers: [.command]),              // ⌘B
-        .deleteOne:        PopoverShortcut(keyCode: 51, modifiers: [.command]),              // ⌘⌫
-        .deleteAll:        PopoverShortcut(keyCode: 51, modifiers: [.command, .shift])       // ⇧⌘⌫
-    ]
-
-    /// 첫 실행 + reset 후 next launch — 미등록 default 등록.
-    static func registerDefaultsIfNeeded() {
-        // TASK-033 fix-2 cleanup — 이전 TASK-033 v1 시도로 SPM (`KeyboardShortcuts_stash.*`) 에 박힌 잔존 키 정리. .popoverOpen 외 6종 SPM 사용 폐기 정합.
-        let legacySpmKeys = [
-            "KeyboardShortcuts_stash.copy",
-            "KeyboardShortcuts_stash.paste",
-            "KeyboardShortcuts_stash.pinToggle",
-            "KeyboardShortcuts_stash.pinSidebarToggle",
-            "KeyboardShortcuts_stash.deleteOne",
-            "KeyboardShortcuts_stash.deleteAll"
-        ]
-        for key in legacySpmKeys {
-            if UserDefaults.standard.object(forKey: key) != nil {
-                UserDefaults.standard.removeObject(forKey: key)
-                Logger.ui.info("PopoverShortcutStore cleanup — legacy SPM key removed: \(key, privacy: .public)")
-            }
-        }
-
-        // TASK-033 fix-5 — 6종 자체 store 매 launch 강제 reset. marker 없이 매번 reset → 사용자 변경값 매 launch 잃음 (베타 단계 정합. 이후 stable 빌드에서 marker 도입 또는 폐기).
-        for id in PopoverShortcutID.allCases where id != .popoverOpen {
-            UserDefaults.standard.removeObject(forKey: prefix + id.rawValue)
-        }
-
-        for id in PopoverShortcutID.allCases {
-            if get(id) == nil, let def = defaults[id] {
-                set(def, for: id)
-                Logger.ui.info("PopoverShortcutStore default registered: \(id.rawValue, privacy: .public)")
-            }
-        }
-    }
-
-    /// 항목별 default 복원.
-    static func reset(_ id: PopoverShortcutID) {
-        if let def = defaults[id] {
-            set(def, for: id)
-        }
-    }
-
-    /// 7항목 모두 default 복원.
-    static func resetAll() {
-        for id in PopoverShortcutID.allCases {
-            if let def = defaults[id] {
-                set(def, for: id)
-            }
-        }
-    }
-}
-
-extension Notification.Name {
-    static let popoverShortcutDidChange = Notification.Name("stash.popoverShortcutDidChange")
-}
-
-// MARK: - PopoverShortcutRecorder (자체 NSView — NSEvent monitor 기반)
-
-/// 자체 단축키 Recorder. SPM `KeyboardShortcuts.Recorder` 사용 X (Carbon 등록 회피).
-/// 클릭 시 *recording mode* 진입 → NSEvent.addLocalMonitorForEvents 등록 → 다음 keyDown 캡쳐 → onChange 콜백 → recording 종료.
-@MainActor
-final class PopoverShortcutRecorderViewCocoa: NSView {
-    let id: PopoverShortcutID
-    let onChange: (PopoverShortcut?) -> Void
-
-    private let label: NSTextField
-    /// TASK-083 — keyDown / mouseDown 두 monitor 분리. focus-out 패턴 (Recorder 영역 바깥 클릭 시 stop) 위해 mouseDown localMonitor 신규.
-    private var keyMonitor: Any?
-    private var mouseMonitor: Any?
-    /// TASK-083 — Settings 윈도우 비활성 시 자동 stop. localMonitor 가 잡지 못하는 외부 앱/Dock 활성 케이스 보완.
-    nonisolated(unsafe) private var resignKeyObserver: NSObjectProtocol?
-    private var isRecording: Bool = false
-    /// TASK-082 Phase 9 (P3) — Swift 6 strict concurrency nonisolated deinit 안 property 접근 위해 `nonisolated(unsafe)` 박음. NSObjectProtocol 자체 Sendable 부합 X, NotificationCenter.removeObserver 는 thread-safe (Foundation 표준).
-    nonisolated(unsafe) private var observer: NSObjectProtocol?
-    /// TASK-065 — hover state. NSTrackingArea 로 mouseEntered/exited 감지 → borderColor + bg 색 분기.
-    private var isHovered: Bool = false
-    private var trackingArea: NSTrackingArea?
-
-    init(id: PopoverShortcutID, onChange: @escaping (PopoverShortcut?) -> Void) {
-        self.id = id
-        self.onChange = onChange
-        self.label = NSTextField(labelWithString: "")
-        super.init(frame: NSRect(x: 0, y: 0, width: 100, height: 22))
-        self.wantsLayer = true
-        self.layer?.cornerRadius = 5
-        self.layer?.borderWidth = 0.5
-        self.layer?.borderColor = NSColor.separatorColor.cgColor
-        self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
-
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.alignment = .center
-        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .labelColor
-        addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor)
-        ])
-
-        updateLabel()
-
-        // store 변경 시 label 자동 갱신. notification.userInfo capture 회피 — id raw 만 추출 후 클로저 외부 capture.
-        let myId = self.id.rawValue
-        observer = NotificationCenter.default.addObserver(
-            forName: .popoverShortcutDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            let changedId = notification.userInfo?["id"] as? String
-            Task { @MainActor [weak self] in
-                guard let self, changedId == myId else { return }
-                self.updateLabel()
-            }
-        }
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    // TASK-082 Phase 9 (P3) — 명시 cleanup 박음. PreferencesWindow 가 lazy 생성 + 재사용 (`isReleasedWhenClosed = false`) 라 실제 deinit 흐름은 *process termination* 만 — 동작 영향 0 이지만 Swift 정합.
-    // TASK-083 — resignKeyObserver 도 cleanup. NSEvent monitor (keyMonitor/mouseMonitor) 는 recording 활성 상태 view 소멸 케이스에만 잔존 — 정상 흐름 (didResignKey → stopRecording) 자연 정리, process termination 시 시스템 정리.
-    deinit {
-        if let observer {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        if let resignKeyObserver {
-            NotificationCenter.default.removeObserver(resignKeyObserver)
-        }
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        if isRecording {
-            stopRecording()
-        } else {
-            startRecording()
-        }
-    }
-
-    // TASK-065 — NSTrackingArea hover 감지 (Recorder 보더/배경 색 분기).
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let trackingArea {
-            removeTrackingArea(trackingArea)
-        }
-        let area = NSTrackingArea(
-            rect: bounds,
-            options: [.activeInActiveApp, .mouseEnteredAndExited, .inVisibleRect],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(area)
-        trackingArea = area
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        isHovered = true
-        updateLabel()
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        isHovered = false
-        updateLabel()
-    }
-
-    private func startRecording() {
-        isRecording = true
-        updateLabel()
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            guard let self else { return event }
-            return Self.handleKeyDown(event: event, recorder: self) ? nil : event
-        }
-        // TASK-083 — focus-out (Recorder 영역 바깥 클릭) 시 stop. 이벤트는 *그대로 전파* (return event) → 다른 Recorder 클릭 시 B start 자연 흐름 보장.
-        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self else { return event }
-            let recorderBoundsInWindow = self.convert(self.bounds, to: nil)
-            if Self.isFocusOutClick(
-                eventLocationInWindow: event.locationInWindow,
-                eventWindow: event.window,
-                recorderWindow: self.window,
-                recorderBoundsInWindow: recorderBoundsInWindow
-            ) {
-                Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — outside mouseDown → stop")
-                self.stopRecording()
-            }
-            return event
-        }
-        // TASK-083 — Settings 윈도우 비활성 (Dock / 다른 앱 활성화) 시 자동 stop. localMonitor 가 잡지 못하는 외부 경로 보완.
-        resignKeyObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didResignKeyNotification,
-            object: self.window,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self, self.isRecording else { return }
-                Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — window didResignKey → stop")
-                self.stopRecording()
-            }
-        }
-        Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — recording started")
-    }
-
-    /// TASK-083 — Recorder 영역 외부 클릭 판정 (localMonitor 핵심 로직 단위 테스트 가능 형태로 분리). 같은 윈도우 안 + Recorder bounds 밖 = focus-out trigger.
-    /// - eventLocationInWindow: `NSEvent.locationInWindow` (윈도우 좌표계)
-    /// - eventWindow: `NSEvent.window` — 이벤트 발생 윈도우
-    /// - recorderWindow: Recorder view 가 박힌 윈도우
-    /// - recorderBoundsInWindow: Recorder bounds 를 윈도우 좌표계로 변환한 rect
-    @MainActor
-    internal static func isFocusOutClick(
-        eventLocationInWindow: CGPoint,
-        eventWindow: NSWindow?,
-        recorderWindow: NSWindow?,
-        recorderBoundsInWindow: CGRect
-    ) -> Bool {
-        guard eventWindow === recorderWindow else { return false }
-        return !recorderBoundsInWindow.contains(eventLocationInWindow)
-    }
-
-    @MainActor
-    private static func handleKeyDown(event: NSEvent, recorder: PopoverShortcutRecorderViewCocoa) -> Bool {
-        // ESC → 취소 (변경 X)
-        if event.keyCode == Constants.KeyCodes.escape {
-            recorder.stopRecording()
-            return true
-        }
-        // 단축키 추출 — modifier 없으면 modifier 검증 실패 콜백
-        guard let shortcut = PopoverShortcut.from(event: event) else {
-            // modifier 없음 — onChange(nil-equivalent invalid) 처리는 호출처에 위임. 여기선 *recording 유지* + onChange(invalid) 호출.
-            recorder.onChange(PopoverShortcut(keyCode: event.keyCode, modifiers: NSEvent.ModifierFlags(rawValue: 0)))
-            // recording 유지 (사용자 재입력 기회). 단 onChange 호출처에서 토스트 + revert.
-            return true
-        }
-        recorder.onChange(shortcut)
-        recorder.stopRecording()
-        return true
-    }
-
-    private func stopRecording() {
-        isRecording = false
-        if let keyMonitor {
-            NSEvent.removeMonitor(keyMonitor)
-            self.keyMonitor = nil
-        }
-        if let mouseMonitor {
-            NSEvent.removeMonitor(mouseMonitor)
-            self.mouseMonitor = nil
-        }
-        if let resignKeyObserver {
-            NotificationCenter.default.removeObserver(resignKeyObserver)
-            self.resignKeyObserver = nil
-        }
-        updateLabel()
-        Logger.ui.info("PopoverShortcutRecorder \(self.id.rawValue, privacy: .public) — recording stopped")
-    }
-
-    private func updateLabel() {
-        if isRecording {
-            label.stringValue = L10n("shortcuts.recorder.placeholder")
-            label.textColor = .secondaryLabelColor
-            self.layer?.borderColor = NSColor.controlAccentColor.cgColor
-            self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
-        } else {
-            let shortcut = PopoverShortcutStore.get(id)
-            label.stringValue = shortcut?.displayText ?? L10n("shortcuts.recorder.change")
-            label.textColor = .labelColor
-            // TASK-065 — hover 시 보더 진하게 + bg opacity 증가 (시각 피드백).
-            self.layer?.borderColor = (isHovered ? NSColor.labelColor.withAlphaComponent(0.35) : NSColor.separatorColor).cgColor
-            self.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(isHovered ? 0.85 : 0.5).cgColor
-        }
-    }
-}
-
-struct PopoverShortcutRecorder: NSViewRepresentable {
-    let id: PopoverShortcutID
-    let onChange: (PopoverShortcut?) -> Void
-
-    func makeNSView(context: Context) -> PopoverShortcutRecorderViewCocoa {
-        PopoverShortcutRecorderViewCocoa(id: id, onChange: onChange)
-    }
-
-    func updateNSView(_ nsView: PopoverShortcutRecorderViewCocoa, context: Context) {}
-}
-
 // MARK: - ShortcutsTab
 
 struct ShortcutsTab: View {
     @Bindable var viewModel: SettingsViewModel
+    /// TASK-098 — `PIN 단축키` 묶음이 각 핀의 *명칭·값* 을 표시·수정하므로 클립 뷰모델이 필요하다.
+    @Bindable var clipsViewModel: ClipsViewModel
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 강조 텍스트 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
     /// TASK-073 — 앱 언어 변경 시 body 재평가 → 모든 i18n 키 lookup 새 언어.
     @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
 
+    // TASK-098 — 묶음 접힘 상태 영속. 초기값 = 기본 단축키 열림 / PIN 단축키 닫힘
+    // (PIN 행이 2줄 구조라 함께 펼치면 탭 진입만으로 스크롤 발생 — UX-UI §4-4).
+    @AppStorage(Constants.UserDefaultsKeys.shortcutsBasicGroupExpanded) private var basicExpanded: Bool = true
+    @AppStorage(Constants.UserDefaultsKeys.shortcutsPinGroupExpanded) private var pinExpanded: Bool = false
+
+    /// TASK-098 — 인라인 편집 대상. 한 번에 한 행만 활성.
+    /// fix-3 — 키를 *클립 id* → **순번** 으로 변경. 클립 id 기준이면 핀이 없는 순번은 편집 자체가 불가능해
+    /// (핀 1개 사용자는 1번 행만 열리고 2번 이후는 클릭해도 무반응) 10개 행 전부 열려야 하는 요건을 만족할 수 없다.
+    private enum EditField: Hashable {
+        case alias(Int)
+        case value(Int)
+    }
+    /// TASK-098 fix-1 — **편집기 렌더 상태는 `@FocusState` 와 분리한다.**
+    /// 1차 구현은 `isEditing = focusedField == .alias(id)` 로 존재 여부를 판정했는데,
+    /// 탭 시점엔 아직 TextField 가 계층에 없어 SwiftUI 가 focus 요청을 즉시 nil 로 되돌린다
+    /// → `isEditing` 이 곧바로 false → **입력창이 아예 뜨지 않고** focus 이탈로 인식돼 빈 draft 저장까지 돌았다.
+    ///
+    /// TASK-098 fix-2 — 편집 단위를 *필드* 에서 **행** 으로 올렸다. 행을 클릭하면 명칭·값 인풋이 함께 열린다.
+    /// TASK-098 fix-3 — 행 식별을 클립 id → **순번** 으로 변경 (핀 없는 순번도 편집 가능해야 하므로).
+    /// 렌더는 본 `editingOrdinal` 이, 키보드 focus 는 필드가 생긴 뒤(`onAppear`) `focusedField` 가 담당한다.
+    @State private var editingOrdinal: Int?
+    /// TASK-098 검증 — 저장 대상 클립을 편집 진입 시점에 고정한다. 확정 시점에 순번으로 다시 조회하면
+    /// 편집 중 핀 목록이 바뀐 경우(다른 창에서 핀 해제 등) 같은 순번의 *다른 클립* 에 쓴다.
+    @State private var editingClipId: UUID?
+    @FocusState private var focusedField: EditField?
+    @State private var aliasDraft: String = ""
+    @State private var valueDraft: String = ""
+
+    /// 기본 단축키 묶음 = Pin 직접 paste 를 뺀 나머지 (열거형 순서 유지).
+    private var basicIDs: [PopoverShortcutID] { PopoverShortcutID.allCases.filter { $0.pinOrdinal == nil } }
+
     var body: some View {
         let _ = accentColorModeRaw  // SwiftUI 의존성 등록
         let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
-        return VStack(spacing: 14) {
+        return VStack(spacing: 10) {
+            // 묶음 1 — 기본 단축키 (초기 열림)
             settingsCard {
                 VStack(spacing: 0) {
-                    let allIds = PopoverShortcutID.allCases
-                    ForEach(Array(allIds.enumerated()), id: \.element) { idx, id in
-                        popoverShortcutRow(id: id)
-                        if idx < allIds.count - 1 {
-                            Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
+                    groupHeader(titleKey: "shortcuts.group.basic", expanded: $basicExpanded)
+                    if basicExpanded {
+                        Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
+                        ForEach(Array(basicIDs.enumerated()), id: \.element) { idx, id in
+                            popoverShortcutRow(id: id)
+                            if idx < basicIDs.count - 1 {
+                                Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 묶음 2 — PIN 단축키 (초기 닫힘). 행마다 명칭·값 2줄.
+            settingsCard {
+                VStack(spacing: 0) {
+                    groupHeader(titleKey: "shortcuts.group.pin", expanded: $pinExpanded)
+                    if pinExpanded {
+                        Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
+                        let pinIDs = PopoverShortcutID.pinPasteIDs
+                        // 핀 목록은 **여기서 한 번만** 계산한다. 행마다 `clipsViewModel.pinnedClips` 를 읽으면
+                        // filter + sort 가 body 재평가마다 10회 돈다.
+                        // TASK-098 검수 정정 — 행↔핀 매칭은 배열 위치가 아니라 **자리 번호**(`pin_slot`).
+                        // 2번을 해제하면 2번 행만 비고 3번 행은 그대로 3번 핀을 보여준다.
+                        let bySlot = Dictionary(
+                            clipsViewModel.pinnedClips.compactMap { clip in clip.pinSlot.map { ($0, clip) } },
+                            uniquingKeysWith: { first, _ in first }
+                        )
+                        ForEach(Array(pinIDs.enumerated()), id: \.element) { idx, id in
+                            pinShortcutRow(
+                                id: id,
+                                ordinal: idx + 1,
+                                clip: bySlot[idx + 1]
+                            )
+                            if idx < pinIDs.count - 1 {
+                                Divider().foregroundStyle(DesignTokens.Colors.settingsRowDivider)
+                            }
                         }
                     }
                 }
@@ -485,6 +118,377 @@ struct ShortcutsTab: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
         }
+        // TASK-098 fix-5 — **바깥 클릭 자동 저장 폐기.** 확정은 인풋 아래 원형 아이콘 버튼(체크/X)으로만 한다.
+        // fix-4 까지는 focus 이탈·바깥 탭 제스처·인풋 소멸 등 암묵 경로로 저장했는데, 저장 시점을 사용자가
+        // 통제할 수 없어 불편하다는 검수 결과. 이제 저장은 *명시적 버튼 또는 명칭 필드 Enter* 뿐이다.
+        // ESC 는 취소 (편집 중일 때만 가로챈다 — 아니면 창 닫기 등 기본 동작 유지).
+        .onExitCommand { if editingOrdinal != nil { cancelRow() } }
+        // TASK-098 fix-3 — 콘텐츠를 항상 창 높이 상한까지 채운다.
+        // 이전에는 PIN 묶음 접힘 상태 콘텐츠가 상한(480)보다 짧아, 펼칠 때 *창이 조금 길어지다가 그 다음부터 스크롤* 이
+        // 되는 두 동작이 섞였다(사용자 검수 지적). 처음부터 상한에 붙여두면 창 높이는 고정되고 펼침은 스크롤만 만든다.
+        .frame(
+            minHeight: DesignTokens.WindowSize.settingsContentMaxH - DesignTokens.Spacing.settingsContentMargin * 2,
+            alignment: .top
+        )
+    }
+
+    // MARK: - TASK-098 묶음 헤더 (접힘)
+
+    /// 묶음 접힘 헤더 — 제목 + 펼침 표시(▶/▼). **항목 개수는 표기하지 않는다.**
+    private func groupHeader(titleKey: String, expanded: Binding<Bool>) -> some View {
+        _GroupHeaderButton(titleKey: titleKey, expanded: expanded)
+    }
+
+    // MARK: - TASK-098 PIN 단축키 행 (2줄)
+
+    /// PIN 단축키 행. 위줄 = 순번 · 타입 아이콘 · 명칭 · 조합 · 되돌리기 / 아래줄 = 값.
+    ///
+    /// TASK-098 fix-3 — **핀이 있든 없든 10개 행 모두 클릭하면 인풋이 열린다.**
+    /// fix-2 까지는 편집 키가 *클립 id* 여서 핀이 없는 순번(클립 없음)은 편집 자체가 불가능했다
+    /// → 핀이 1개인 사용자는 1번 행만 열리고 2번 이후는 클릭해도 반응이 없었다.
+    /// 편집 키를 **순번** 으로 바꾸고, 빈 순번에서 값을 입력해 확정하면 새 핀을 만든다.
+    private func pinShortcutRow(id: PopoverShortcutID, ordinal: Int, clip: Clip?) -> some View {
+        let isEditing = editingOrdinal == ordinal
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                // 순번 · 타입 아이콘 · 명칭을 한 덩어리로 묶어 **행 앞부분 어디를 클릭해도** 편집이 열리게 한다
+                // (승인 목업은 행 전체 클릭. 이전에는 명칭·값 *글자* 만 클릭 대상이라 순번·아이콘·여백이 무반응이었다).
+                // 조합 입력(Recorder)·되돌리기는 자기 클릭을 가져야 하므로 이 클러스터 밖에 둔다.
+                pinRowLeadingCluster(ordinal: ordinal, clip: clip, isEditing: isEditing)
+
+                PopoverShortcutRecorder(id: id) { newShortcut in
+                    viewModel.handlePopoverShortcutChange(id: id, newShortcut: newShortcut, allIds: PopoverShortcutID.allCases)
+                }
+                .frame(width: 100, height: 22)
+
+                _ResetShortcutItemButton(action: { viewModel.resetPopoverShortcut(id: id) })
+            }
+
+            Group {
+                if isEditing {
+                    valueInput(clip: clip, ordinal: ordinal)
+                } else {
+                    valueDisplay(clip: clip, ordinal: ordinal)
+                }
+            }
+            // 들여쓰기 = 순번(15) + gap(8) + 아이콘(13) + gap(8)
+            .padding(.leading, 44)
+
+            // fix-5 — 저장 / 취소 (아이콘 전용 원형 버튼, 좌측 정렬). 인풋 왼쪽선과 같은 들여쓰기.
+            if isEditing {
+                HStack(spacing: 6) {
+                    _CircleIconButton(
+                        systemName: "checkmark",
+                        tint: DesignTokens.Colors.pinSaveButton,
+                        labelKey: "shortcuts.pin.save",
+                        disabled: !canSave(clip: clip),
+                        action: { saveRow(ordinal: ordinal) }
+                    )
+                    _CircleIconButton(
+                        systemName: "xmark",
+                        tint: DesignTokens.Colors.labelSecondary,
+                        labelKey: "shortcuts.pin.cancel",
+                        disabled: false,
+                        action: { cancelRow() }
+                    )
+                    // 핀 해제 — 설정에서 핀을 *만들 수* 있으니 *없앨 수* 도 있어야 한다(검수 지적).
+                    // 편집 중에만 노출한다 — 상시 노출하면 조합 입력 옆에 파괴적 버튼이 놓여 오클릭 위험이 생긴다.
+                    // 저장·취소와 시각적으로 떼어놓고(간격 + 경고 톤) 클립 삭제가 아님을 색으로도 구분한다.
+                    if let clip {
+                        // 아이콘은 popover 클립 행의 핀 버튼과 **같은 글리프·같은 45° 기울기** 를 쓴다
+                        // (`pin.slash` 는 사이드바 압정과 형태가 달라 이질감을 준다는 검수 지적).
+                        // 사이드바에서도 이 기울어진 압정을 누르는 것이 곧 핀 해제라 동작 대응도 일치한다.
+                        _CircleIconButton(
+                            systemName: "pin.fill",
+                            tint: DesignTokens.Colors.pinUnpinButton,
+                            labelKey: "shortcuts.pin.unpin",
+                            disabled: false,
+                            rotationDegrees: 45,
+                            action: { unpinRow(clip: clip) }
+                        )
+                        .padding(.leading, 10)
+                    }
+                }
+                .padding(.leading, 44)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+
+    /// 저장 가능 여부 — 값이 비면 저장 불가(빈 클립 금지). 값 수정이 안 되는 타입(이미지·파일)은 명칭만 저장하므로 항상 가능.
+    private func canSave(clip: Clip?) -> Bool {
+        let editable = clip.map { PinPasteShortcutResolver.isValueEditable(type: $0.type) } ?? true
+        guard editable else { return true }
+        return PinPasteShortcutResolver.normalizeValue(valueDraft) != nil
+    }
+
+    // MARK: - TASK-098 위줄 좌측 클러스터 (순번 · 타입 아이콘 · 명칭)
+
+    /// 위줄의 순번·아이콘·명칭 묶음. **비편집 상태에서만** 탭 제스처를 붙인다 —
+    /// 편집 중에 붙여 두면 명칭 인풋으로 가야 할 클릭을 부모 제스처가 가로챈다.
+    @ViewBuilder
+    private func pinRowLeadingCluster(ordinal: Int, clip: Clip?, isEditing: Bool) -> some View {
+        let cluster = HStack(alignment: .center, spacing: 8) {
+            // 순번 — 행의 가장 좌측 (승인된 인터랙션 목업 순서: 순번 → 타입 아이콘).
+            Text("\(ordinal)")
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .frame(width: 15)
+
+            // 타입 아이콘 — 고정폭이라 핀 없는 행(빈 칸)에서도 정렬이 어긋나지 않는다.
+            Group {
+                if let clip {
+                    Image(systemName: PinPasteShortcutResolver.typeSymbol(type: clip.type, isMultiFile: clip.isMultiFile))
+                        .font(.system(size: 11, weight: .regular))
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: 13, height: 13)
+            .foregroundStyle(DesignTokens.Colors.labelSecondary)
+
+            if isEditing {
+                aliasInput(ordinal: ordinal)
+            } else {
+                aliasDisplay(clip: clip)
+            }
+        }
+
+        if isEditing {
+            cluster
+        } else {
+            cluster
+                .contentShape(Rectangle())
+                .onTapGesture { beginEditing(ordinal: ordinal, clip: clip) }
+        }
+    }
+
+    // MARK: - TASK-098 명칭 / 값 — 표시 상태
+
+    /// 명칭 표시(비편집). 클릭 판정은 상위 클러스터가 담당한다.
+    private func aliasDisplay(clip: Clip?) -> some View {
+        let alias = clip.flatMap { PinPasteShortcutResolver.normalizeAlias($0.pinAlias) }
+        return Group {
+            if let alias {
+                Text(alias)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } else {
+                Text(L10n("shortcuts.pin.aliasEmpty"))
+                    .font(.system(size: 12.5, weight: .regular))
+                    .italic()
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 값 표시(비편집). 클릭 시 그 행의 명칭·값 인풋이 함께 열린다 (핀 없는 순번도 동일).
+    private func valueDisplay(clip: Clip?, ordinal: Int) -> some View {
+        let locked = clip.map { !PinPasteShortcutResolver.isValueEditable(type: $0.type) } ?? false
+        return HStack(spacing: 6) {
+            Text(clip.map { Self.valuePreview(for: $0) } ?? L10n("shortcuts.pin.slotEmpty"))
+                .font(.system(size: 11, weight: .regular))
+                .italic(clip == nil)
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if locked {
+                Text(L10n("shortcuts.pin.valueLocked"))
+                    .font(.system(size: 9.5, weight: .regular))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { beginEditing(ordinal: ordinal, clip: clip) }
+    }
+
+    // MARK: - TASK-098 명칭 / 값 — 편집 인풋 (외형 통일)
+
+    /// 명칭 인풋 — 한 줄. Enter 확정.
+    private func aliasInput(ordinal: Int) -> some View {
+        HStack(spacing: 6) {
+            TextField(
+                "",
+                text: $aliasDraft,
+                prompt: Text(L10n("shortcuts.pin.aliasPlaceholder"))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            )
+            .textFieldStyle(.plain)
+            .font(Self.inputFont)
+            .focused($focusedField, equals: .alias(ordinal))
+            // 필드가 계층에 들어온 *뒤* 에 focus 요청 — 순서가 뒤바뀌면 SwiftUI 가 요청을 버린다 (fix-1).
+            .onAppear { focusedField = .alias(ordinal) }
+            // 명칭은 한 줄이라 Enter 로 저장 (체크 버튼과 동일 경로).
+            .onSubmit { saveRow(ordinal: ordinal) }
+            // 탭 전환 · 창 닫기 · 묶음 접기로 인풋이 사라지면 **취소**로 처리한다 (fix-5 — 암묵 저장 폐기).
+            .onDisappear { if editingOrdinal == ordinal { cancelRow() } }
+            .onChange(of: aliasDraft) { _, new in
+                if new.count > Constants.pinAliasMaxLength {
+                    aliasDraft = String(new.prefix(Constants.pinAliasMaxLength))
+                }
+            }
+            Text("\(aliasDraft.count)/\(Constants.pinAliasMaxLength)")
+                .font(.system(size: 9.5, weight: .regular))
+                .monospacedDigit()
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+        }
+        .modifier(_InputChrome(isFocused: focusedField == .alias(ordinal)))
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 값 인풋 — 여러 줄. 최대 높이 초과 시 영역 내부 스크롤.
+    /// 이미지·파일 클립은 본문이 없어 편집 대상이 아니므로 표시 상태를 유지한다.
+    @ViewBuilder
+    private func valueInput(clip: Clip?, ordinal: Int) -> some View {
+        let editable = clip.map { PinPasteShortcutResolver.isValueEditable(type: $0.type) } ?? true
+        if editable {
+            // fix-4 — `TextEditor` 대신 **세로 확장 `TextField`**.
+            // TextEditor 는 자체 text container inset 을 갖고(공개 API 로 제거 불가) 텍스트를 위로 붙여 놓기 때문에,
+            // 명칭 필드(TextField)와 *좌측 시작점·세로 정렬이 둘 다 어긋났다*(사용자 검수 스크린샷).
+            // 같은 컨트롤 계열로 바꾸면 여백·정렬·서체가 자동으로 일치하고 플레이스홀더도 prompt 로 동일하게 처리된다.
+            TextField(
+                "",
+                text: $valueDraft,
+                prompt: Text(L10n("shortcuts.pin.valuePlaceholder"))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary),
+                axis: .vertical
+            )
+            .textFieldStyle(.plain)
+            .font(Self.inputFont)
+            // 한 줄에서 시작해 내용만큼 늘어난다 (상한 6줄 — 넘으면 내부 스크롤).
+            .lineLimit(1...6)
+            .focused($focusedField, equals: .value(ordinal))
+            // 행 진입 시 focus 는 명칭에 준다 — 값은 클릭·Tab 으로 이동.
+            // 값은 여러 줄이라 Enter 가 개행 — 저장은 체크 버튼으로만.
+            .onDisappear { if editingOrdinal == ordinal { cancelRow() } }
+            .modifier(_InputChrome(isFocused: focusedField == .value(ordinal)))
+            .frame(maxWidth: .infinity)
+        } else {
+            valueDisplay(clip: clip, ordinal: ordinal)
+        }
+    }
+
+    /// 두 인풋 공통 서체 — 외형 통일.
+    private static let inputFont: Font = .system(size: 12, weight: .regular)
+
+    // MARK: - TASK-098 편집 진입 / 확정
+
+    /// 행 편집 진입 — 명칭·값 draft 를 현재 값으로 채우고 두 인풋을 함께 띄운다.
+    /// 핀이 없는 순번이면 빈 draft 로 시작하고, 값을 입력해 확정하면 새 핀이 만들어진다.
+    private func beginEditing(ordinal: Int, clip: Clip?) {
+        guard editingOrdinal != ordinal else { return }
+        aliasDraft = clip?.pinAlias ?? ""
+        valueDraft = clip?.body ?? ""
+        // 저장 대상은 **여기서 고정한다.** 확정 시점에 순번으로 다시 조회하면 편집 중 핀 목록이 바뀐 경우
+        // (다른 창에서 핀 해제 등) 엉뚱한 클립에 쓴다.
+        editingClipId = clip?.id
+        editingOrdinal = ordinal
+    }
+
+    /// 편집 취소 — 입력을 버리고 표시 상태로 돌아간다 (fix-5. 저장은 오직 `saveRow`).
+    private func cancelRow() {
+        guard let ordinal = editingOrdinal else { return }
+        Logger.ui.info("PIN 행 편집 취소 — ordinal=\(ordinal, privacy: .public) (입력 버림)")
+        clearEditing()
+    }
+
+    private func clearEditing() {
+        editingOrdinal = nil
+        editingClipId = nil
+        focusedField = nil
+        aliasDraft = ""
+        valueDraft = ""
+    }
+
+    /// 행 확정 — 명칭·값을 함께 저장한다. *변경된 것만* 저장해 불필요한 DB 쓰기·목록 갱신을 피한다.
+    /// 핀이 없던 순번에 값이 입력됐으면 새 핀을 만든다.
+    /// 저장은 체크 버튼 또는 명칭 필드 Enter 로만 호출된다.
+    private func saveRow(ordinal: Int) {
+        // 중복 실행 방지 게이트 — 같은 행의 두 번째 호출은 no-op.
+        // (draft 를 비우는 방식은 위험 — 두 번째 호출이 *사용자가 명칭을 지웠다* 로 오인해 기존 명칭을 삭제한다.)
+        guard editingOrdinal == ordinal else { return }
+        let clip = editingClipId.flatMap { id in clipsViewModel.clips.first { $0.id == id } }
+        let alias = aliasDraft
+        let body = valueDraft
+
+        // ── 거부 경로 — 편집 상태를 유지하고 입력을 버리지 않는다 (승인 목업 정합).
+        //    Enter 는 체크 버튼과 같은 경로인데 버튼은 비활성인 상태가 있으므로, 여기서 같은 조건을 한 번 더 막는다.
+        //    이 게이트가 없으면 빈 순번에 *명칭만* 넣고 Enter 를 쳤을 때 편집창이 조용히 닫히고 입력이 사라진다.
+        guard canSave(clip: clip) else {
+            Logger.ui.info("PIN 행 저장 거부 — ordinal=\(ordinal, privacy: .public) 사유: 값 비어 있음 (편집 유지)")
+            viewModel.settingsToast.enqueue(.warn, L10n("toast.pin.valueRequired"))
+            return
+        }
+        if clip == nil {
+            // 한도 초과는 여기서 먼저 잡는다 — 뷰모델의 토스트는 popover 큐로 나가서 설정 창에서는 보이지 않는다.
+            // 빈 자리 유무가 아니라 **개수** 로 판정한다. 클릭한 행이 비어 있다는 건 그 자리가 비었다는 뜻이라
+            // 자리 기준으로는 한도에 걸릴 수 없고, 자리 없는 옛 핀이 섞였을 때만 개수가 먼저 찬다.
+            guard clipsViewModel.pinnedClips.count < Constants.maxPinnedClips else {
+                Logger.ui.info("PIN 행 저장 거부 — ordinal=\(ordinal, privacy: .public) 사유: 핀 한도 초과 (편집 유지)")
+                viewModel.settingsToast.enqueue(.warn, String(format: L10n("toast.pin.limit"), Constants.maxPinnedClips))
+                return
+            }
+            // 같은 본문이 이미 다른 번호에 고정돼 있으면 새 핀을 만들 수 없다 (수집 dedup 정책상 같은 본문은 한 row).
+            // 안내 없이 진행하면 요청한 자리는 빈 채로 남고 입력만 사라져 *저장이 안 먹은 것* 처럼 보인다.
+            if let dup = clipsViewModel.pinnedClips.first(where: { $0.type == .text && $0.body == body }) {
+                Logger.ui.info("PIN 행 저장 거부 — ordinal=\(ordinal, privacy: .public) 사유: 같은 본문이 \(dup.pinSlot?.description ?? "?", privacy: .public)번에 이미 고정 (편집 유지)")
+                viewModel.settingsToast.enqueue(.warn, String(format: L10n("toast.pin.alreadyPinned"), dup.pinSlot ?? ordinal))
+                return
+            }
+        }
+
+        // ── 확정
+        clearEditing()
+
+        guard let clip else {
+            Task { @MainActor in
+                // 클릭한 **그 번호** 자리에 꽂는다 (TASK-098 검수 정정 — 자리 개념 도입으로 해소된 제약).
+                let created = await clipsViewModel.createPinnedClip(body: body, alias: alias, slot: ordinal)
+                if !created {
+                    viewModel.settingsToast.enqueue(.warn, L10n("toast.pin.createFailed"))
+                }
+            }
+            return
+        }
+
+        let normalizedAlias = PinPasteShortcutResolver.normalizeAlias(alias)
+        let aliasChanged = normalizedAlias != PinPasteShortcutResolver.normalizeAlias(clip.pinAlias)
+        let bodyChanged = PinPasteShortcutResolver.isValueEditable(type: clip.type) && body != (clip.body ?? "")
+        guard aliasChanged || bodyChanged else { return }
+
+        let clipId = clip.id
+        Task { @MainActor in
+            if aliasChanged { await clipsViewModel.setPinAlias(id: clipId, rawAlias: alias) }
+            if bodyChanged { await clipsViewModel.updateClipBody(id: clipId, rawBody: body) }
+        }
+    }
+
+    /// 핀 해제 — 편집을 닫고 `is_pinned` 만 내린다. 항목은 히스토리에 남고 값 수정분도 유지되므로 확인 창을 두지 않는다.
+    /// 명칭은 repository `togglePin` 이 함께 초기화한다 (재고정 시 옛 이름 부활 방지).
+    /// 해제한 자리만 비고 다른 행의 번호·조합은 그대로다 — 그 결과가 이 화면에서 바로 보인다.
+    private func unpinRow(clip: Clip) {
+        Logger.ui.info("PIN 행 핀 해제 — clipId=\(clip.id.uuidString, privacy: .public)")
+        clearEditing()
+        let clipId = clip.id
+        Task { @MainActor in
+            await clipsViewModel.unpinFromSettings(id: clipId)
+            viewModel.settingsToast.enqueue(.info, L10n("toast.pin.unpinned"))
+        }
+    }
+
+    /// 값 미리보기 — 타입별 표시 라벨(`ClipRowView.displayLabel`)을 한 줄로 접는다.
+    /// TASK-098 검증 — 이전에는 본문/파일 경로를 직접 조립해 **이미지 핀에 내부 UUID 파일명**이,
+    /// **다중 파일 묶음에 첫 파일명**이 나왔다. 표시 규칙은 클립 행과 한 소스를 본다.
+    private static func valuePreview(for clip: Clip) -> String {
+        ClipRowView.displayLabel(for: clip).replacingOccurrences(of: "\n", with: " ")
     }
 
     private func popoverShortcutRow(id: PopoverShortcutID) -> some View {
@@ -508,6 +512,113 @@ struct ShortcutsTab: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
+    }
+}
+
+// MARK: - TASK-098 저장 / 취소 원형 아이콘 버튼 (fix-5)
+
+/// 아이콘 전용 원형 버튼. **텍스트를 화면에 노출하지 않고** 라벨은 툴팁 + 접근성 라벨로만 둔다.
+@MainActor
+private struct _CircleIconButton: View {
+    let systemName: String
+    let tint: Color
+    let labelKey: String
+    let disabled: Bool
+    /// 글리프 회전(도). 핀 해제 버튼이 popover 압정과 같은 45° 기울기를 쓰기 위한 것. 기본 0 = 회전 없음.
+    var rotationDegrees: Double = 0
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    /// fix-6 — 24 → 20pt (사용자 검수: 버튼이 큼). 행 안 보조 동작이라 조합 입력(22pt)보다 작게 둔다.
+    private let size: CGFloat = 20
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(tint)
+                .rotationEffect(.degrees(rotationDegrees))
+                .frame(width: size, height: size)
+                .background(
+                    Circle().fill(
+                        isHovered && !disabled
+                            ? tint.opacity(0.18)
+                            : DesignTokens.Colors.settingsCircleButtonBg
+                    )
+                )
+                .overlay(
+                    Circle().stroke(
+                        tint.opacity(isHovered && !disabled ? 0.70 : 0.38),
+                        lineWidth: 0.5
+                    )
+                )
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.35 : 1.0)
+        .onHover { isHovered = $0 }
+        .help(L10n(labelKey))
+        .accessibilityLabel(Text(L10n(labelKey)))
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
+    }
+}
+
+// MARK: - TASK-098 인풋 공통 외형
+
+/// 명칭·값 인풋 공통 chrome — **두 인풋의 모양을 같게** 만드는 단일 지점 (fix-2).
+/// 1차 구현은 명칭이 테두리 없는 평문, 값은 accent 테두리 박스여서 모양이 달랐다.
+private struct _InputChrome: ViewModifier {
+    let isFocused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(DesignTokens.Colors.settingsInputBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(
+                        isFocused ? DesignTokens.Colors.accent : DesignTokens.Colors.labelSecondary.opacity(0.35),
+                        lineWidth: isFocused ? 1 : 0.5
+                    )
+            )
+    }
+}
+
+// MARK: - TASK-098 묶음 접힘 헤더
+
+/// 묶음 헤더 — 제목 + 펼침 표시. 마우스 올림 시 배경 톤 (기존 설정 카드 hover 패턴 정합).
+@MainActor
+private struct _GroupHeaderButton: View {
+    let titleKey: String
+    @Binding var expanded: Bool
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: { expanded.toggle() }) {
+            HStack(spacing: 7) {
+                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                    .frame(width: 9)
+                Text(L10n(titleKey))
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isHovered ? DesignTokens.Colors.settingsCardBgHover : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 

@@ -164,7 +164,8 @@ struct StashApp: App {
         // ⑧ UI controllers (NSStatusItem retain) — HistoryPopover 호스팅
         // 1·2·3 호출 방식 통합 popover Window (TASK-018). StatusItemController 와 HotkeyMonitor 모두 동일 인스턴스 공유.
         // TASK-029 — preferencesController 를 App lifetime 으로 보관 + popover onOpenSettings 콜백이 controller.show() 호출 (단일 진입점).
-        let prefsController = PreferencesWindowController(viewModel: settingsVM)
+        // TASK-098 — 단축키 탭 `PIN 단축키` 묶음이 핀 항목의 명칭·값을 표시·수정하므로 클립 뷰모델도 주입.
+        let prefsController = PreferencesWindowController(viewModel: settingsVM, clipsViewModel: clipsVM)
         self.preferencesController = prefsController
         let popover = PopoverWindow(
             viewModel: clipsVM,
@@ -188,6 +189,40 @@ struct StashApp: App {
                 Logger.hotkey.info("popoverOpen shortcut triggered (방식 2 — SPM)")
                 await clipsVM.reload()
                 popover.show(mode: .method2)
+            }
+        }
+
+        // ⑨-2-1 TASK-098 — Pin 직접 paste 전역 단축키 10종 등록 (기본 `⌥⌘1`~`⌥⌘9`, `⌥⌘0`).
+        // `.popoverOpen` 과 같은 SPM Carbon 경로 — *어디서나 동작*이 기능 본질이라 popover localMonitor 로는 성립하지 않는다.
+        // 대상은 *자리 번호* (`pin_slot` 1~10) 기준이다 — TASK-098 검수 정정.
+        // 이전에는 `pinnedClips` 배열 위치를 순번으로 썼는데, 그러면 앞자리를 핀 해제한 순간 뒤 항목이 당겨져
+        // **같은 조합이 다른 클립을 붙여넣었다**. 자리는 해제해도 당겨지지 않으므로 조합이 가리키는 대상이 고정된다.
+        // 그 자리가 비어 있으면 오류 표시 없이 무시한다 (전역 단축키라 오타성 입력이 잦음 — FEATURES F-004).
+        for id in PopoverShortcutID.pinPasteIDs {
+            guard let name = id.globalName, let ordinal = id.pinOrdinal else { continue }
+            self.hotkeyManager.register(name: name) { [popover, clipsVM] in
+                Task { @MainActor in
+                    await clipsVM.reload()
+                    let slots = clipsVM.pinnedClips.map(\.pinSlot)
+                    let pinnedCount = slots.count
+                    guard let targetIdx = PinPasteShortcutResolver.resolvePinTargetIndex(
+                        ordinal: ordinal,
+                        slots: slots
+                    ) else {
+                        Logger.hotkey.info("pinPaste 무시 — ordinal=\(ordinal, privacy: .public) pinnedCount=\(pinnedCount, privacy: .public) (그 자리 비어 있음)")
+                        return
+                    }
+                    Logger.hotkey.info("pinPaste 실행 — ordinal=\(ordinal, privacy: .public) pinnedCount=\(pinnedCount, privacy: .public) idx=\(targetIdx, privacy: .public)")
+                    // popover 안 paste 와 동일 경로 — 권한 × 자동 붙여넣기 매트릭스(F-003)를 그대로 상속.
+                    // popover 가 떠 있으면 기존 흐름대로 닫고 붙이고, 닫혀 있으면 hide 가 no-op 이라 현재 앱에 그대로 붙는다.
+                    await PopoverPanel.performPasteFlow(
+                        viewModel: clipsVM,
+                        idx: targetIdx,
+                        zone: .pin,
+                        sourceLabel: "PinPasteHotkey(\(ordinal))",
+                        hide: { if popover.isVisible { popover.hide() } }
+                    )
+                }
             }
         }
 

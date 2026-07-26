@@ -69,9 +69,76 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
                 throw DatabaseError.pinLimitReached
             }
         }
+        // TASK-098 검수 정정 — 자리 배정/해제 (GRDBClipRepository 정합).
+        // 켜기 = 가장 낮은 빈 자리 / 해제 = 그 자리만 비움 (다른 핀 자리 불변).
+        if !clips[index].isPinned {
+            let occupied = Set(clips.filter { $0.isPinned }.compactMap(\.pinSlot))
+            guard let slot = (1...Constants.maxPinnedClips).first(where: { !occupied.contains($0) }) else {
+                throw DatabaseError.pinLimitReached
+            }
+            clips[index].pinSlot = slot
+        } else {
+            clips[index].pinSlot = nil
+        }
         clips[index].isPinned.toggle()
         // TASK-019 — 핀 시점 기록 (GRDBClipRepository 정합).
         clips[index].pinnedAt = clips[index].isPinned ? Date() : nil
+        // TASK-098 검수 정정 — 핀 해제 시 명칭도 초기화 (GRDBClipRepository 정합).
+        // 핀을 켜는 방향에서는 건드리지 않는다 (`createPinnedClip` 경로 보호).
+        if !clips[index].isPinned {
+            clips[index].pinAlias = nil
+        }
+    }
+
+    /// TASK-098 검수 정정 — 지정 자리에 핀 (GRDBClipRepository 정합).
+    @discardableResult
+    func pinAtSlot(id: UUID, slot: Int) async throws -> Bool {
+        guard slot >= 1, slot <= Constants.maxPinnedClips else { return false }
+        guard let index = clips.firstIndex(where: { $0.id == id }) else { return false }
+        if clips[index].isPinned, clips[index].pinSlot == slot { return true }
+        let occupied = Set(clips.filter { $0.isPinned }.compactMap(\.pinSlot))
+        guard !occupied.contains(slot) else { return false }
+        clips[index].isPinned = true
+        clips[index].pinSlot = slot
+        clips[index].pinnedAt = Date()
+        return true
+    }
+
+    /// TASK-098 — 핀 표시용 명칭 저장 (GRDBClipRepository 정합). nil = 해제.
+    func setPinAlias(id: UUID, alias: String?) async throws {
+        guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
+        clips[index].pinAlias = alias
+    }
+
+    /// TASK-098 — 본문 수정. 텍스트 타입만 · 빈 값 거부 · `lastUsedAt` 미갱신 (GRDBClipRepository 정합).
+    ///
+    /// `Clip.body` 가 `let` 이라 부분 수정이 불가능해 통째로 다시 만든다. 그래서 **필드를 하나라도 빠뜨리면
+    /// 그 값이 조용히 기본값으로 리셋되는데**, 프로덕션은 `UPDATE clips SET body = ?` 단일 컬럼이라 그런 일이 없다.
+    /// (실제로 `pinSlot` 이 빠져 값 수정만으로 자리가 사라지는 상태였다 — 아래 전 필드 나열을 줄이지 말 것.)
+    @discardableResult
+    func updateBody(id: UUID, body: String) async throws -> Bool {
+        guard let index = clips.firstIndex(where: { $0.id == id }) else { return false }
+        guard clips[index].type == .text else { return false }
+        guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        let old = clips[index]
+        clips[index] = Clip(
+            id: old.id,
+            type: old.type,
+            body: body,
+            filePath: old.filePath,
+            isFileExternal: old.isFileExternal,
+            fileOriginalPath: old.fileOriginalPath,
+            fileBookmark: old.fileBookmark,
+            sourceAppBundleId: old.sourceAppBundleId,
+            isPinned: old.isPinned,
+            createdAt: old.createdAt,
+            lastUsedAt: old.lastUsedAt,   // 수정은 사용이 아님 — 갱신 X
+            pinnedAt: old.pinnedAt,
+            filePathsJson: old.filePathsJson,
+            pinAlias: old.pinAlias,
+            pinSlot: old.pinSlot
+        )
+        return true
     }
 
     @discardableResult

@@ -202,11 +202,30 @@ final class ClipsViewModel {
     }
 
     /// Pin 사이드바 — 핀 항목 별도 보장 노출 채널 (일반 히스토리 외 추가 채널).
-    /// TASK-019 — 정렬 = `pinned_at DESC` (최근 핀이 상단). NULL fallback = `created_at` (V3 마이그레이션 이전 핀 row 안전망 — 마이그레이션이 last_used_at 으로 초기화하므로 일반 케이스 nil X).
+    /// 정렬 = **자리 번호(`pin_slot`) 오름차순** (TASK-098 검수 정정).
+    ///
+    /// 정책이 두 번 바뀐 자리라 근거를 남긴다. TASK-019 는 `pinned_at DESC`(최근 핀이 상단)였고, TASK-098 이 이를 뒤집었다 —
+    /// Pin 직접 paste 단축키가 *순번* 을 대상 지정 수단으로 쓰는데 최근 핀 상단 정렬에서는 새 핀마다 전체 번호가 밀려
+    /// `⌥⌘1` 이 가리키는 대상이 수시로 바뀌기 때문이다. 그러나 시각 순서만으로는 *핀 해제* 시 뒤 항목이 당겨지는 것을
+    /// 막지 못해(검수 지적) 자리를 데이터로 갖게 했다. 이제 해제해도 그 자리만 비므로 **중간이 비는 것이 정상 상태**다(1·3·4).
+    /// 사이드바는 빈 자리를 건너뛰어 나열하되 각 행은 자기 번호를 표시한다.
+    ///
+    /// 자리가 없는 행(V7 이전 데이터 안전망)은 옛 기준(`pinned_at`, NULL 은 `created_at`) 오름차순으로 자리 있는 행 뒤에 둔다.
     var pinnedClips: [Clip] {
         clips.filter { $0.isPinned }.sorted { lhs, rhs in
-            (lhs.pinnedAt ?? lhs.createdAt) > (rhs.pinnedAt ?? rhs.createdAt)
+            switch (lhs.pinSlot, rhs.pinSlot) {
+            case let (l?, r?): return l < r
+            case (_?, nil):    return true
+            case (nil, _?):    return false
+            case (nil, nil):   return (lhs.pinnedAt ?? lhs.createdAt) < (rhs.pinnedAt ?? rhs.createdAt)
+            }
         }
+    }
+
+    /// TASK-098 검수 정정 — *자리 번호* 로 핀을 찾는다. 단축키 순번 · 설정 행 번호가 모두 이 경로를 쓴다.
+    /// 배열 위치(`pinnedClips[n-1]`)로 찾으면 앞자리가 빈 순간 다른 클립을 가리킨다.
+    func pinnedClip(atSlot slot: Int) -> Clip? {
+        pinnedClips.first { $0.pinSlot == slot }
     }
 
     /// `focusZone` 기반 현재 활성 idx — `.pin` 이면 `pinSelectedIdx`, 그 외는 `selectedIdx`.
@@ -609,6 +628,137 @@ final class ClipsViewModel {
             toastQueue?.enqueue(.warn, body)
         } catch {
             Logger.ui.error("ClipsViewModel.togglePin error: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// TASK-098 — 설정 PIN 단축키 행의 *핀 해제*.
+    ///
+    /// 클립 자체는 지우지 않는다 — `is_pinned` 만 내리므로 항목은 히스토리에 남는다. 값(`body`) 수정도 그대로 유지된다.
+    /// 반면 **명칭(`pin_alias`)은 초기화된다** — 핀에만 있는 개념이라 재고정 시 옛 이름이 되살아나면 안 된다(`togglePin` 이 처리).
+    /// 해제한 *그 자리만* 비고 다른 핀의 번호·조합은 그대로 유지된다 (자리를 `pin_slot` 데이터로 갖는 구조).
+    ///
+    /// `trackSelection: .pin` 을 넘기는 이유 — 그 분기가 *핀 목록이 줄었을 때의 후처리*(선택 idx clamp + **마지막 핀 해제 시 사이드바 닫기**)를
+    /// 담당한다. 설정 창에서 해제했다고 그 후처리를 건너뛰면 popover 사이드바가 **빈 채로 남는다**.
+    /// (파라미터 이름이 호출 위치가 아니라 *어느 목록을 추적하는가* 를 뜻한다는 점에 주의.)
+    func unpinFromSettings(id: UUID) async {
+        Logger.ui.info("unpinFromSettings — id: \(id.uuidString, privacy: .public)")
+        await togglePin(id: id, trackSelection: .pin)
+    }
+
+    /// TASK-098 — 핀 표시용 명칭 저장. 설정 PIN 단축키 행의 명칭 필드 확정 시 호출.
+    /// 입력 정규화(공백 제거 · 빈 문자 → 해제 · 40자 상한)는 `PinPasteShortcutResolver.normalizeAlias` 단일 지점.
+    func setPinAlias(id: UUID, rawAlias: String?) async {
+        let normalized = PinPasteShortcutResolver.normalizeAlias(rawAlias)
+        do {
+            try await repository.setPinAlias(id: id, alias: normalized)
+            Logger.ui.info("setPinAlias — id: \(id.uuidString, privacy: .public) 설정: \(normalized != nil, privacy: .public) 길이: \(normalized?.count ?? 0, privacy: .public)")
+            await reload()
+        } catch {
+            Logger.ui.error("ClipsViewModel.setPinAlias error: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// TASK-098 — 클립 본문 수정. 설정 PIN 단축키 행의 값 편집 확정 시 호출.
+    /// 텍스트 타입만 · 빈 값 거부(기존 값 유지) · `last_used_at` 미갱신은 repository 가 최종 판정한다.
+    /// - Returns: 반영됐으면 true. false 면 호출자가 편집 전 값으로 되돌린다.
+    @discardableResult
+    func updateClipBody(id: UUID, rawBody: String?) async -> Bool {
+        guard let value = PinPasteShortcutResolver.normalizeValue(rawBody) else {
+            Logger.ui.info("updateClipBody 거부 — id: \(id.uuidString, privacy: .public) 사유: 빈 값 (수정 전 값 유지)")
+            return false
+        }
+        do {
+            let applied = try await repository.updateBody(id: id, body: value)
+            Logger.ui.info("updateClipBody — id: \(id.uuidString, privacy: .public) 반영: \(applied, privacy: .public) 길이: \(value.count, privacy: .public)")
+            if applied { await reload() }
+            return applied
+        } catch {
+            Logger.ui.error("ClipsViewModel.updateClipBody error: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    /// TASK-098 fix-3 — 설정 PIN 단축키 행의 *빈 순번* 에 값을 입력해 확정하면 새 핀을 만든다.
+    ///
+    /// 주의: 수집 시점 dedup 정책(V2)상 동일 `(type:text, body)` 가 이미 있으면 새 row 가 생기지 않고
+    /// 기존 row 의 `last_used_at` 만 갱신된다. 그래서 insert 후 *해당 body 의 row 를 다시 찾아* 핀 처리한다
+    /// (새로 생긴 row 든 기존 row 든 같은 경로로 수습).
+    /// - Parameter slot: 사용자가 클릭한 *자리 번호*. 그 자리에 그대로 꽂는다 (TASK-098 검수 정정).
+    ///   nil 이면 가장 낮은 빈 자리(`togglePin` 기본 규칙).
+    /// - Returns: 핀이 만들어졌으면 true. 값이 비었거나 자리가 없으면 false.
+    @discardableResult
+    func createPinnedClip(body rawBody: String, alias rawAlias: String?, slot: Int? = nil) async -> Bool {
+        guard let value = PinPasteShortcutResolver.normalizeValue(rawBody) else {
+            Logger.ui.info("createPinnedClip 거부 — 사유: 빈 값")
+            return false
+        }
+        // 자리를 **먼저 확정한다** — 요청 자리가 유효하고 비어 있으면 그대로, 아니면 가장 낮은 빈 자리.
+        // (핀인데 자리가 NULL 인 row 를 만들지 않기 위해 insert 전에 값을 정한다.)
+        let occupied = pinnedClips.map(\.pinSlot)
+        let taken = Set(occupied.compactMap { $0 })
+        let requested = slot.flatMap { s in (1...Constants.maxPinnedClips).contains(s) && !taken.contains(s) ? s : nil }
+        // 개수 가드도 함께 둔다 — 이 경로는 `insert` 로 핀 row 를 직접 만들어 `togglePin` 의 한도 검사를 거치지 않는다.
+        // 자리 검사만 두면 *자리 없는 핀* (V7 이전 데이터 등)이 섞였을 때 한도를 넘겨 만들 수 있다.
+        guard pinnedClips.count < Constants.maxPinnedClips,
+              let targetSlot = requested ?? PinPasteShortcutResolver.lowestFreeSlot(occupied: occupied) else {
+            Logger.ui.warning("createPinnedClip 거부 — 빈 자리 없음 (max=\(Constants.maxPinnedClips, privacy: .public))")
+            toastQueue?.enqueue(.warn, String(format: L10n("toast.pin.limit"), Constants.maxPinnedClips))
+            return false
+        }
+        let now = Date()
+        let draft = Clip(
+            id: UUID(),
+            type: .text,
+            body: value,
+            filePath: nil,
+            isFileExternal: false,
+            fileOriginalPath: nil,
+            fileBookmark: nil,
+            sourceAppBundleId: nil,
+            isPinned: true,
+            createdAt: now,
+            lastUsedAt: now,
+            pinnedAt: now,
+            pinAlias: PinPasteShortcutResolver.normalizeAlias(rawAlias),
+            pinSlot: targetSlot
+        )
+        do {
+            _ = try await repository.insert(draft)
+            await reload()
+            guard let target = clips.first(where: { $0.type == .text && $0.body == value }) else {
+                Logger.ui.error("createPinnedClip — insert 후 대상 row 조회 실패")
+                return false
+            }
+            if target.id != draft.id {
+                // dedup 으로 **기존 row 가 재사용된** 경로.
+                // 그 row 가 이미 핀이면 실패로 돌려준다 — 자리를 옮기면 사용자가 만든 배치가 흔들리고,
+                // 조용히 성공을 반환하면 요청한 자리는 빈 채로 남는데 *다른 자리 핀의 명칭만* 바뀌어 엉뚱한 행이 변한다.
+                // 어느 번호에 이미 있는지는 호출자(설정 창)가 안내한다.
+                guard !target.isPinned else {
+                    Logger.ui.info("createPinnedClip 거부 — 같은 본문이 이미 \(target.pinSlot?.description ?? "?", privacy: .public)번 자리에 고정됨 (요청 자리: \(targetSlot, privacy: .public))")
+                    return false
+                }
+                // 핀이 아닌 기존 row 를 그대로 승격 — 핀·자리가 안 붙어 있으므로 여기서 채운다.
+                if try await repository.pinAtSlot(id: target.id, slot: targetSlot) == false {
+                    Logger.ui.warning("createPinnedClip — \(targetSlot, privacy: .public)번 자리 배정 실패 → 빈 자리 배정으로 대체")
+                    try await repository.togglePin(id: target.id)
+                }
+            }
+            // (target.id == draft.id 면 새 row 가 그대로 들어간 것 — insert 시점에 핀·자리가 이미 박혀 있다.)
+            if let alias = PinPasteShortcutResolver.normalizeAlias(rawAlias), target.pinAlias != alias {
+                try await repository.setPinAlias(id: target.id, alias: alias)
+            }
+            await reload()
+            onPinnedClipsChange?()
+            Logger.ui.info("createPinnedClip — id: \(target.id.uuidString, privacy: .public) 길이: \(value.count, privacy: .public) 명칭: \(rawAlias?.isEmpty == false, privacy: .public)")
+            return true
+        } catch DatabaseError.pinLimitReached {
+            Logger.ui.warning("createPinnedClip — 핀 한도 초과 (repository)")
+            toastQueue?.enqueue(.warn, String(format: L10n("toast.pin.limit"), Constants.maxPinnedClips))
+            return false
+        } catch {
+            Logger.ui.error("ClipsViewModel.createPinnedClip error: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 

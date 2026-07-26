@@ -12,10 +12,14 @@ struct PinSidebarView: View {
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
     /// TASK-073 — 언어 변경 시 body 재평가 → 헤더 "핀 목록" 라벨 등 새 언어 lookup.
     @AppStorage(AppLanguage.userDefaultsKey) private var appLanguageRaw: String = AppLanguage.systemDefault.rawValue
+    /// TASK-098 — 설정에서 Pin 조합을 바꾸면 사이드바 키캡이 *즉시* 따라가야 한다.
+    /// `PopoverShortcutStore` 는 UserDefaults/SPM 저장이라 SwiftUI 가 관측하지 못하므로, 변경 알림을 받아 본 값을 올려 재평가시킨다.
+    @State private var shortcutRevision: Int = 0
 
     var body: some View {
         let _ = accentColorModeRaw  // TASK-053 SwiftUI 의존성 등록
         let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
+        let _ = shortcutRevision    // TASK-098 — 조합 변경 시 키캡 재평가
         return VStack(alignment: .leading, spacing: 0) {
             header
             ScrollView {
@@ -23,6 +27,13 @@ struct PinSidebarView: View {
                     ForEach(Array(viewModel.pinnedClips.enumerated()), id: \.element.id) { idx, clip in
                         // TASK-019 fix 2차 — 본체 ClipRowView 컴포넌트 그대로 사용 (타입 아이콘 + 본문 + 핀해제 버튼).
                         // TASK-019 fix 3차 — showTimeLabel: false 박아 시간 영역 제거 (220 너비 안 본문 truncate 완화 — B8).
+                        // TASK-098 — 순번 · 명칭(있으면) · 현재 조합 키캡을 함께 전달.
+                        // 검수 정정 — 순번은 배열 위치가 아니라 **자기 자리 번호**(`pin_slot`)다.
+                        // 2번을 해제하면 3번 행은 계속 3번으로 표시되고(당겨지지 않음) 목록에서는 1 다음에 3이 온다.
+                        // fallback(`idx + 1`)은 V7 이전 데이터 안전망.
+                        let ordinal = clip.pinSlot ?? (idx + 1)
+                        let shortcut = PinPasteShortcutResolver.shortcutID(forPinOrdinal: ordinal)
+                            .flatMap { PopoverShortcutStore.get($0) }
                         ClipRowView(
                             clip: clip,
                             isSelected: viewModel.pinSelectedIdx == idx,
@@ -58,7 +69,12 @@ struct PinSidebarView: View {
                                 // (clip.isPinned == true 이므로 ClipRowView 의 X 아이콘 분기 진입 X)
                             },
                             onHoverEnter: { viewModel.hoverEnterRow(id: clip.id) },  // TASK-055 — hover 임계 timer 시작.
-                            onHoverExit: { viewModel.hoverExitRow(id: clip.id) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
+                            onHoverExit: { viewModel.hoverExitRow(id: clip.id) },   // TASK-055 — 같은 행 이탈 시 timer cancel.
+                            pinOrdinal: ordinal,
+                            // 명칭이 없으면 nil → 기존대로 값 표시.
+                            displayTitleOverride: PinPasteShortcutResolver.normalizeAlias(clip.pinAlias),
+                            shortcutKeycap: PinPasteShortcutResolver.keycapText(for: shortcut),
+                            isKeycapCustomized: PinPasteShortcutResolver.isCustomized(shortcut: shortcut, pinOrdinal: ordinal)
                         )
                         // TASK-037 fix-15b — Equatable + .equatable() → 호버 응답 빠름.
                         .equatable()
@@ -86,6 +102,10 @@ struct PinSidebarView: View {
             } else {
                 viewModel.pinSidebarHoverExit()
             }
+        }
+        // TASK-098 — 설정에서 조합을 바꾸면 키캡 즉시 갱신.
+        .onReceive(NotificationCenter.default.publisher(for: .popoverShortcutDidChange)) { _ in
+            shortcutRevision &+= 1
         }
     }
 
