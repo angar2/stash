@@ -19,12 +19,17 @@ final class GRDBClipRepository: ClipRepository {
     /// TASK-082 Phase 6 — migration 등록 단일 진실 소스. init / recoverFromCorruption 양쪽 동일 helper 호출 → V4 누락 회귀 영구 차단.
     /// 신규 Vn 추가 시 본 helper 1줄만 갱신 → 두 호출 경로 자동 정합.
     /// TASK-082 Phase 8 — V5 `(type, body)` 인덱스 추가 (dedup hot-path 대비).
-    private static func registerAllMigrations(in migrator: inout DatabaseMigrator) {
+    /// TASK-098 — V6 `pin_alias` 컬럼 추가 (핀 표시용 명칭).
+    /// TASK-098 검수 정정 — `internal` 로 연 이유: V7 백필(기존 사용자 자리 배정)을 검증하려면 테스트가
+    /// *V6 까지의 DB* 를 만든 뒤 전체 목록을 그대로 적용해봐야 한다. 목록을 테스트에 복제하면 진실 소스가 갈라진다.
+    static func registerAllMigrations(in migrator: inout DatabaseMigrator) {
         V1_InitialSchema.register(in: &migrator)
         V2_DedupSameBody.register(in: &migrator)
         V3_AddPinnedAt.register(in: &migrator)
         V4_AddFilePathsJson.register(in: &migrator)
         V5_AddBodyIndex.register(in: &migrator)
+        V6_AddPinAlias.register(in: &migrator)
+        V7_AddPinSlot.register(in: &migrator)
     }
 
     // MARK: - ClipRepository
@@ -84,6 +89,18 @@ final class GRDBClipRepository: ClipRepository {
         }
     }
 
+    /// TASK-098 검수 정정 — 현재 점유된 핀 자리 목록. 자리 배정·중복 검사의 단일 근거.
+    private static func occupiedSlots(in db: Database) throws -> Set<Int> {
+        let slots = try Int.fetchAll(db, sql: "SELECT pin_slot FROM clips WHERE is_pinned = 1 AND pin_slot IS NOT NULL")
+        return Set(slots)
+    }
+
+    /// TASK-098 검수 정정 — 가장 낮은 빈 자리. 자리가 없으면 nil (= 한도 초과).
+    private static func lowestFreeSlot(in db: Database) throws -> Int? {
+        let occupied = try occupiedSlots(in: db)
+        return (1...Constants.maxPinnedClips).first { !occupied.contains($0) }
+    }
+
     func togglePin(id: UUID) async throws {
         Logger.database.debug("togglePin — id: \(id)")
         try await dbQueue.write { db in
@@ -94,12 +111,98 @@ final class GRDBClipRepository: ClipRepository {
                 if pinnedCount >= Constants.maxPinnedClips {
                     throw DatabaseError.pinLimitReached
                 }
+                // TASK-098 검수 정정 — 자리(1~10) 배정. 개수 가드를 통과했는데 빈 자리가 없다면
+                // 자리 데이터가 어긋난 상태이므로 같은 에러로 막는다 (묵묵히 NULL 자리 핀을 만들지 않는다).
+                guard let slot = try Self.lowestFreeSlot(in: db) else {
+                    Logger.database.error("togglePin — 빈 자리 없음 (pinnedCount=\(pinnedCount) 인데 slot 여유 X)")
+                    throw DatabaseError.pinLimitReached
+                }
+                clip.pinSlot = slot
+            } else {
+                // 해제 = **그 자리만 비운다.** 다른 핀의 자리는 건드리지 않는다 (번호·조합 유지).
+                clip.pinSlot = nil
             }
             clip.isPinned.toggle()
-            // TASK-019 — 핀 시점 기록. isPinned=true 면 now / false 면 nil. Pin 사이드바 정렬(최근 핀 우선) 기준.
+            // TASK-019 — 핀 시점 기록. isPinned=true 면 now / false 면 nil.
+            // TASK-098 — 사이드바 정렬 기준은 `pin_slot` 으로 옮겨갔고 `pinned_at` 은 자리 없는 옛 행의 fallback 으로만 남았다.
+            // 기록 방식 자체는 동일하다 (V7 백필도 이 값을 순서 근거로 삼았다).
             clip.pinnedAt = clip.isPinned ? Date() : nil
+            // TASK-098 검수 정정 — **핀을 해제하면 명칭도 초기화한다.**
+            // 명칭은 *핀에만 있는 개념*(Pin 사이드바·설정 PIN 행에서만 쓰인다)이라 해제 후에도 남겨두면,
+            // 한참 뒤 같은 항목을 다시 핀했을 때 잊고 있던 옛 이름이 되살아나 사용자를 놀라게 한다.
+            // 값(`body`) 수정은 히스토리 원본을 바꾸는 것이라 해제와 무관하게 유지된다 — 초기화 대상은 명칭뿐이다.
+            // 핀을 *켜는* 방향에서는 건드리지 않는다 (`createPinnedClip` 의 insert → togglePin → setPinAlias 순서 보호).
+            if !clip.isPinned {
+                clip.pinAlias = nil
+            }
             try clip.update(db)
-            Logger.database.debug("togglePin — isPinned: \(clip.isPinned) pinnedAt: \(clip.pinnedAt?.description ?? "nil")")
+            Logger.database.debug("togglePin — isPinned: \(clip.isPinned) slot: \(clip.pinSlot?.description ?? "nil") pinnedAt: \(clip.pinnedAt?.description ?? "nil") pinAlias 초기화: \(!clip.isPinned)")
+        }
+    }
+
+    /// TASK-098 검수 정정 — **지정한 자리**에 핀을 꽂는다. 설정 `PIN 단축키` 의 빈 행에서 새 핀을 만드는 경로 전용.
+    /// `togglePin` 은 가장 낮은 빈 자리를 배정하므로, 사용자가 *5번 행* 을 클릭해 만들었는데 2번에 꽂히는 문제가 생긴다.
+    /// - 자리가 이미 점유됐거나 범위(1~10) 밖이면 아무것도 하지 않고 `false` 를 반환한다(호출자가 안내).
+    @discardableResult
+    func pinAtSlot(id: UUID, slot: Int) async throws -> Bool {
+        try await dbQueue.write { db in
+            guard slot >= 1, slot <= Constants.maxPinnedClips else {
+                Logger.database.info("pinAtSlot 거부 — slot=\(slot) 사유: 범위 밖")
+                return false
+            }
+            guard var clip = try Clip.filter(Column("id") == id).fetchOne(db) else {
+                Logger.database.info("pinAtSlot 거부 — id: \(id) 사유: 대상 없음")
+                return false
+            }
+            let occupied = try Self.occupiedSlots(in: db)
+            // 이미 그 자리를 쓰는 핀이면 no-op 성공 (같은 상태 요청).
+            if clip.isPinned, clip.pinSlot == slot { return true }
+            guard !occupied.contains(slot) else {
+                Logger.database.info("pinAtSlot 거부 — slot=\(slot) 사유: 이미 점유")
+                return false
+            }
+            clip.isPinned = true
+            clip.pinSlot = slot
+            clip.pinnedAt = Date()
+            try clip.update(db)
+            Logger.database.info("pinAtSlot — id: \(id) slot: \(slot)")
+            return true
+        }
+    }
+
+    /// TASK-098 — 핀 표시용 명칭 저장. raw SQL UPDATE 로 `pin_alias` 단일 컬럼만 건드린다
+    /// (`clip.update(db)` 는 전 컬럼을 다시 쓰므로 다른 컬럼 회귀 여지가 있다).
+    func setPinAlias(id: UUID, alias: String?) async throws {
+        try await dbQueue.write { db in
+            try db.execute(
+                sql: "UPDATE clips SET pin_alias = ? WHERE id = ?",
+                arguments: [alias, id]
+            )
+            let changes = db.changesCount
+            Logger.database.info("setPinAlias — id: \(id) 설정: \(alias != nil) 길이: \(alias?.count ?? 0) changes: \(changes)")
+        }
+    }
+
+    /// TASK-098 — 클립 본문 수정. 텍스트 타입만 · 빈 값 거부 · `last_used_at` 미갱신.
+    @discardableResult
+    func updateBody(id: UUID, body: String) async throws -> Bool {
+        try await dbQueue.write { db in
+            guard let clip = try Clip.filter(Column("id") == id).fetchOne(db) else {
+                Logger.database.info("updateBody 거부 — id: \(id) 사유: 대상 없음")
+                return false
+            }
+            guard clip.type == .text else {
+                Logger.database.info("updateBody 거부 — id: \(id) 사유: 텍스트 아님 (type: \(clip.type.rawValue, privacy: .public))")
+                return false
+            }
+            guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                Logger.database.info("updateBody 거부 — id: \(id) 사유: 빈 값")
+                return false
+            }
+            // `last_used_at` 을 갱신하지 않는 것이 핵심 — 수정은 사용이 아니므로 히스토리 정렬이 흔들리면 안 된다.
+            try db.execute(sql: "UPDATE clips SET body = ? WHERE id = ?", arguments: [body, id])
+            Logger.database.info("updateBody — id: \(id) 이전 길이: \(clip.body?.count ?? 0) 이후 길이: \(body.count)")
+            return true
         }
     }
 

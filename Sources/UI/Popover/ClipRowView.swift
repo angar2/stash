@@ -20,6 +20,14 @@ struct ClipRowView: View, Equatable {
     /// default no-op — 호출처 (HistoryPopover / PinSidebarView) 가 박지 않으면 hover 트리거 비활성.
     var onHoverEnter: () -> Void = {}
     var onHoverExit: () -> Void = {}
+    /// TASK-098 — Pin 사이드바 순번 (1~10). 타입 아이콘 *오른쪽*, 본문 왼쪽에 표시. nil = 미표시 (본체 목록 기본값 → 영향 0).
+    var pinOrdinal: Int? = nil
+    /// TASK-098 — 본문 자리에 값 대신 표시할 문자열 (핀 명칭). nil = 기존대로 값 표시.
+    var displayTitleOverride: String? = nil
+    /// TASK-098 — 압정 앞 조합 키캡 문자열 (`⌥⌘1` 등). nil = 미표시.
+    var shortcutKeycap: String? = nil
+    /// TASK-098 — 키캡이 *사용자가 바꾼* 조합인지. 기본 조합은 옅게 / 변경 조합은 진하게.
+    var isKeycapCustomized: Bool = false
 
     /// TASK-037 fix-15b — Equatable conformance. closure 제외 시각 영향 prop 만 비교.
     /// `.equatable()` modifier 와 함께 사용 → SwiftUI 가 변경된 행만 re-render → 호버 응답 빠름 (selectedIdx 변경 시 다른 행 skip).
@@ -31,7 +39,12 @@ struct ClipRowView: View, Equatable {
         lhs.isFocused == rhs.isFocused &&
         lhs.mode == rhs.mode &&
         lhs.showTimeLabel == rhs.showTimeLabel &&
-        lhs.searchQuery == rhs.searchQuery
+        lhs.searchQuery == rhs.searchQuery &&
+        // TASK-098 — 순번·표시 문자열·키캡도 시각 영향 prop. 빠지면 조합 변경·명칭 변경이 행에 반영되지 않는다.
+        lhs.pinOrdinal == rhs.pinOrdinal &&
+        lhs.displayTitleOverride == rhs.displayTitleOverride &&
+        lhs.shortcutKeycap == rhs.shortcutKeycap &&
+        lhs.isKeycapCustomized == rhs.isKeycapCustomized
     }
 
     @State private var hovering: Bool = false
@@ -52,11 +65,23 @@ struct ClipRowView: View, Equatable {
         let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
             HStack(alignment: .center, spacing: DesignTokens.Spacing.rowInnerGap) {
+                // TASK-098 fix-1 — 순번이 행의 **가장 좌측** (타입 아이콘보다 앞). 사용자 검수 지시.
+                if let pinOrdinal {
+                    Text("\(pinOrdinal)")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                        .frame(width: 13, alignment: .center)
+                }
                 typeIconArea
                 content
                 Spacer(minLength: 4)
                 if showTimeLabel {
                     timeLabel
+                }
+                // TASK-098 — 현재 지정된 Pin 직접 paste 조합. 압정 앞.
+                if let shortcutKeycap {
+                    keycapLabel(shortcutKeycap)
                 }
             }
 
@@ -223,13 +248,51 @@ struct ClipRowView: View, Equatable {
     // MARK: - Content
     private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(displayLines.indices, id: \.self) { idx in
-                Text(highlightedLine(idx))
+            // TASK-098 — 핀 명칭이 지정된 행은 값 대신 명칭을 표시한다 (중간 굵기 + 본문 색).
+            // 붙여넣기·복사는 언제나 실제 값으로 동작하므로 *표시만* 바뀐다. 검색 강조는 값 영역이 아니라 미적용.
+            if let displayTitleOverride {
+                Text(displayTitleOverride)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(DesignTokens.Colors.labelPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ForEach(displayLines.indices, id: \.self) { idx in
+                    Text(highlightedLine(idx))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
+    }
+
+    /// TASK-098 — 조합 키캡. 기본 조합은 옅게 / 사용자가 바꾼 조합은 진하게 (어디를 손댔는지 한눈에).
+    private func keycapLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10.5, weight: .semibold))
+            .foregroundStyle(
+                isKeycapCustomized
+                    ? DesignTokens.Colors.labelPrimary.opacity(0.80)
+                    : DesignTokens.Colors.labelSecondary
+            )
+            .padding(.horizontal, 5)
+            .frame(height: 17)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(DesignTokens.Colors.pinKeycapBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(
+                        isKeycapCustomized
+                            ? DesignTokens.Colors.labelPrimary.opacity(0.30)
+                            : DesignTokens.Colors.labelSecondary.opacity(0.32),
+                        lineWidth: 0.5
+                    )
+            )
+            .fixedSize()
     }
 
     /// TASK-035 — 현재 행 idx 의 displayLine 을 검색어 매칭 강조된 AttributedString 으로 반환.
@@ -275,7 +338,7 @@ struct ClipRowView: View, Equatable {
     ///  2. `body` 가 http(s) URL 이고 path 유효하면 → URL.lastPathComponent (웹 이미지, 회귀 (g)).
     ///  3. `body` URL 파싱 실패 또는 path 비어있으면 → body 그대로.
     ///  4. `body` 도 nil 이면 → localized "이미지" fallback (스크린샷, case B).
-    private var imageDisplayName: String {
+    nonisolated static func imageDisplayName(for clip: Clip) -> String {
         if let originalPath = clip.fileOriginalPath {
             return (originalPath as NSString).lastPathComponent
         }
@@ -292,6 +355,27 @@ struct ClipRowView: View, Equatable {
         return L10n("clip.row.image")
     }
 
+    /// 클립 표시 문자열 **단일 진실 소스** — 타입별 라벨 규칙만 결정하고 *줄 처리는 호출처* 가 한다
+    /// (클립 행은 첫 줄만, 설정 PIN 단축키 행은 개행을 공백으로 접음).
+    /// TASK-098 — 설정 PIN 단축키 행이 자체 구현을 갖고 있어 **이미지 핀에 내부 UUID 파일명**이,
+    /// **다중 파일 묶음에 첫 파일명**이 노출됐다(본체 목록은 *이미지* / *여러 파일* 라벨). 규칙을 여기로 모아 재발 차단.
+    nonisolated static func displayLabel(for clip: Clip) -> String {
+        switch clip.type {
+        case .image:
+            return imageDisplayName(for: clip)
+        case .file:
+            // TASK-026 — 다중 파일 묶음 라벨 = `여러 파일` (단순 라벨, N 정보는 배지가 담당).
+            // 파일명 리스트 상세는 TASK-027 *클립 상세 미리보기 sub-window* 에서 별도 표시.
+            if clip.isMultiFile {
+                return L10n("clip.row.multiFile.label")
+            }
+            return clip.fileOriginalPath.map { ($0 as NSString).lastPathComponent }
+                ?? (clip.body ?? L10n("clip.row.file"))
+        case .text:
+            return clip.body ?? ""
+        }
+    }
+
     // mono 폰트 분기 — 코드 / URL은 mono. plan은 mono 필드 X. 단순 휴리스틱: 50자 이상이거나 줄바꿈 / 코드 패턴 (^/$/{}/=>/) → mono.
     private var isMonoBody: Bool {
         let body = clip.body ?? ""
@@ -302,23 +386,10 @@ struct ClipRowView: View, Equatable {
     }
 
     private var displayLines: [String] {
-        switch clip.type {
-        case .image:
-            return [imageDisplayName]
-        case .file:
-            // TASK-026 — 다중 파일 묶음 라벨 = `여러 파일` (단순 라벨, N 정보는 배지가 담당).
-            // 파일명 리스트 상세는 TASK-027 *클립 상세 미리보기 sub-window* 에서 별도 표시.
-            if clip.isMultiFile {
-                return [L10n("clip.row.multiFile.label")]
-            }
-            let name = clip.fileOriginalPath.flatMap { ($0 as NSString).lastPathComponent } ?? (clip.body ?? L10n("clip.row.file"))
-            return [name]
-        case .text:
-            // TASK-037 — 행 단일 고정 높이 정책. 첫 줄만 노출, 초과는 truncate.
-            let body = clip.body ?? ""
-            let firstLine = body.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) ?? ""
-            return [firstLine]
-        }
+        let label = Self.displayLabel(for: clip)
+        guard clip.type == .text else { return [label] }
+        // TASK-037 — 행 단일 고정 높이 정책. 첫 줄만 노출, 초과는 truncate.
+        return [label.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) ?? ""]
     }
 
     // MARK: - Time label (48px width, tabular-nums)

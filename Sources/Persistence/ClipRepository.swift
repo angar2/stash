@@ -23,7 +23,26 @@ protocol ClipRepository: Sendable {
     func updateLastUsedAt(id: UUID) async throws
 
     /// Pin 토글. 한도 10 초과 시 `DatabaseError.pinLimitReached` throw.
+    /// TASK-098 검수 정정 — 핀을 켜면 **가장 낮은 빈 자리**(`pin_slot` 1~10)를 배정하고,
+    /// 해제하면 **그 자리만 비운다**(다른 핀의 자리·번호·조합 불변) + 명칭(`pin_alias`) 초기화.
     func togglePin(id: UUID) async throws
+
+    /// 지정한 *자리* (1~10)에 핀을 꽂는다 (TASK-098 검수 정정). 설정 `PIN 단축키` 빈 행에서 새 핀을 만드는 경로 전용.
+    /// `togglePin` 은 가장 낮은 빈 자리를 배정하므로 *사용자가 클릭한 번호* 를 지킬 수 없다.
+    /// - Returns: 꽂았으면 `true`. 대상 없음 / 자리 점유 / 범위 밖이면 `false`.
+    @discardableResult
+    func pinAtSlot(id: UUID, slot: Int) async throws -> Bool
+
+    /// 핀 표시용 명칭 저장 (TASK-098). `nil` 이면 해제(컬럼 NULL).
+    /// 호출 전 `PinPasteShortcutResolver.normalizeAlias` 로 공백 제거·상한(40자) 적용을 마친 값을 넘긴다.
+    /// 표시 전용 컬럼이라 `last_used_at` 등 다른 컬럼은 건드리지 않는다.
+    func setPinAlias(id: UUID, alias: String?) async throws
+
+    /// 클립 본문 수정 (TASK-098). **텍스트 타입만** 허용하며 빈 문자·공백만은 거부한다.
+    /// 수정은 *사용 이력이 아니므로* `last_used_at` 을 갱신하지 않는다 (히스토리 최근사용순 정렬 불변).
+    /// - Returns: 실제로 반영됐으면 `true`. 대상 없음 / 텍스트 아님 / 빈 값이면 `false`.
+    @discardableResult
+    func updateBody(id: UUID, body: String) async throws -> Bool
 
     /// 개별 클립 DB row 삭제. 디스크 파일 삭제는 호출자 책임.
     /// - Returns: 삭제된 클립 (해당 id 없으면 nil).

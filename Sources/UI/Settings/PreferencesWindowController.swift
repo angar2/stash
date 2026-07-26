@@ -6,10 +6,13 @@ import OSLog
 @MainActor
 final class PreferencesWindowController {
     private let viewModel: SettingsViewModel
+    /// TASK-098 — 단축키 탭 `PIN 단축키` 묶음이 핀 항목의 명칭·값을 표시·수정하므로 클립 뷰모델을 함께 보관한다.
+    private let clipsViewModel: ClipsViewModel
     private var window: PreferencesWindow?
 
-    init(viewModel: SettingsViewModel) {
+    init(viewModel: SettingsViewModel, clipsViewModel: ClipsViewModel) {
         self.viewModel = viewModel
+        self.clipsViewModel = clipsViewModel
     }
 
     /// 마우스 클릭 / ⌘+, 통합 진입점. 윈도우 lazy 생성 + activate + frontmost 진입.
@@ -39,7 +42,7 @@ final class PreferencesWindowController {
 
     private func ensureWindow() -> PreferencesWindow {
         if let window { return window }
-        let hosting = NSHostingController(rootView: SettingsWindow(viewModel: viewModel))
+        let hosting = NSHostingController(rootView: SettingsWindow(viewModel: viewModel, clipsViewModel: clipsViewModel))
         // NSHostingController 가 SwiftUI 의 intrinsic preferred content size 를 따라 NSWindow 자동 사이즈 조정.
         // 박지 않으면 윈도우 contentRect 가 SwiftUI view 를 채우지 못해 tab bar 만 fit 되고 ScrollView 영역이 0 으로 collapse 됨 (사용자 검수 발견).
         hosting.sizingOptions = [.preferredContentSize]
