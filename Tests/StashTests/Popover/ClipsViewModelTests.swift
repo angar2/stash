@@ -566,8 +566,11 @@ struct ClipsViewModelTests {
         #expect(afterUnpin?.pinnedAt == nil)
     }
 
-    @Test("pinnedClips — 정렬 = pinnedAt DESC (최근 핀이 상단, TASK-019)")
-    func pinnedClipsSortedByPinnedAtDesc() async throws {
+    /// TASK-098 — 정렬 정책이 `pinnedAt DESC`(최근 핀 상단, TASK-019)에서 **자리 번호(`pin_slot`) 오름차순**으로 바뀌었다.
+    /// 사유: Pin 직접 paste 단축키가 순번을 대상 지정 수단으로 쓰는데, DESC 에서는 항목을 새로 핀할 때마다 전체 번호가 밀려
+    /// `⌥⌘1` 이 가리키는 대상이 수시로 바뀐다. 핀을 켜면 가장 낮은 빈 자리를 받으므로 *먼저 핀한 것이 1번*이 된다.
+    @Test("pinnedClips — 정렬 = 자리 번호 오름차순 (먼저 핀한 것이 1번, TASK-098)")
+    func pinnedClipsSortedBySlotAscending() async throws {
         let prefilled = [
             makeClip(body: "first-pin", pinned: false),
             makeClip(body: "second-pin", pinned: false),
@@ -584,11 +587,12 @@ struct ClipsViewModelTests {
         try? await Task.sleep(nanoseconds: 10_000_000)
         let thirdId = vm.clips.first(where: { $0.body == "third-pin" })!.id
         await vm.togglePin(id: thirdId, trackSelection: .clip)
-        // 최근 핀 우선.
+        // 먼저 핀한 것이 1번 — 새 핀은 다음 빈 자리를 받아 기존 번호가 유지된다.
         #expect(vm.pinnedClips.count == 3)
-        #expect(vm.pinnedClips[0].body == "third-pin")
+        #expect(vm.pinnedClips[0].body == "first-pin")
         #expect(vm.pinnedClips[1].body == "second-pin")
-        #expect(vm.pinnedClips[2].body == "first-pin")
+        #expect(vm.pinnedClips[2].body == "third-pin")
+        #expect(vm.pinnedClips.map(\.pinSlot) == [1, 2, 3])
     }
 
     @Test("onPinSidebarOpenChange / onPinnedClipsChange 콜백 — PopoverWindow 토글 / size 재조정 트리거")

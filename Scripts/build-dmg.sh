@@ -71,13 +71,26 @@ hdiutil create \
 
 # 4-2. 임시 .dmg 마운트 → Applications 폴더로의 심볼릭 링크 추가
 #   사용자가 .dmg 더블클릭 시 "stash.app 을 Applications 로 드래그" UX 자연 (macOS 배포 관행)
-MOUNT_POINT="/Volumes/${APP_NAME}"
-hdiutil attach build/temp.dmg -mountpoint "$MOUNT_POINT"
+#   마운트 지점을 /Volumes/<앱이름> 으로 고정하면, *다른 Stash dmg 가 이미 그 자리에 붙어 있을 때*
+#   새 이미지가 같은 경로에 겹쳐 마운트되고 detach 가 엉뚱한 디스크를 지목해 실패한다
+#   (2026-07-27 v1.1.0 빌드에서 실제 발생 — 6월에 열어둔 1.0.1 dmg 가 자리를 물고 있었다).
+#   → 매번 빈 임시 경로를 새로 만들어 쓰고, detach 는 경로가 아니라 attach 가 돌려준 디바이스로 지목한다.
+#   -nobrowse = 빌드 중 Finder 사이드바·바탕화면에 볼륨이 뜨지 않게 (사용자 방해 X)
+MOUNT_ROOT=$(mktemp -d /tmp/stash-dmg-XXXXXX)
+MOUNT_POINT="${MOUNT_ROOT}/${APP_NAME}"
+DEV=$(hdiutil attach build/temp.dmg -mountpoint "$MOUNT_POINT" -nobrowse \
+  | awk '/GUID_partition_scheme/ { print $1; exit }')
+# attach 는 성공했는데 디바이스를 못 뽑으면 이후 detach 가 조용히 빗나간다 → 즉시 중단
+if [ -z "$DEV" ]; then
+  echo "✗ dmg 마운트 디바이스를 찾지 못했습니다 (hdiutil attach 출력 형식 확인 필요)" >&2
+  exit 1
+fi
 ln -s /Applications "$MOUNT_POINT/Applications"
 # Spotlight indexing / Finder 자동 열기 등으로 detach 실패 가능 → 잠시 대기 후 -force 박음
 sync
 sleep 2
-hdiutil detach "$MOUNT_POINT" -force
+hdiutil detach "$DEV" -force
+rmdir "$MOUNT_POINT" "$MOUNT_ROOT" 2>/dev/null || true
 
 # 4-3. read-write .dmg → 압축 read-only .dmg 변환
 #   -format UDZO = zlib 압축 read-only (배포용 표준 형식 + 파일 크기 감소)

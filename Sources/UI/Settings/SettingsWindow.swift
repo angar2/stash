@@ -4,6 +4,8 @@ import SwiftUI
 
 struct SettingsWindow: View {
     @Bindable var viewModel: SettingsViewModel
+    /// TASK-098 — 단축키 탭의 `PIN 단축키` 묶음이 핀 항목의 명칭·값을 표시·수정하므로 클립 뷰모델을 함께 전달한다.
+    @Bindable var clipsViewModel: ClipsViewModel
     @State private var selectedTab: SettingsTab = .general
     // TASK-053 — 콘텐츠 색상 모드 변경 시 Settings 윈도우 body 재평가 트리거.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
@@ -45,7 +47,7 @@ struct SettingsWindow: View {
                     switch selectedTab {
                     case .general:    GeneralTab(viewModel: viewModel)
                     case .display:    DisplayTab(viewModel: viewModel)
-                    case .shortcuts:  ShortcutsTab(viewModel: viewModel)
+                    case .shortcuts:  ShortcutsTab(viewModel: viewModel, clipsViewModel: clipsViewModel)
                     case .collection: CollectionTab(viewModel: viewModel)
                     case .about:      AboutTab(viewModel: viewModel)
                     }

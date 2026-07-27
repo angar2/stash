@@ -242,12 +242,13 @@ final class SettingsViewModel {
             return
         }
 
-        // 충돌 검사 — 다른 6항목과 비교
+        // 충돌 검사 — 나머지 전 항목과 비교 (TASK-098 이후 기본 7종 + Pin 10종 = 17종).
         for otherId in allIds where otherId != id {
             guard let other = PopoverShortcutStore.get(otherId) else { continue }
             if other == newShortcut {
                 revertPopoverShortcut(id: id)
-                let otherLabel = L10n(otherId.labelKey)
+                // TASK-098 — Pin 10종은 라벨이 모두 같아 순번까지 알려야 어느 번호와 겹쳤는지 안다.
+                let otherLabel = otherId.conflictLabel
                 let format = L10n("toast.shortcut.conflict")
                 settingsToast.enqueue(.warn, String(format: format, otherLabel))
                 return

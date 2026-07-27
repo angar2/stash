@@ -15,6 +15,10 @@ enum Constants {
     // F-004 Pin 한도
     static let maxPinnedClips: Int = 10
 
+    // TASK-098 — 핀 명칭(pin_alias) 길이 상한. 사이드바 최소 너비(180)에서 어차피 말줄임되므로 무제한 입력은 이득 없음.
+    // 초과 입력은 차단하고 편집 중 글자 수(`n/40`)를 표시한다. DATA-MODEL §1 `pin_alias` 정책 정합.
+    static let pinAliasMaxLength: Int = 40
+
     // F-002 + SERVICE-POLICY §3 LRU
     static let maxUnpinnedClips: Int = 200
 
@@ -63,6 +67,12 @@ enum Constants {
     static let popoverWidthMin: CGFloat = 280
     static let popoverWidthMax: CGFloat = 600
 
+    // TASK-097 Pin 사이드바 너비 clamp 범위 + 항상 영속 — popoverWidth 정책 미러링.
+    // 주의(TASK-097 검수 결과): 사이드바 패널은 `becomesKeyOnlyIfNeeded` + `orderFrontRegardless` 로 항상 non-key 라 styleMask `.resizable` 만으로는 *엣지 리사이즈 커서·드래그가 동작하지 않음*(실기 확인). 즉 현재 사용자 리사이즈 진입점은 없고, 본 상수·영속 인프라는 *저장 너비 복원* 경로에서만 실효. 사용자 조작 UX 는 별도 접근 필요.
+    // 최소 180 = 타입 아이콘 + 본문 truncate 하한 / 최대 400 = popover 본체 압도 방지 상한. 기본값은 DesignTokens.WindowSize.pinSidebarWidth(220).
+    static let pinSidebarWidthMin: CGFloat = 180
+    static let pinSidebarWidthMax: CGFloat = 400
+
     // TASK-055 클립 상세 sub-window hover 트리거 임계.
     // 클립 행 위에 마우스 커서 본 시간 이상 머무름 → ClipsViewModel.triggerClipDetail() 자동 발화.
     // 같은 행 안 미세 움직임은 누적 보존 (hoverEnterRow 가 같은 row.id 추적 중이면 task 유지). 다른 행 이탈 시 cancel + 새 행 재시작.
@@ -101,6 +111,14 @@ enum Constants {
 
         // TASK-054 fix-1 popover width 영속 — 사용자 freeform 변경 + 항상 영속.
         static let popoverWidth: String = "popoverWidth"
+
+        // TASK-097 Pin 사이드바 width 영속 — 항상 영속 (위치 토글과 무관). 조회는 PopoverWindow.storedPinSidebarWidth.
+        static let pinSidebarWidth: String = "pinSidebarWidth"
+
+        // TASK-098 설정 단축키 탭 묶음 접힘 상태 영속. 초기값 = 기본 단축키 열림 / PIN 단축키 닫힘.
+        // (PIN 행이 2줄 구조라 함께 펼치면 탭 진입만으로 스크롤 발생 — UX-UI §4-4.)
+        static let shortcutsBasicGroupExpanded: String = "shortcutsBasicGroupExpanded"
+        static let shortcutsPinGroupExpanded: String = "shortcutsPinGroupExpanded"
 
         // FEATURES F-007 차단 앱 (Settings CollectionTab).
         static let blockedAppBundleIds: String = "blockedAppBundleIds"
@@ -146,5 +164,11 @@ enum Constants {
 
         // Tab — TASK-044 PopoverPanel 안전망 (NSTextView insertTab: 차단).
         static let tab: UInt16 = 48
+
+        // TASK-098 — 숫자 키 (Pin 직접 paste 단축키 기본값 `⌥⌘1`~`⌥⌘0`).
+        // 주의: `kVK_ANSI_*` 숫자 keyCode 는 **순차가 아니다** — 5·6 이 23·22 로 뒤집혀 있고 7·8·9 는 26·28·25.
+        // `18 + n` 같은 산술로 만들면 5·6 번이 서로 바뀐다. 반드시 본 표를 참조할 것.
+        // index 0 = 숫자 1 … index 8 = 숫자 9 / index 9 = 숫자 0 (Pin 10번).
+        static let digitsPinOrder: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25, 29]
     }
 }
