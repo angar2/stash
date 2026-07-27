@@ -20,7 +20,7 @@ Like a squirrel hoarding acorns, it keeps everything you copy so you never lose 
 - `Auto-stash`: Anything you copy — text, images, files — piles up in your stash automatically.
 - `Quick access`: Pull up your stash with a shortcut while typing, without breaking your flow.
 - `Fast search`: Got a lot stashed? Search by keyword and find it in a snap.
-- `Pin it`: Pin the stuff you use often so it never disappears.
+- `Pin it`: Pin the stuff you use often. Give it a name, and paste it anytime with a shortcut.
 - `Detailed info`: See where each item was copied from, when, character count, image previews, and more.
 - `Flexible layout`: Resize and move the stash window however you like — keep it open all the time if you want.
 
@@ -58,9 +58,11 @@ First, just copy things like you normally would.
 | Paste right away | `⌘V` |
 | Just copy | `⌘C` |
 | Pin an item | `⌘P` |
+| Paste a pinned item | `⌥⌘1` – `⌥⌘0` |
 | Delete | `⌘⌫` or `⌥⌘⌫` |
 
 All shortcuts are customizable, and you can use mouse clicks too.
+Pin paste shortcuts (`⌥⌘1` – `⌥⌘0`) work anywhere — no need to open the stash first.
 
 
 ## ☻ Good to Know
