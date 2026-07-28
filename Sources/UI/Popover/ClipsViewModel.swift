@@ -234,6 +234,309 @@ final class ClipsViewModel {
         focusZone == .pin ? pinSelectedIdx : selectedIdx
     }
 
+    // MARK: - 다중 선택 (TASK-099)
+
+    /// 선택한 클립 id — **선택한 순서 그대로**. 이 배열이 기능 전체의 단일 진실이다
+    /// (순서 칩 · 프리뷰 · 묶음 실행 · `⌘C`/`⌘V` 분기가 모두 여기를 본다).
+    /// 비어 있으면 *기존 단일 동작* 경로가 그대로 돈다 — 회귀 위험이 조건 하나로 좁혀지는 자리라 의미가 크다.
+    private(set) var multiSelection: [UUID] = []
+
+    /// 선택 시점의 클립 사본. **검색 때문에 필요하다** — 검색은 `clips` 를 결과로 통째 갈아끼우므로
+    /// 선택한 클립이 필터에서 빠지면 `clips` 조회만으로는 프리뷰가 사라진다(요구: 검색 중에도 선택·프리뷰 유지).
+    /// 조회는 언제나 `clips` 를 먼저 보고 없을 때만 이 사본으로 떨어진다 — 본문이 수정돼도 최신값을 쓰기 위해서다.
+    private var multiSelectionSnapshots: [UUID: Clip] = [:]
+
+    /// 선택한 클립들 — 선택 순서 그대로.
+    var multiSelectedClips: [Clip] {
+        multiSelection.compactMap { id in
+            clips.first { $0.id == id } ?? multiSelectionSnapshots[id]
+        }
+    }
+
+    /// 행에 겹쳐 그릴 선택 순서(1-based). 선택 안 된 클립은 nil.
+    func multiSelectOrdinal(for id: UUID) -> Int? {
+        multiSelection.firstIndex(of: id).map { $0 + 1 }
+    }
+
+    /// 선택 토글 — 이미 선택된 클립이면 해제한다. 해제하면 뒤 순번이 자연히 앞으로 당겨진다(배열 제거).
+    /// 대상은 히스토리 목록과 Pin 사이드바 **양쪽**이다 (fix-4). 판정 기준이 `clips` 하나라
+    /// 핀 여부는 애초에 구분되지 않는다 — 어느 목록에서 집었든 같은 클립이면 선택은 한 건이고 순번도 하나다.
+    /// `clips` 에 없는 id 는 무시한다 (이미 사라진 클립을 가리키는 stale 콜백 방어).
+    func toggleMultiSelect(id: UUID) {
+        if let idx = multiSelection.firstIndex(of: id) {
+            multiSelection.remove(at: idx)
+            multiSelectionSnapshots[id] = nil
+            Logger.ui.info("MultiSelect 해제 — clipId=\(id.uuidString, privacy: .public) 남은 선택=\(self.multiSelection.count, privacy: .public)")
+        } else {
+            guard let clip = clips.first(where: { $0.id == id }) else {
+                Logger.ui.debug("MultiSelect skip — 목록에 없는 clipId=\(id.uuidString, privacy: .public)")
+                return
+            }
+            multiSelection.append(id)
+            multiSelectionSnapshots[id] = clip
+            Logger.ui.info("MultiSelect 선택 — clipId=\(id.uuidString, privacy: .public) 순번=\(self.multiSelection.count, privacy: .public)")
+        }
+        // 프리뷰 바가 나타나거나 사라지면 popover 높이가 그만큼 달라진다.
+        NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
+    }
+
+    /// 선택 단축키(`⌥C`)가 가리키는 **현재 커서 행**을 토글한다. 대상은 `focusZone` 이 정한다 —
+    /// `.clip` 이면 히스토리 커서, `.pin` 이면 Pin 사이드바 커서.
+    ///
+    /// 판정을 dispatch 가 아니라 여기 두는 이유는 **검증 가능성**이다. fix-1 에서 실행 흐름이
+    /// dispatch 안에만 있어 단위 테스트가 통째로 비껴간 전례가 있다.
+    ///
+    /// - Returns: 실제로 토글했으면 true. 대상 행이 없거나(빈 목록·커서 범위 밖) 선택 대상이 아닌
+    ///   zone 이면 false — **호출처는 이 값과 무관하게 키 이벤트를 소비해야 한다**
+    ///   (forward 하면 검색란에 `ç` 가 입력된다).
+    @discardableResult
+    func toggleMultiSelectAtActiveRow() -> Bool {
+        let target: Clip?
+        switch focusZone {
+        case .clip:
+            let list = visibleClips
+            target = list.indices.contains(selectedIdx) ? list[selectedIdx] : nil
+        case .pin:
+            // fix-4 — Pin 사이드바도 선택 대상. 커서는 히스토리와 별도(`pinSelectedIdx`)다.
+            let list = pinnedClips
+            target = list.indices.contains(pinSelectedIdx) ? list[pinSelectedIdx] : nil
+        case .settings:
+            target = nil
+        }
+        guard let clip = target else {
+            Logger.ui.debug("MultiSelect skip — 대상 행 없음 zone=\(self.focusZone.rawValue, privacy: .public)")
+            return false
+        }
+        toggleMultiSelect(id: clip.id)
+        return true
+    }
+
+    /// 전체 해제. 호출 site = `ESC`(선택 있을 때) / 묶음 실행 직후 / popover 열림·닫힘.
+    func clearMultiSelection() {
+        guard !multiSelection.isEmpty else { return }
+        Logger.ui.info("MultiSelect 전체 해제 — 해제 개수=\(self.multiSelection.count, privacy: .public)")
+        multiSelection.removeAll()
+        multiSelectionSnapshots.removeAll()
+        NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
+    }
+
+    /// 선택 목록에서 특정 클립을 걷어낸다 — **삭제 경로 전용**.
+    /// 검색 필터로 안 보이는 것과 실제로 사라진 것을 구분해야 하므로, 목록 조회 결과가 아니라
+    /// *삭제한 id* 로만 걷어낸다 (조회 기준으로 prune 하면 검색 중에 선택이 통째로 날아간다).
+    func pruneMultiSelection(deletedIds: [UUID]) {
+        guard !multiSelection.isEmpty, !deletedIds.isEmpty else { return }
+        let removing = Set(deletedIds)
+        let before = multiSelection.count
+        multiSelection.removeAll { removing.contains($0) }
+        for id in removing { multiSelectionSnapshots[id] = nil }
+        guard before != multiSelection.count else { return }
+        Logger.ui.info("MultiSelect prune — 삭제로 제외=\(before - self.multiSelection.count, privacy: .public) 남은 선택=\(self.multiSelection.count, privacy: .public)")
+        NotificationCenter.default.post(name: Self.displayLayoutDidChange, object: nil)
+    }
+
+    /// 설정에 저장된 연결자 **원문**. 미설정이면 기본값(줄바꿈 표기).
+    /// 빈 문자열은 *구분 없이 연결* 이라는 유효한 값이라 `?? 기본값` 이 아니라 키 부재로만 fallback 한다.
+    static var multiPasteSeparatorRaw: String {
+        UserDefaults.standard.string(forKey: Constants.UserDefaultsKeys.multiPasteSeparator)
+            ?? Constants.multiPasteSeparatorDefault
+    }
+
+    /// 프리뷰 바 내용. 선택이 없으면 nil (= 바 미표시).
+    /// 화면은 `@AppStorage` 로 연결자를 추적해 직접 `MultiPasteComposer.preview` 를 부른다(즉시 반영 필요).
+    /// 이 프로퍼티는 화면 밖 호출처(로그·테스트)용 동일 결과다.
+    var multiPastePreview: MultiPastePreview? {
+        MultiPasteComposer.preview(clips: multiSelectedClips, separatorRaw: Self.multiPasteSeparatorRaw)
+    }
+
+    // MARK: - 묶음 실행 (TASK-099)
+
+    /// 묶음 실행을 부른 단축키. `⌘C` 는 클립보드 갱신만, `⌘V` 는 붙여넣기까지.
+    enum MultiPasteAction: Sendable {
+        case copy
+        case paste
+    }
+
+    /// 실행할 수 없는 이유. 있으면 **popover 를 닫지 않고** 안내만 하고 선택도 유지한다
+    /// (닫아버리면 사용자가 무엇이 막혔는지 확인할 화면이 사라진다).
+    enum MultiPasteBlockReason: Sendable {
+        /// 혼합 선택의 복사 — 연속 합성은 붙여넣기 전제라 복사로 표현할 단일 산출물이 없다.
+        case mixedCopyUnsupported
+        /// 혼합 선택의 붙여넣기 — 자동 붙여넣기 + 시스템 접근 권한이 있어야 순서가 성립한다.
+        case mixedNeedsAutoPaste
+    }
+
+    /// 묶음 실행이 막히는 경우를 *실행 전에* 판정한다. nil = 실행 가능.
+    /// - Parameter clips: 판정 대상을 명시할 때 사용 (nil 이면 현재 선택). 실행 대상과 판정 대상이
+    ///   어긋나면 막아야 할 조합이 그대로 실행되므로, 스냅샷을 쓰는 흐름은 같은 배열을 넘긴다.
+    func multiPasteBlockReason(for action: MultiPasteAction, clips: [Clip]? = nil) -> MultiPasteBlockReason? {
+        guard MultiPasteComposer.category(of: clips ?? multiSelectedClips) == .mixed else { return nil }
+        if action == .copy { return .mixedCopyUnsupported }
+        return effectivePasteMode == .autoPaste ? nil : .mixedNeedsAutoPaste
+    }
+
+    /// 안내 토스트만 발행 (실행 없음 · 선택 유지).
+    func publishMultiPasteBlockedToast(_ reason: MultiPasteBlockReason) {
+        let key: String
+        switch reason {
+        case .mixedCopyUnsupported: key = "toast.multiPaste.mixed.copyUnsupported"
+        case .mixedNeedsAutoPaste:  key = "toast.multiPaste.mixed.needsAutoPaste"
+        }
+        Logger.ui.info("MultiPaste 차단 — 사유=\(String(describing: reason), privacy: .public)")
+        toastQueue?.enqueue(.warn, L10n(key))
+    }
+
+    /// *바로 붙여넣기* 설정 조회. 기본은 UserDefaults 이며, 단위 테스트가 **전역 상태에 흔들리지 않도록** 주입 가능하게 둔다
+    /// (여러 스위트가 같은 키를 지우고 쓰는데 스위트는 병렬로 돌아, 조회 시점 값이 남의 것일 수 있다).
+    var autoPasteEnabledProvider: () -> Bool = {
+        UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
+    }
+
+    /// 붙여넣기 모드 판정의 **단일 소스** — 자동 붙여넣기 설정 × 시스템 접근 권한 (TASK-033 매트릭스).
+    /// 둘 다 참일 때만 자동 붙여넣기, 아니면 복사 폴백. 단일 클립(`paste(at:zone:)`)과 묶음 실행이 같이 쓴다.
+    private var effectivePasteMode: PasteMode {
+        (accessibilityGranted && autoPasteEnabledProvider()) ? .autoPaste : .copyBack
+    }
+
+    /// 묶음 실행 진입점. 계열에 따라 [텍스트 연결 / 파일 배열 / 혼합 연속] 세 갈래로 갈린다.
+    /// 실행에 성공하면 결과를 새 클립으로 등록하고(혼합 제외) 선택을 비운다.
+    /// - Parameter clips: 실행 대상을 **호출자가 미리 확정해 넘길 때** 사용한다.
+    ///   popover 를 내리고 붙이는 흐름에서는 `hide()` 가 닫힘과 함께 선택을 비우므로,
+    ///   여기서 상태를 다시 읽으면 빈 선택을 보고 아무것도 하지 않는다. nil 이면 현재 선택을 쓴다.
+    func runMultiPaste(_ action: MultiPasteAction, clips: [Clip]? = nil) async {
+        let selected = clips ?? multiSelectedClips
+        guard let category = MultiPasteComposer.category(of: selected) else { return }
+        if let reason = multiPasteBlockReason(for: action, clips: selected) {
+            publishMultiPasteBlockedToast(reason)
+            return
+        }
+        let mode: PasteMode = (action == .paste) ? effectivePasteMode : .copyBack
+        Logger.ui.info("MultiPaste 실행 — action=\(String(describing: action), privacy: .public) 계열=\(String(describing: category), privacy: .public) 선택=\(selected.count, privacy: .public) mode=\(mode.rawValue, privacy: .public)")
+
+        do {
+            switch category {
+            case .text:
+                let separator = MultiPasteComposer.resolveSeparator(Self.multiPasteSeparatorRaw)
+                let joined = MultiPasteComposer.joinedText(clips: selected, separator: separator)
+                try await pasteService.pasteJoinedText(joined, mode: mode)
+                await registerJoinedTextClip(joined)
+                toastQueue?.enqueue(.success, String(
+                    format: L10n(action == .paste ? "toast.multiPaste.text.done" : "toast.multiPaste.text.copied"),
+                    selected.count
+                ))
+
+            case .files:
+                let urls = MultiPasteComposer.fileURLs(clips: selected)
+                try await pasteService.pasteFileURLs(urls, mode: mode)
+                await registerFileBundleClip(from: selected)
+                toastQueue?.enqueue(.success, String(
+                    format: L10n(action == .paste ? "toast.multiPaste.files.done" : "toast.multiPaste.files.copied"),
+                    urls.count
+                ))
+
+            case .mixed:
+                // 계열별로 모아 두 번에 나눠 붙인다 — 파일·이미지 배열 먼저, 이어서 연결된 텍스트.
+                // 선택 순서를 그대로 따르지 않는 이유는 `MultiPasteComposer.sequentialGroups` 주석 참조.
+                let groups = MultiPasteComposer.sequentialGroups(clips: selected)
+                let separator = MultiPasteComposer.resolveSeparator(Self.multiPasteSeparatorRaw)
+                try await pasteService.pasteMixed(
+                    fileURLs: MultiPasteComposer.fileURLs(clips: groups.files),
+                    joinedText: groups.texts.isEmpty
+                        ? nil
+                        : MultiPasteComposer.joinedText(clips: groups.texts, separator: separator)
+                )
+                // 혼합은 산출물이 둘로 갈려 *하나의 클립* 으로 담을 수 없어 **저장하지 않는다**.
+                toastQueue?.enqueue(.success, String(format: L10n("toast.multiPaste.mixed.done"), selected.count))
+            }
+        } catch {
+            Logger.ui.error("MultiPaste 실패 — \(error.localizedDescription, privacy: .public)")
+            toastQueue?.enqueue(.warn, L10n("toast.multiPaste.failed"))
+            // 실패했으면 선택은 남긴다 — 사용자가 다시 시도할 수 있어야 한다.
+            return
+        }
+
+        clearMultiSelection()
+        await reload()
+    }
+
+    /// 텍스트 묶음 결과를 새 클립으로 등록한다.
+    /// 수집 시점 dedup 정책(V2)상 같은 본문이 이미 있으면 새 row 대신 기존 row 의 `last_used_at` 만 갱신된다 —
+    /// 어느 쪽이든 히스토리 최상단에 오므로 사용자가 보는 결과는 같다.
+    private func registerJoinedTextClip(_ body: String) async {
+        guard !body.isEmpty else { return }
+        let now = Date()
+        let clip = Clip(
+            id: UUID(),
+            type: .text,
+            body: body,
+            filePath: nil,
+            isFileExternal: false,
+            fileOriginalPath: nil,
+            fileBookmark: nil,
+            sourceAppBundleId: nil,
+            isPinned: false,
+            createdAt: now,
+            lastUsedAt: now
+        )
+        do {
+            let evicted = try await repository.insert(clip)
+            for old in evicted { try? await fileClipService.delete(old) }
+            pruneMultiSelection(deletedIds: evicted.map(\.id))
+            Logger.ui.info("MultiPaste 새 텍스트 클립 등록 — 길이=\(body.count, privacy: .public)")
+        } catch {
+            Logger.ui.error("MultiPaste 새 텍스트 클립 등록 실패 — \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 파일 묶음 결과를 새 *다중 파일* 클립으로 등록한다.
+    ///
+    /// 알려진 한계 — 새 클립은 원본 클립들이 쓰던 **같은 파일을 가리킨다**(디스크 카피본을 새로 뜨지 않는다).
+    /// 원본 클립을 삭제하면 그 카피본이 지워져 묶음 클립의 해당 항목이 빈 경로가 된다.
+    /// 카피본을 복제하면 100MB 급 파일이 선택 횟수만큼 불어나므로 참조를 택했다.
+    private func registerFileBundleClip(from clips: [Clip]) async {
+        let entries: [ClipFileEntry] = clips.flatMap { clip -> [ClipFileEntry] in
+            if clip.isMultiFile, let existing = clip.fileEntries { return existing }
+            guard let path = clip.filePath ?? clip.fileOriginalPath else { return [] }
+            return [ClipFileEntry(
+                originalPath: clip.fileOriginalPath ?? "",
+                filePath: path,
+                isFileExternal: clip.isFileExternal
+            )]
+        }
+        guard !entries.isEmpty, let json = try? ClipFileEntry.encodeJSON(entries) else {
+            Logger.ui.error("MultiPaste 새 파일 클립 등록 실패 — entries 직렬화 불가")
+            return
+        }
+        let now = Date()
+        let clip = Clip(
+            id: UUID(),
+            type: .file,
+            body: nil,
+            filePath: nil,
+            isFileExternal: false,
+            fileOriginalPath: nil,
+            fileBookmark: nil,
+            sourceAppBundleId: nil,
+            isPinned: false,
+            createdAt: now,
+            lastUsedAt: now,
+            pinnedAt: nil,
+            filePathsJson: json
+        )
+        do {
+            let evicted = try await repository.insert(clip)
+            // LRU 로 밀려난 클립의 카피본을 지운다. 단 **이번 묶음이 가리키는 파일은 남긴다** —
+            // 위 한계와 같은 이유로 경로를 공유하므로, 그냥 지우면 방금 만든 클립이 곧바로 빈 경로가 된다.
+            let keep = Set(entries.map(\.filePath))
+            for old in evicted where collectReferencedPaths(from: [old]).isDisjoint(with: keep) {
+                try? await fileClipService.delete(old)
+            }
+            pruneMultiSelection(deletedIds: evicted.map(\.id))
+            Logger.ui.info("MultiPaste 새 파일 클립 등록 — 항목=\(entries.count, privacy: .public)")
+        } catch {
+            Logger.ui.error("MultiPaste 새 파일 클립 등록 실패 — \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     // MARK: - Reload / Search
     func reload() async {
         do {
@@ -380,7 +683,9 @@ final class ClipsViewModel {
     /// TASK-061 — floor=3 룰 폐기 (사용자 요구). 이전 `rows = max(min(visibleCount, N), min(N, 3))` 가 visibleCount 1-2 케이스에 *3행 강제* → 검색 진행 중 결과 변동 시 사용자 인지 *3행 사이즈로 왔다갔다* oscillation. visibleCount 자연 그대로 변동으로 단순화.
     /// 화면 cap: popover 가 화면 visible 영역 초과 시 cap 적용 (popover top = visible.maxY 까지 박혀 menu bar 바로 아래에 붙음).
     /// TASK-052 — `hintBarVisible` 인자 추가. OFF 시 totalOverhead 에서 `hintBarOverhead` (실측 42pt) 차감 → clipList cap 확장 → 한 행 더 표시 + popover total ON/OFF 동일 (method2 우하단 anchor 시 상단 공백 잔존 차단).
-    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool) -> CGFloat {
+    /// TASK-099 — `previewBarVisible` 인자 추가. 프리뷰 바가 떠 있는 동안은 clipList cap 을 그만큼 줄여
+    /// popover 가 화면 밖으로 자라는 것을 막는다. 기본값 false = 기존 호출처 동작 불변.
+    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false) -> CGFloat {
         let n = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, clipsPerPage))
         let rowHeight = DesignTokens.Spacing.rowMinHeight
         let rowGap = DesignTokens.Spacing.rowGap
@@ -393,7 +698,7 @@ final class ClipsViewModel {
         }
         let raw = CGFloat(rows) * rowHeight + CGFloat(max(0, rows - 1)) * rowGap
         // 화면 cap — TASK-057 cappedRowsForCurrentScreen 헬퍼 위임 (windowWillResize raw 동기화 분기와 공유).
-        let cappedRows = cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible)
+        let cappedRows = cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible, previewBarVisible: previewBarVisible)
         let cap = CGFloat(cappedRows) * rowHeight + CGFloat(max(0, cappedRows - 1)) * rowGap
         return min(raw, cap)
     }
@@ -402,13 +707,15 @@ final class ClipsViewModel {
     /// `effectiveClipListHeight` 의 cap 계산 (line 339 자리) + `PopoverWindow.windowWillResize` 의 raw vs effective 동기화 분기 양쪽 공통 진입점.
     /// TASK-054 fix-2 정합 — cap 을 *정수 행 단위 floor* 박음 (fractional 잔여 공간 차단). (rowHeight + rowGap) 단위 floor — gap 1 개 분량 보정 위해 (screenAvailable + rowGap) 사용.
     /// TASK-052 정합 — hintBarVisible=false 시 baseOverhead 에서 hintBarOverhead 차감 (clipList cap 확장).
-    static func cappedRowsForCurrentScreen(hasPinned: Bool, hintBarVisible: Bool) -> Int {
+    /// TASK-099 정합 — `previewBarVisible` 시 프리뷰 바 높이만큼 overhead 를 더해 cap 을 낮춘다.
+    static func cappedRowsForCurrentScreen(hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false) -> Int {
         let rowHeight = DesignTokens.Spacing.rowMinHeight
         let rowGap = DesignTokens.Spacing.rowGap
         let baseOverhead = DesignTokens.Spacing.clipListOverheadBase
         let pinRowOverhead: CGFloat = hasPinned ? (DesignTokens.Spacing.pinRowHeight + DesignTokens.Spacing.pinRowMarginVert * 2) : 0
         let hintBarAdjust: CGFloat = hintBarVisible ? 0 : DesignTokens.Spacing.hintBarOverhead
-        let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust
+        let previewBarOverhead: CGFloat = previewBarVisible ? DesignTokens.Spacing.previewBarOverhead : 0
+        let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust + previewBarOverhead
         let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
         return max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
     }
@@ -514,6 +821,8 @@ final class ClipsViewModel {
         pinSidebarOpen = false
         pinHoverActive = false
         pendingScrollToId = nil
+        // TASK-099 — 다중 선택은 popover 한 번 열린 동안만 유효하다. 새로 열면 빈 상태에서 시작.
+        clearMultiSelection()
         ignoreHoverUntil = Date().addingTimeInterval(DesignTokens.Animation.popoverOpenHoverIgnoreDelay)
         // TASK-027 / TASK-055 — popover 새 호출 시 detail panel 강제 닫음 (default closed). frame .zero 초기화 동반.
         activeRowFrameInPopover = .zero
@@ -550,9 +859,9 @@ final class ClipsViewModel {
     func paste(at idx: Int, zone: FocusZone) async {
         guard let clip = clipForZone(at: idx, zone: zone) else { return }
         Logger.ui.info("Paste invoked — zone=\(zone.rawValue, privacy: .public) idx=\(idx, privacy: .public) clipId=\(clip.id.uuidString, privacy: .public)")
-        // TASK-033 — autoPasteEnabled (UserDefaults 단일 진실 소스) × accessibilityGranted 매트릭스. 둘 다 true 시에만 auto-paste, 외는 copy back fallback. UserDefaults default true 는 Composition Root 가 register defaults 로 박음.
-        let autoPasteEnabled = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.autoPasteEnabled)
-        let effectiveMode: PasteMode = (accessibilityGranted && autoPasteEnabled) ? .autoPaste : .copyBack
+        // TASK-033 매트릭스는 `effectivePasteMode` 단일 소스 (TASK-099 fix-4 정리 — 묶음 경로가 같은 판정을
+        // 따로 계산하고 있어 한쪽만 고치면 단일/묶음이 갈리는 자리였다).
+        let effectiveMode = effectivePasteMode
         do {
             try await pasteService.paste(clip: clip, mode: effectiveMode)
             publishPasteToast(for: clip, mode: effectiveMode)
@@ -776,6 +1085,8 @@ final class ClipsViewModel {
         let clip = list[idx]
         _ = try? await repository.delete(id: clip.id)
         try? await fileClipService.delete(clip)
+        // TASK-099 — 사라진 클립이 선택에 남아 있으면 묶음 실행이 유령 항목을 붙이려 든다.
+        pruneMultiSelection(deletedIds: [clip.id])
         await reload()
         clampSelection()
     }
@@ -786,6 +1097,8 @@ final class ClipsViewModel {
         for clip in deleted {
             try? await fileClipService.delete(clip)
         }
+        // TASK-099 — 전체 삭제로 사라진 클립을 선택에서 걷어낸다 (핀은 남으므로 선택이 전부 비지는 않을 수 있다).
+        pruneMultiSelection(deletedIds: deleted.map(\.id))
         let pinnedPaths = collectReferencedPaths(from: pinnedClips)
         await fileClipService.sweepOrphans(referencedPaths: pinnedPaths)
         await reload()
