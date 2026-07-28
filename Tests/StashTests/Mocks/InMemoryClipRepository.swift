@@ -17,6 +17,12 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
         )
     }
 
+    /// TASK-100 — 핀 제외 개수. `fetchAll` 과 달리 보관 한도로 자르지 않는다 (한도 판정의 비교 기준이라
+    /// 한도로 자르면 자기 자신을 기준 삼는 꼴이 된다).
+    func unpinnedCount() async throws -> Int {
+        clips.filter { !$0.isPinned }.count
+    }
+
     @discardableResult
     func insert(_ clip: Clip) async throws -> [Clip] {
         // TASK-019 fix 5차 — 동일 (type=text, body) dedup. 기존 row 의 lastUsedAt 갱신 + 새 row 추가 X.

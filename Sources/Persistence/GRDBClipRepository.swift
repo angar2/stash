@@ -6,9 +6,17 @@ import OSLog
 final class GRDBClipRepository: ClipRepository {
     private nonisolated(unsafe) var dbQueue: DatabaseQueue
     private let dbPath: URL
+    /// 보관 한도 조회 (TASK-100). 기본은 사용자 설정을 그대로 따른다.
+    ///
+    /// 주입 지점을 둔 이유 — 한도가 사용자 설정이 되면서 *특정 행 수를 전제로 하는 테스트* 가 전역 설정값에
+    /// 좌우된다. 실제로 검색 벤치마크(200행 기준)가 기본값 50 아래로 잘려 깨졌다. 테스트가 공유 UserDefaults 에
+    /// 값을 쓰는 방식으로 우회하면 같은 키를 읽는 다른 스위트와 병렬 실행에서 서로 간섭하므로, 인스턴스에
+    /// 한도를 주는 쪽을 택했다.
+    private let historyLimit: @Sendable () -> Int
 
-    init(dbPath: URL) throws {
+    init(dbPath: URL, historyLimit: @escaping @Sendable () -> Int = { Constants.maxUnpinnedClips }) throws {
         self.dbPath = dbPath
+        self.historyLimit = historyLimit
         self.dbQueue = try DatabaseQueue(path: dbPath.path)
         var migrator = DatabaseMigrator()
         Self.registerAllMigrations(in: &migrator)
@@ -34,12 +42,32 @@ final class GRDBClipRepository: ClipRepository {
 
     // MARK: - ClipRepository
 
+    /// 핀 제외 클립 개수 (TASK-100).
+    func unpinnedCount() async throws -> Int {
+        try await dbQueue.read(Self.unpinnedCount(in:))
+    }
+
+    /// 같은 값을 동기로 읽는다 — 앱 기동의 *첫 실행 초기화* 전용.
+    ///
+    /// 비동기를 기다릴 수 없는 이유가 있다: 초기화가 끝나기 전에 클립보드 감시가 첫 클립을 저장하면
+    /// 그 insert 가 **기본값 기준으로** LRU 정리를 돌려 기존 클립을 지운다. 한도는 감시가 시작되기 전에
+    /// 확정돼 있어야 한다.
+    func unpinnedCountSync() throws -> Int {
+        try dbQueue.read(Self.unpinnedCount(in:))
+    }
+
+    /// 위 두 경로와 LRU 정리가 함께 쓰는 단일 쿼리. 세는 조건(`is_pinned = 0`)이 갈라지면
+    /// 한도 판정 기준과 실제 정리 대상이 어긋난다.
+    private static func unpinnedCount(in db: Database) throws -> Int {
+        try Clip.filter(Column("is_pinned") == 0).fetchCount(db)
+    }
+
     func fetchAll() async throws -> [Clip] {
         Logger.database.debug("fetchAll — 시작")
         let clips = try await dbQueue.read { db in
             try Clip
                 .order(Column("last_used_at").desc)
-                .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
+                .limit(self.historyLimit() + Constants.maxPinnedClips)
                 .fetchAll(db)
         }
         Logger.database.debug("fetchAll — \(clips.count)개 반환")
@@ -65,13 +93,13 @@ final class GRDBClipRepository: ClipRepository {
             if query.isEmpty {
                 return try Clip
                     .order(Column("last_used_at").desc)
-                    .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
+                    .limit(self.historyLimit() + Constants.maxPinnedClips)
                     .fetchAll(db)
             }
             return try Clip
                 .filter(Column("body").like("%\(query)%"))
                 .order(Column("last_used_at").desc)
-                .limit(Constants.maxUnpinnedClips + Constants.maxPinnedClips)
+                .limit(self.historyLimit() + Constants.maxPinnedClips)
                 .fetchAll(db)
         }
         Logger.database.debug("search — \(clips.count)개 반환")
@@ -300,12 +328,14 @@ final class GRDBClipRepository: ClipRepository {
     }
 
     private func enforceMaxHistorySize(in db: Database) throws -> [Clip] {
-        let count = try Clip.filter(Column("is_pinned") == 0).fetchCount(db)
-        guard count > Constants.maxUnpinnedClips else { return [] }
+        // 한 번만 읽어 트랜잭션 안에서 같은 값을 쓴다 (판정과 삭제 개수가 서로 다른 한도를 보면 안 된다).
+        let limit = historyLimit()
+        let count = try Self.unpinnedCount(in: db)
+        guard count > limit else { return [] }
         let toDelete = try Clip
             .filter(Column("is_pinned") == 0)
             .order(Column("last_used_at").asc)
-            .limit(count - Constants.maxUnpinnedClips)
+            .limit(count - limit)
             .fetchAll(db)
         for clip in toDelete {
             try clip.delete(db)

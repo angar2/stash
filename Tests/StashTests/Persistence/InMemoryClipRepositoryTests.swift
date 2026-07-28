@@ -154,9 +154,31 @@ struct InMemoryClipRepositoryTests {
         #expect(remaining.first?.isPinned == true)
     }
 
+    // MARK: - 핀 제외 개수 (TASK-100)
+
+    /// 보관 한도는 핀이 아닌 클립에만 적용되므로, 한도 판정의 비교 기준도 *핀 제외* 개수여야 한다.
+    /// 전체 개수를 쓰면 핀 개수만큼 하한이 부풀려져 사용자가 한도를 못 내린다.
+    @Test("unpinnedCount 는 핀을 세지 않는다")
+    func unpinnedCountExcludesPinned() async throws {
+        let repo = InMemoryClipRepository()
+        for i in 0..<7 {
+            try await repo.insert(ClipFixture.makeText(body: "unpinned \(i)"))
+        }
+        for i in 0..<3 {
+            let pinned = ClipFixture.makeText(body: "pinned \(i)")
+            try await repo.insert(pinned)
+            try await repo.togglePin(id: pinned.id)
+        }
+
+        #expect(try await repo.unpinnedCount() == 7)
+        #expect(try await repo.fetchAll().count == 10)
+    }
+
     // MARK: - LRU 엣지케이스
 
-    @Test func insertExceeding200TrimsOldest() async throws {
+    /// TASK-100 — 한도가 고정 200 에서 사용자 설정으로 바뀌었다. 본 테스트는 *그때그때의 한도* 를 기준으로
+    /// 정리가 도는지 확인한다 (설정값을 직접 건드리지 않는다 — 공유 UserDefaults 에 쓰면 병렬 스위트와 간섭한다).
+    @Test func insertExceedingLimitTrimsOldest() async throws {
         let repo = InMemoryClipRepository()
         let limit = Constants.maxUnpinnedClips
         for i in 0..<limit {
