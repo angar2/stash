@@ -45,6 +45,8 @@ struct KeyboardHintsView: View {
             Hint(id: "move", parts: [.keys(["↑↓"]), .keys(["⌘↑↓"]), .keys(["⌘⇧↑↓"])], label: L10n("hint.move"), enabled: true),
             Hint(id: "copy", parts: [.keys([keyDisplay(for: .copy, fallback: "⌘C")])], label: L10n("hint.copy"), enabled: true),
             Hint(id: "paste", parts: [.keys([keyDisplay(for: .paste, fallback: "⌘V")])], label: L10n("hint.paste"), enabled: accessibilityGranted),
+            // TASK-099 — 다중 선택 토글. 복사/붙여넣기 다음 자리 (선택 → 묶음 실행 학습 흐름).
+            Hint(id: "multiSelect", parts: [.keys([keyDisplay(for: .multiSelectToggle, fallback: "⌥C")])], label: L10n("hint.multiSelect"), enabled: true),
             Hint(id: "pin", parts: [.keys([keyDisplay(for: .pinToggle, fallback: "⌘P")])], label: L10n("hint.pin"), enabled: true),
             // TASK-055 — 활성 클립 상세 sub-window toggle. 변경 불가 hardcoded ⌘D (PopoverShortcutStore 미등록).
             Hint(id: "clipDetail", parts: [.keys(["⌘D"])], label: L10n("hint.clipDetail"), enabled: true),

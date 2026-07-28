@@ -8,17 +8,17 @@ import Foundation
 @Suite("KeyboardHintsView — hints 배열 구조 (TASK-050)")
 struct KeyboardHintsViewTests {
 
-    @Test("hints.count == 7 — TASK-055 clipDetail (⌘D) 추가 후 7 개 cell (move / copy / paste / pin / clipDetail / del / delAll)")
+    @Test("hints.count == 8 — TASK-099 multiSelect (⌥C) 추가 후 8 개 cell")
     func hintsCount() {
         let view = KeyboardHintsView(mode: .method1, accessibilityGranted: true)
-        #expect(view.hints.count == 7)
+        #expect(view.hints.count == 8)
     }
 
-    @Test("hints id 순서 — TASK-055 clipDetail (⌘D) pin 과 del 사이 삽입")
+    @Test("hints id 순서 — TASK-099 multiSelect (⌥C) paste 와 pin 사이 삽입 (선택 → 묶음 실행 학습 흐름)")
     func hintsOrder() {
         let view = KeyboardHintsView(mode: .method1, accessibilityGranted: true)
         let ids = view.hints.map { $0.id }
-        #expect(ids == ["move", "copy", "paste", "pin", "clipDetail", "del", "delAll"])
+        #expect(ids == ["move", "copy", "paste", "multiSelect", "pin", "clipDetail", "del", "delAll"])
     }
 
     @Test("move hint — parts.count == 3 (keys 3 그룹 연속, separator 없음)")

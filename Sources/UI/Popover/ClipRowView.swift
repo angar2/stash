@@ -28,6 +28,14 @@ struct ClipRowView: View, Equatable {
     var shortcutKeycap: String? = nil
     /// TASK-098 — 키캡이 *사용자가 바꾼* 조합인지. 기본 조합은 옅게 / 변경 조합은 진하게.
     var isKeycapCustomized: Bool = false
+    /// TASK-099 — 다중 선택 순서(1-based). nil = 미선택.
+    /// **레이아웃 흐름에 자리를 만들지 않는다** — `pinOrdinal` 처럼 HStack 슬롯으로 넣으면
+    /// 선택·해제할 때마다 아이콘과 본문이 한 칸씩 밀려 행이 출렁인다. 좌상단 overlay 로 겹쳐 그린다.
+    var multiSelectOrdinal: Int? = nil
+    /// TASK-099 — `⌥` 를 누른 채 **행 본문**을 클릭했을 때. nil 이면 ⌥ 여부와 무관하게 기존 `onClick` 이 돈다
+    /// (Pin 사이드바처럼 선택 대상이 아닌 목록은 아무것도 넘기지 않으면 기존 동작 그대로다).
+    /// 우측 액션 버튼(압정·삭제)은 자체 `highPriorityGesture` 가 먼저 가져가므로 여기 걸리지 않는다.
+    var onOptionClick: (() -> Void)? = nil
 
     /// TASK-037 fix-15b — Equatable conformance. closure 제외 시각 영향 prop 만 비교.
     /// `.equatable()` modifier 와 함께 사용 → SwiftUI 가 변경된 행만 re-render → 호버 응답 빠름 (selectedIdx 변경 시 다른 행 skip).
@@ -44,7 +52,10 @@ struct ClipRowView: View, Equatable {
         lhs.pinOrdinal == rhs.pinOrdinal &&
         lhs.displayTitleOverride == rhs.displayTitleOverride &&
         lhs.shortcutKeycap == rhs.shortcutKeycap &&
-        lhs.isKeycapCustomized == rhs.isKeycapCustomized
+        lhs.isKeycapCustomized == rhs.isKeycapCustomized &&
+        // TASK-099 — 선택 순서도 시각 영향 prop. 빠지면 선택·해제가 행에 반영되지 않는다
+        // (`.equatable()` 가 같은 view 로 보고 재렌더를 건너뛴다).
+        lhs.multiSelectOrdinal == rhs.multiSelectOrdinal
     }
 
     @State private var hovering: Bool = false
@@ -93,10 +104,20 @@ struct ClipRowView: View, Equatable {
         .background(rowBackground)
         .overlay(rowBorder)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous))
+        // TASK-099 — 선택 순서 칩. clipShape 뒤에 겹쳐 그려 레이아웃에 자리를 만들지 않는다.
+        .overlay(alignment: .topLeading) { multiSelectChip }
         // TASK-031 — hit-test 영역 outer 전체로 통합. hover/click/cursor 세 영역 일치 (padding 포함 시각 하이라이트 가장자리까지 클릭 가능).
         // actionButton(핀/X) 영역은 자식 .highPriorityGesture 우선권으로 paste 오작동 차단 (단일 안전망).
         .contentShape(Rectangle())
-        .onTapGesture(perform: onClick)
+        .onTapGesture {
+            // TASK-099 — `⌥` 를 누른 채 클릭하면 선택 토글. SwiftUI TapGesture 는 이벤트를 넘겨주지 않아
+            // 탭이 발생한 시점의 시스템 modifier 상태를 직접 읽는다 (동기 호출이라 그 순간 상태가 맞다).
+            if let onOptionClick, NSEvent.modifierFlags.contains(.option) {
+                onOptionClick()
+                return
+            }
+            onClick()
+        }
         .onHover { isHover in
             hovering = isHover
             if isHover {
@@ -116,6 +137,29 @@ struct ClipRowView: View, Equatable {
                 )
             }
         )
+    }
+
+    // MARK: - 다중 선택 순서 칩 (TASK-099)
+
+    /// 행 좌상단에 겹쳐 뜨는 선택 순서.
+    /// 테두리(링)는 두지 않는다 — 어두운 링이 검은 외곽선처럼 읽혀 지저분했다(사용자 검수).
+    /// 개수 배지와는 대각(좌상단 ↔ 아이콘 우하단)으로 떨어져 있어 링 없이도 서로 구분된다.
+    @ViewBuilder
+    private var multiSelectChip: some View {
+        if let multiSelectOrdinal {
+            Text("\(multiSelectOrdinal)")
+                .font(.system(size: 9, weight: .heavy))
+                .monospacedDigit()
+                .foregroundStyle(DesignTokens.Colors.multiSelectChipForeground)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 3)
+                .frame(minWidth: 15, minHeight: 15)
+                .background(Capsule().fill(DesignTokens.Colors.multiSelectChipBackground))
+                .padding(.top, 3)
+                .padding(.leading, 3)
+                .allowsHitTesting(false)  // 칩은 시각 표시일 뿐 — 행 클릭을 가로채면 안 된다.
+        }
     }
 
     // MARK: - Type icon
@@ -146,10 +190,12 @@ struct ClipRowView: View, Equatable {
 
     /// TASK-026 — 다중 파일 묶음 아이콘 + N 배지. entries decode 실패 시 fallback (`square.stack` 단독).
     /// TASK-042 — 배경 `Circle()` → `Capsule()` 전환 + minWidth 동적 (1자리=12 / 2자리·"99+"=16) + `lineLimit(1)` + `fixedSize` 박아 두 자리 이상 wrap/클리핑 차단. N≥100 은 "99+" 캡 (배지 폭 안정).
+    /// TASK-099 — 배지를 아이콘 **우상단 → 우하단** 으로 옮겼다. 선택 순서 칩이 행 좌상단에 겹쳐 뜨면서
+    /// 우상단 배지와 대각이 아니라 나란히 놓여 *숫자 두 개가 한 덩어리로* 읽혔다 (다중 파일 클립 선택 시).
     @ViewBuilder
     private var multiFileIconWithBadge: some View {
         let count = clip.fileEntries?.count ?? 0
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .bottomTrailing) {
             Image(systemName: "doc.on.doc")
                 .font(.system(size: 12, weight: .regular))
             if let text = Self.badgeText(for: count) {
@@ -164,7 +210,7 @@ struct ClipRowView: View, Equatable {
                     .background(
                         Capsule().fill(DesignTokens.Colors.accent)
                     )
-                    .offset(x: 6, y: -6)
+                    .offset(x: 6, y: 6)
             }
         }
     }
@@ -481,10 +527,19 @@ struct ClipRowView: View, Equatable {
     @ViewBuilder
     private var rowBackground: some View {
         if visuallySelected {
-            LinearGradient(
-                colors: [DesignTokens.Colors.clipRowSelectionTop, DesignTokens.Colors.clipRowSelectionBottom],
-                startPoint: .top, endPoint: .bottom
-            )
+            // TASK-099 — 커서 행이면서 동시에 선택된 행은 커서 그라데이션 위에 선택 톤을 한 겹 더 얹는다
+            // (둘 중 하나만 보이면 "커서가 지금 어디인지" 와 "이 행이 선택됐는지" 중 하나를 잃는다).
+            ZStack {
+                LinearGradient(
+                    colors: [DesignTokens.Colors.clipRowSelectionTop, DesignTokens.Colors.clipRowSelectionBottom],
+                    startPoint: .top, endPoint: .bottom
+                )
+                if multiSelectOrdinal != nil {
+                    DesignTokens.Colors.multiSelectRowBackground
+                }
+            }
+        } else if multiSelectOrdinal != nil {
+            DesignTokens.Colors.multiSelectRowBackground
         } else if hovering {
             Color.primary.opacity(0.04)
         } else {
@@ -494,7 +549,11 @@ struct ClipRowView: View, Equatable {
 
     @ViewBuilder
     private var rowBorder: some View {
-        if visuallySelected {
+        // TASK-099 — 선택 행은 커서 여부와 무관하게 테두리로 경계를 준다 (커서보다 진한 톤).
+        if multiSelectOrdinal != nil {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous)
+                .stroke(DesignTokens.Colors.multiSelectRowBorder, lineWidth: 1)
+        } else if visuallySelected {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.clipRow, style: .continuous)
                 .stroke(DesignTokens.Colors.clipRowSelectionBorder, lineWidth: 0.5)
         }

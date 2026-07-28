@@ -19,6 +19,7 @@ struct GeneralTab: View {
                 autoPasteRow
                 historyLimitRow
                 languageRow
+                separatorRow
             }
         }
     }
@@ -96,7 +97,8 @@ struct GeneralTab: View {
         settingsRow(
             label: L10n("settings.general.language.label"),
             hint: nil,
-            showDivider: false
+            // TASK-099 — 연결자 행이 뒤에 붙어 더 이상 마지막이 아니다 (구분선 필요).
+            showDivider: true
         ) {
             Picker(
                 "",
@@ -113,6 +115,85 @@ struct GeneralTab: View {
             // TASK-073 Phase 7 — 사용자 피드백 fix: 라디오 → 드롭다운.
             .pickerStyle(.menu)
             .labelsHidden()
+        }
+    }
+
+    /// TASK-099 — 다중 선택 붙여넣기의 *연결자*. 여러 클립을 한 번에 붙여넣을 때 사이에 넣을 문자다.
+    /// 카드 마지막 행에 두는 이유 — 붙여넣기 방식의 일부라 일반 탭이 자연스럽고, 사용 빈도는 위 항목들보다 낮다.
+    private var separatorRow: some View {
+        settingsRow(
+            label: L10n("settings.general.separator.label"),
+            hint: L10n("settings.general.separator.hint"),
+            showDivider: false
+        ) {
+            _SeparatorField()
+        }
+    }
+}
+
+/// 연결자 입력란. 저장 버튼 없이 **입력 즉시** UserDefaults 에 반영한다 (다른 설정 항목과 같은 관례).
+///
+/// 저장하는 값은 사용자가 친 **원문 그대로** 다 — `\n` 두 글자가 입력란에도 그대로 보이고,
+/// 실제 개행으로 바뀌는 것은 붙여넣을 때뿐이다(`MultiPasteComposer.resolveSeparator`).
+/// 눈에 안 보이는 문자를 입력란에 직접 담으면 사용자가 무엇이 들었는지 확인할 방법이 없어진다.
+@MainActor
+private struct _SeparatorField: View {
+    // 빈 문자열은 *구분 없이 연결* 이라는 유효한 값이라, 미설정일 때만 기본값이 들어간다.
+    @AppStorage(Constants.UserDefaultsKeys.multiPasteSeparator) private var separator: String = Constants.multiPasteSeparatorDefault
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            TextField("", text: $separator)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11.5, design: .monospaced))
+                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                .focused($focused)
+                .padding(.horizontal, 8)
+                .frame(width: 120, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(DesignTokens.Colors.inputFieldBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(
+                            focused ? DesignTokens.Colors.accent : DesignTokens.Colors.inputFieldBorder,
+                            lineWidth: focused ? 1 : 0.5
+                        )
+                )
+                .animation(.easeInOut(duration: 0.12), value: focused)
+            escapeHint
+        }
+    }
+
+    /// 입력란 바로 아래 escape 표기 안내. 라벨 쪽 설명이 아니라 **입력란 아래**에 두는 이유 —
+    /// 무엇을 칠 수 있는지는 치는 자리에서 보여야 한다.
+    private var escapeHint: some View {
+        HStack(spacing: 10) {
+            escapePair(code: "\\n", label: L10n("settings.general.separator.escape.newline"))
+            escapePair(code: "\\t", label: L10n("settings.general.separator.escape.tab"))
+        }
+    }
+
+    private func escapePair(code: String, label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(code)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(DesignTokens.Colors.labelPrimary.opacity(0.85))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(DesignTokens.Colors.keycapBg)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .stroke(DesignTokens.Colors.divider, lineWidth: 0.5)
+                )
+            Text(label)
+                .font(.system(size: 10.5))
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
         }
     }
 }

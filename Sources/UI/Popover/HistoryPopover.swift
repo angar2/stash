@@ -13,6 +13,8 @@ struct HistoryPopover: View {
     @AppStorage(Constants.UserDefaultsKeys.autoFitClipListHeight) private var autoFitClipListHeight: Bool = false
     /// TASK-052 — 단축키 설명 표시 토글. OFF 시 `KeyboardHintsView` if 분기 false → 전체 비표시 + popover height 자동 축소.
     @AppStorage(Constants.UserDefaultsKeys.hintBarVisible) private var hintBarVisible: Bool = true
+    /// TASK-099 — 다중 선택 연결자 **원문**. 설정에서 바꾸면 프리뷰가 즉시 따라와야 해서 `@AppStorage` 로 추적한다.
+    @AppStorage(Constants.UserDefaultsKeys.multiPasteSeparator) private var multiPasteSeparator: String = Constants.multiPasteSeparatorDefault
     /// Window가 주입 — popover dismiss + 이전 frontmost 앱 복원 + 활성화 대기 + paste 흐름 캡슐화 (Bug 4·5 fix).
     /// HistoryPopover는 idx + zone 전달 → Window 측이 hide → restore → sleep → viewModel.paste(at:zone:) 순서 보장.
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
@@ -58,6 +60,14 @@ struct HistoryPopover: View {
         VStack(spacing: 0) {
             // 1·2·3 동일 form — 방식 2도 검색바·환경설정 노출 (입력 비활성, TASK-018).
             PopoverHeaderView(viewModel: viewModel, mode: mode)
+            // TASK-099 — 다중 선택 프리뷰 바. 선택이 없으면 아예 그리지 않아 popover 높이가 원래대로 돌아간다.
+            // 연결자는 `@AppStorage` 로 추적해야 설정 변경이 *즉시* 반영된다 (ViewModel 안 UserDefaults 직접 조회는 SwiftUI 가 추적 못 함).
+            if let preview = MultiPasteComposer.preview(
+                clips: viewModel.multiSelectedClips,
+                separatorRaw: multiPasteSeparator
+            ) {
+                SelectionPreviewBar(preview: preview)
+            }
             clipsArea
                 .accessibilityIdentifier("popover.clipsArea")
             if hasPinned {
@@ -145,7 +155,12 @@ struct HistoryPopover: View {
                                 await viewModel.delete(at: currentIdx)
                             } },
                             onHoverEnter: { viewModel.hoverEnterRow(id: clipId) },  // TASK-055 — hover 임계 timer 시작.
-                            onHoverExit: { viewModel.hoverExitRow(id: clipId) }    // TASK-055 — 같은 행 이탈 시 timer cancel.
+                            onHoverExit: { viewModel.hoverExitRow(id: clipId) },   // TASK-055 — 같은 행 이탈 시 timer cancel.
+                            // TASK-099 — 선택 순서 칩. 목록 위치가 아니라 *선택한 순서* 라 매 렌더마다 조회한다.
+                            multiSelectOrdinal: viewModel.multiSelectOrdinal(for: clipId),
+                            // TASK-099 — ⌥클릭 = 선택 토글. 히스토리 목록에만 넘긴다
+                            // (Pin 사이드바는 미전달 → ⌥ 를 눌러도 기존 붙여넣기 동작 그대로 = 선택 대상 제외).
+                            onOptionClick: { viewModel.toggleMultiSelect(id: clipId) }
                         )
                         // TASK-037 fix-15b — Equatable conformance + .equatable() → SwiftUI 가 변경된 행만 re-render. 호버 응답 빠름.
                         .equatable()
@@ -165,7 +180,9 @@ struct HistoryPopover: View {
                 clipsPerPage: clipsPerPage,
                 autoFit: autoFitClipListHeight,
                 hasPinned: hasPinned,
-                hintBarVisible: hintBarVisible
+                hintBarVisible: hintBarVisible,
+                // TASK-099 — 프리뷰 바가 떠 있으면 클립 목록 상한을 그만큼 낮춘다 (화면 밖으로 자라는 것 차단).
+                previewBarVisible: !viewModel.multiSelection.isEmpty
             ))
             // TASK-061 — 빈 영역 안내 (emptyState / searchEmptyResult) 자체 폐기 (사용자 요구). visibleClips.isEmpty 시 clipsList 영역 빈 채로 박힘.
             // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.

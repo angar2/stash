@@ -15,6 +15,9 @@ final class PasteService {
     /// TASK-026 fix — paste 진행 시작/종료 시 호출. Composition Root 가 `ClipboardWatcher.setPastePending(_:)` 주입.
     /// 다중 파일 paste의 saveFiles race 차단 — tick이 paste 도중 새 캡쳐 진입해 ack 대기 시간 증가하는 함정 fix.
     private let setPastePending: (@Sendable (Bool) async -> Void)?
+    /// TASK-099 — 혼합 묶음 사이 지연. 프로덕션은 `Constants` 값을 쓰고, 단위 테스트는 짧은 값을 넣는다.
+    /// 테스트가 실제로 수백 ms 를 자면 병렬로 도는 *임계 시간에 의존하는 다른 테스트* 들을 굶겨 불안정해진다.
+    private let sequentialDelay: Duration
 
     init(
         synthesizer: PasteSynthesizer,
@@ -22,8 +25,10 @@ final class PasteService {
         repository: ClipRepository,
         permissionService: PermissionService,
         onPasteboardWritten: (@Sendable () async -> Void)? = nil,
-        setPastePending: (@Sendable (Bool) async -> Void)? = nil
+        setPastePending: (@Sendable (Bool) async -> Void)? = nil,
+        sequentialDelay: Duration = Constants.multiPasteSequentialDelay
     ) {
+        self.sequentialDelay = sequentialDelay
         self.synthesizer = synthesizer
         self.pasteboard = pasteboard
         self.repository = repository
@@ -44,9 +49,8 @@ final class PasteService {
         Logger.paste.info("Paste start: type=\(clip.type.rawValue, privacy: .public), mode=\(mode.rawValue, privacy: .public), clipId=\(clip.id.uuidString, privacy: .public)")
 
         // TASK-026 fix — paste 진행 동안 watcher tick 자체 차단 (race 차단). 다중 파일의 saveFiles 시간 소요로 인한
-        // ack 대기 → synthesizeCommandV 지연 함정 fix. begin 호출은 *write 전*, end 는 *모든 흐름 후* (try/catch finally 보장).
-        await setPastePending?(true)
-        do {
+        // ack 대기 → synthesizeCommandV 지연 함정 fix. 실패 시 해제 보장은 `withPastePending` 이 맡는다.
+        try await withPastePending {
             try writeToPasteboard(clip: clip)
 
             // TASK-023 회귀 (e) fix — pasteboard 박은 직후 watcher 에 통보. synthesizer ⌘V 합성은 *읽기* 동작이라 추가 changeCount 증가 X, 콜백은 합성 전 호출 안전.
@@ -58,9 +62,94 @@ final class PasteService {
 
             try await repository.updateLastUsedAt(id: clip.id)
             Logger.paste.info("Paste done: type=\(clip.type.rawValue, privacy: .public), mode=\(mode.rawValue, privacy: .public)")
+        }
+    }
+
+    // MARK: - 묶음 붙여넣기 (TASK-099)
+
+    /// 텍스트 묶음 — 연결자로 이어붙인 **단일 문자열** 하나를 기록한다.
+    /// 단일 클립 경로와 달리 `updateLastUsedAt` 을 부르지 않는다 — 붙인 것은 *선택한 클립들* 이 아니라
+    /// 그것들을 이어붙인 새 산출물이고, 그 산출물은 호출자가 새 클립으로 등록한다(등록 자체가 최신 항목이 된다).
+    func pasteJoinedText(_ text: String, mode: PasteMode) async throws {
+        Logger.paste.info("MultiPaste 텍스트 묶음 — mode=\(mode.rawValue, privacy: .public) 길이=\(text.count, privacy: .public)")
+        try await withPastePending {
+            await writeText(text)
+            if mode == .autoPaste {
+                try synthesizer.synthesizeCommandV()
+            }
+        }
+    }
+
+    /// 파일 묶음 — 파일 URL 배열을 한 번에 기록한다 (다중 파일 클립 붙여넣기와 같은 경로).
+    func pasteFileURLs(_ urls: [URL], mode: PasteMode) async throws {
+        guard !urls.isEmpty else {
+            Logger.paste.error("MultiPaste 파일 묶음 실패 — URL 0건")
+            throw PasteError.fileURLLoadFailed
+        }
+        Logger.paste.info("MultiPaste 파일 묶음 — mode=\(mode.rawValue, privacy: .public) 개수=\(urls.count, privacy: .public)")
+        try await withPastePending {
+            await writeFiles(urls)
+            if mode == .autoPaste {
+                try synthesizer.synthesizeCommandV()
+            }
+        }
+    }
+
+    /// 혼합 묶음 — **계열별로 모아 두 번** 붙인다. 파일·이미지 배열이 먼저, 이어서 연결된 텍스트.
+    ///
+    /// 페이스트보드는 *순서 개념 없는 단일 상태* 라 텍스트와 파일을 한 번의 붙여넣기로 표현할 수 없다.
+    /// 그래서 이 경로만 **자동 붙여넣기를 전제로** 한다 (합성 없이는 순서 자체가 성립하지 않는다).
+    ///
+    /// 처음에는 선택 순서대로 항목마다 합성했는데, 계열이 번갈아 나오면 합성이 항목 수만큼 늘어나고
+    /// 매번 붙는 앱이 앞 항목을 처리했기를 기대해야 해서 뒤쪽이 누락됐다(사용자 검수: `이미지 → 텍스트 → 이미지`
+    /// 에서 마지막 이미지 실패). 계열별로 모으면 합성이 **2회로 고정** 돼 실패 지점 자체가 줄어든다.
+    /// 두 묶음 사이 지연은 여전히 필요하다 — 앞 붙여넣기를 앱이 처리하기 전에 클립보드를 덮어쓰면 안 된다.
+    func pasteMixed(fileURLs: [URL], joinedText: String?) async throws {
+        let hasFiles = !fileURLs.isEmpty
+        let hasText = !(joinedText ?? "").isEmpty
+        guard hasFiles || hasText else { return }
+        Logger.paste.info("MultiPaste 혼합 시작 — 파일=\(fileURLs.count, privacy: .public) 텍스트=\(hasText, privacy: .public) 지연=\(String(describing: self.sequentialDelay), privacy: .public)")
+        try await withPastePending {
+            if hasFiles {
+                await writeFiles(fileURLs)
+                try synthesizer.synthesizeCommandV()
+                Logger.paste.info("MultiPaste 혼합 1/2 — 파일 \(fileURLs.count, privacy: .public)건 붙여넣기")
+                // 텍스트가 뒤따를 때만 기다린다 (마지막 붙여넣기 뒤에는 기다릴 이유가 없다).
+                if hasText {
+                    try? await Task.sleep(for: sequentialDelay)
+                }
+            }
+            if hasText, let text = joinedText {
+                await writeText(text)
+                try synthesizer.synthesizeCommandV()
+                Logger.paste.info("MultiPaste 혼합 2/2 — 텍스트 \(text.count, privacy: .public)자 붙여넣기")
+            }
+        }
+        Logger.paste.info("MultiPaste 혼합 완료")
+    }
+
+    /// 페이스트보드에 텍스트를 기록하고 watcher 에 통보한다.
+    /// 통보를 쓰기와 한 몸으로 묶어 두는 이유는 **빠뜨리면 stash 가 자기 쓰기를 새 복사로 다시 수집** 하기 때문이다.
+    private func writeText(_ text: String) async {
+        pasteboard.clearAndDeclareTypes([.string])
+        pasteboard.setString(text, forType: .string)
+        await onPasteboardWritten?()
+    }
+
+    /// 파일 URL 배열 기록 + watcher 통보. `writeText` 와 같은 사유로 한 몸이다.
+    private func writeFiles(_ urls: [URL]) async {
+        pasteboard.writeFileURLs(urls)
+        await onPasteboardWritten?()
+    }
+
+    /// 페이스트보드를 건드리는 동안 watcher tick 을 멈춘다 (TASK-026 의 `setPastePending` 과 같은 사유).
+    /// 실패해도 pending 이 반드시 풀리도록 묶어 둔다 — 풀리지 않으면 이후 복사가 통째로 수집되지 않는다.
+    private func withPastePending(_ work: () async throws -> Void) async rethrows {
+        await setPastePending?(true)
+        do {
+            try await work()
             await setPastePending?(false)
         } catch {
-            // TASK-026 fix — paste 실패 시에도 pending 해제 보장 (try/catch finally).
             await setPastePending?(false)
             throw error
         }
