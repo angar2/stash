@@ -74,7 +74,13 @@ struct PinSidebarView: View {
                             // 명칭이 없으면 nil → 기존대로 값 표시.
                             displayTitleOverride: PinPasteShortcutResolver.normalizeAlias(clip.pinAlias),
                             shortcutKeycap: PinPasteShortcutResolver.keycapText(for: shortcut),
-                            isKeycapCustomized: PinPasteShortcutResolver.isCustomized(shortcut: shortcut, pinOrdinal: ordinal)
+                            isKeycapCustomized: PinPasteShortcutResolver.isCustomized(shortcut: shortcut, pinOrdinal: ordinal),
+                            // TASK-099 fix-4 — Pin 사이드바도 선택 대상. 같은 클립이 히스토리에도 보이면
+                            // 두 행에 같은 순번 칩이 뜬다 (선택은 id 기준이라 한 건).
+                            multiSelectOrdinal: viewModel.multiSelectOrdinal(for: clip.id),
+                            // fix-4 이전에는 이 콜백이 없어 ⌥클릭이 `onClick` 으로 떨어졌고,
+                            // 선택이 하나라도 있으면 클릭한 핀이 아니라 *묶음* 이 붙었다.
+                            onOptionClick: { viewModel.toggleMultiSelect(id: clip.id) }
                         )
                         // TASK-037 fix-15b — Equatable + .equatable() → 호버 응답 빠름.
                         .equatable()
