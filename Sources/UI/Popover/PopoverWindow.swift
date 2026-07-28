@@ -512,6 +512,8 @@ final class PopoverWindow: NSObject {
             removeLocalClickMonitor()
             removePopoverKeyMonitor()
         }
+        // TASK-099 — popover 가 닫히면 다중 선택도 사라진다 (선택은 열려 있는 동안만 유효한 상태).
+        viewModel.clearMultiSelection()
         // TASK-027 — Detail sub-window 동반 닫음.
         hideClipDetailPanel()
         // Pin 사이드바도 동반 닫음 (popover 닫히면 사이드바 단독 노출 의미 없음).
@@ -902,6 +904,19 @@ final class PopoverWindow: NSObject {
     /// TASK-028 — `zone` 명시 파라미터화. 호출 site (HistoryPopover 본체 행 / PinSidebarView 핀 행 / dispatch ⌘V) 가 zone snapshot 박아 전달.
     private func handleClipPaste(at idx: Int, zone: FocusZone) async {
         let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
+        // TASK-099 — 선택이 하나라도 있으면 묶음 경로. **선택이 비면 아래 기존 경로가 그대로 돈다**
+        // (회귀 위험이 이 조건 하나로 좁혀지는 자리다).
+        // focusZone 으로 가르지 않는 이유 — hover 만으로도 zone 이 `.pin` 으로 바뀌어 같은 키가
+        // 마우스 위치에 따라 다른 일을 하게 된다. 무엇이 붙을지는 프리뷰 바가 이미 말하고 있다.
+        if !viewModel.multiSelection.isEmpty {
+            await PopoverPanel.performMultiPasteFlow(
+                viewModel: viewModel,
+                action: .paste,
+                sourceLabel: label,
+                hide: { [weak self] in self?.hide() }
+            )
+            return
+        }
         await PopoverPanel.performPasteFlow(
             viewModel: viewModel,
             idx: idx,
@@ -915,6 +930,16 @@ final class PopoverWindow: NSObject {
     /// TASK-028 — `zone` 명시 파라미터화.
     private func handleClipCopy(at idx: Int, zone: FocusZone) async {
         let label = currentMode.map { "PopoverWindow(\(String(describing: $0)))" } ?? "PopoverWindow"
+        // TASK-099 — 붙여넣기와 같은 분기. 선택이 비면 기존 단일 복사 경로 그대로.
+        if !viewModel.multiSelection.isEmpty {
+            await PopoverPanel.performMultiPasteFlow(
+                viewModel: viewModel,
+                action: .copy,
+                sourceLabel: label,
+                hide: { [weak self] in self?.hide() }
+            )
+            return
+        }
         await PopoverPanel.performCopyFlow(
             viewModel: viewModel,
             idx: idx,
