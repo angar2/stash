@@ -126,11 +126,27 @@ struct PopoverHotkeyTests {
         #expect(PopoverHotkey.allCases.contains(.confirm))
     }
 
-    @Test("TASK-055 — PopoverHotkey.allCases.count == 15 (TASK-051 14 case + TASK-055 .toggleClipDetail 신규)")
-    func allCasesCountIsFifteen() {
-        // TASK-025 시점 10 case → TASK-036 +4 → TASK-051 +1 (.confirm) → TASK-055 +1 (.toggleClipDetail).
-        // 현재 enum 15 case: moveSelectionUp / moveSelectionDown / pageUp / pageDown / moveSelectionToFirst / moveSelectionToLast / togglePin / togglePinSidebar / deleteOne / deleteAll / copy / paste / confirm / escape / toggleClipDetail.
-        #expect(PopoverHotkey.allCases.count == 15)
+    @Test("TASK-099 — PopoverHotkey.allCases.count == 16 (TASK-055 15 case + TASK-099 .multiSelectToggle 신규)")
+    func allCasesCountIsSixteen() {
+        // TASK-025 시점 10 case → TASK-036 +4 → TASK-051 +1 (.confirm) → TASK-055 +1 (.toggleClipDetail)
+        // → TASK-099 +1 (.multiSelectToggle).
+        #expect(PopoverHotkey.allCases.count == 16)
+    }
+
+    // MARK: - TASK-099: .multiSelectToggle (⌥+C) 매칭
+
+    /// `⌘C`(복사)와 같은 키에 modifier 만 달라, 서로 오발동하지 않는지가 핵심이다
+    /// (매칭이 modifier 집합 **정확 일치** 라 교차 매칭이 나면 복사가 선택으로 새거나 그 반대가 된다).
+    @Test("TASK-099 — .multiSelectToggle 은 ⌥C 에만 매칭, ⌘C 와 교차하지 않는다")
+    func multiSelectToggleMatchesOptionC() {
+        PopoverShortcutStore.registerDefaultsIfNeeded()
+        let optionC = makeKeyEvent(keyCode: 8, modifiers: [.option])
+        let commandC = makeKeyEvent(keyCode: 8, modifiers: [.command])
+
+        #expect(PopoverHotkey.multiSelectToggle.matches(event: optionC) == true)
+        #expect(PopoverHotkey.multiSelectToggle.matches(event: commandC) == false)
+        #expect(PopoverHotkey.copy.matches(event: optionC) == false)
+        #expect(PopoverHotkey.copy.matches(event: commandC) == true)
     }
 
     // MARK: - TASK-055: .toggleClipDetail (⌘+D) 매칭

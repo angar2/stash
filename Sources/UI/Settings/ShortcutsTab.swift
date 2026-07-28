@@ -491,14 +491,24 @@ struct ShortcutsTab: View {
         ClipRowView.displayLabel(for: clip).replacingOccurrences(of: "\n", with: " ")
     }
 
+    /// 라벨 옆에 덧붙일 단서의 i18n 키. 없으면 nil.
+    private static func labelNoteKey(for id: PopoverShortcutID) -> String? {
+        switch id {
+        case .deleteAll: return "shortcuts.deleteAll.note"
+        case .multiSelectToggle: return "shortcuts.multiSelectToggle.note"
+        default: return nil
+        }
+    }
+
     private func popoverShortcutRow(id: PopoverShortcutID) -> some View {
         HStack(alignment: .center, spacing: 8) {
             Text(L10n(id.labelKey))
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(DesignTokens.Colors.labelPrimary)
-            // TASK-065 — 전체 삭제 항목 라벨 우측에 secondary 컬러 부가 설명. 라벨 자체를 단순화(*전체 삭제*) 하고 핀 제외 정책은 부가 라인으로 분리.
-            if id == .deleteAll {
-                Text(L10n("shortcuts.deleteAll.note"))
+            // TASK-065 — 라벨 우측 secondary 컬러 부가 설명. 라벨 자체는 단순하게 두고 단서만 분리한다.
+            // TASK-099 — *다중 선택* 도 이름만으로는 무엇을 고르는지 알기 어려워 같은 자리를 쓴다.
+            if let noteKey = Self.labelNoteKey(for: id) {
+                Text(L10n(noteKey))
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(DesignTokens.Colors.labelSecondary)
             }

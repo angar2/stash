@@ -32,6 +32,9 @@ enum PopoverShortcutID: String, CaseIterable, Sendable {
     case popoverOpen
     case copy
     case paste
+    // TASK-099 — 다중 선택 토글. 설정 화면의 행 순서는 `allCases` 선언 순서를 그대로 따르므로
+    // *붙여넣기 다음* 자리에 둔다 (복사 → 붙여넣기 → 다중 선택 → 핀 … 학습 흐름).
+    case multiSelectToggle
     case pinToggle
     case pinSidebarToggle
     case deleteOne
@@ -47,6 +50,7 @@ enum PopoverShortcutID: String, CaseIterable, Sendable {
         case .popoverOpen: return "shortcuts.popoverOpen"
         case .copy: return "shortcuts.copy"
         case .paste: return "shortcuts.paste"
+        case .multiSelectToggle: return "shortcuts.multiSelectToggle"
         case .pinToggle: return "shortcuts.pinToggle"
         case .pinSidebarToggle: return "shortcuts.pinSidebarToggle"
         case .deleteOne: return "shortcuts.deleteOne"
@@ -207,6 +211,9 @@ enum PopoverShortcutStore {
             .popoverOpen:      PopoverShortcut(keyCode: 8, modifiers: [.command, .shift]),       // ⌘⇧C (TASK-065)
             .copy:             PopoverShortcut(keyCode: 8, modifiers: [.command]),               // ⌘C
             .paste:            PopoverShortcut(keyCode: 9, modifiers: [.command]),               // ⌘V
+            // TASK-099 — ⌥C. `⌘C`(복사) 와 같은 키에 modifier 만 달라, *복사 계열* 이라는 인상을 유지하면서
+            // 조합은 겹치지 않는다 (매칭이 modifier 집합 정확 일치라 서로 오발동하지 않는다).
+            .multiSelectToggle: PopoverShortcut(keyCode: 8, modifiers: [.option]),               // ⌥C
             .pinToggle:        PopoverShortcut(keyCode: 35, modifiers: [.command]),              // ⌘P
             .pinSidebarToggle: PopoverShortcut(keyCode: 11, modifiers: [.command]),              // ⌘B
             .deleteOne:        PopoverShortcut(keyCode: 51, modifiers: [.command]),              // ⌘⌫
