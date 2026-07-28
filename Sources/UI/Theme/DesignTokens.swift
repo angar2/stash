@@ -76,6 +76,71 @@ enum DesignTokens {
             )
         }
 
+        // ─── 다중 선택 (TASK-099) ────────────────────────────────────
+        // 커서 행(회색 그라데이션)과 *동시에* 걸릴 수 있어, 선택 상태가 커서보다 진하게 읽혀야 한다.
+        // 커서 행 선택 그라데이션과 같은 accent 베이스를 쓰되 배경은 한 톤 옅게 깔고 테두리로 경계를 준다.
+        static var multiSelectRowBackground: Color {
+            Color(
+                light: accent.opacity(0.10),
+                dark:  accent.opacity(0.20)
+            )
+        }
+        static var multiSelectRowBorder: Color {
+            Color(
+                light: accent.opacity(0.40),
+                dark:  accent.opacity(0.50)
+            )
+        }
+        /// 선택 순서 칩 배경 — 행 위에 겹쳐 뜨므로 배경과 대비가 확실해야 한다.
+        static var multiSelectChipBackground: Color { accent }
+        static let multiSelectChipForeground = Color.white
+        // 칩 둘레의 링(`multiSelectChipRing`)은 폐기했다 — 다크에서 검은 외곽선처럼 읽혔다(사용자 검수).
+        // 개수 배지를 아이콘 우하단으로 옮겨 대각으로 떨어뜨렸으므로 링 없이도 서로 구분된다.
+        // ─── 프리뷰 바 (TASK-099, 검수 fix-3 개정) ───────────────────
+        // 초안은 바탕·보더·라벨·연결자가 전부 accent 계열이라 파란색이 네 겹으로 겹쳐 산만했다(사용자 검수).
+        // 바탕을 **검색바와 같은 어두운 톤** 으로 내리고, accent 는 *내용 칩* 하나에만 남긴다.
+        static let previewBarBackground = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.06),
+            dark:  Color(red: 0, green: 0, blue: 0, opacity: 0.28)
+        )
+        static let previewBarBorder = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.10),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.09)
+        )
+        /// 클립 하나를 담는 칩. 프리뷰에서 **유일하게** 강조 색을 쓰는 자리다.
+        static var previewChipBackground: Color {
+            Color(
+                light: accent.opacity(0.14),
+                dark:  accent.opacity(0.22)
+            )
+        }
+        static var previewChipBorder: Color {
+            Color(
+                light: accent.opacity(0.40),
+                dark:  accent.opacity(0.55)
+            )
+        }
+        static var previewChipForeground: Color {
+            Color(
+                light: accent.opacity(0.95),
+                dark:  Color(red: 207/255, green: 228/255, blue: 1, opacity: 1)
+            )
+        }
+        // 파일·이미지 칩은 **키캡과 같은 회색 톤** 을 쓴다 (검수 결정).
+        // 텍스트는 이어붙여 하나가 되고 파일은 배열로 따로 붙는데, 색이 같으면 그 차이가 안 보인다.
+        // 키캡 토큰을 그대로 참조해 힌트바·설정 코드 칩과 한 계열로 묶는다.
+        static var previewFileChipBackground: Color { keycapBg }
+        static var previewFileChipBorder: Color { keycapInset }
+        static var previewFileChipForeground: Color { keycapFg }
+
+        /// 설정 화면 텍스트 입력란 (TASK-099 연결자). 단축키 Recorder 와 같은 톤을 쓴다 —
+        /// 같은 탭 안에서 *값을 넣는 자리* 라는 인상이 어긋나지 않도록.
+        static let inputFieldBackground = Color(nsColor: .controlBackgroundColor).opacity(0.5)
+        static let inputFieldBorder = Color(
+            light: Color(red: 0, green: 0, blue: 0, opacity: 0.18),
+            dark:  Color(red: 1, green: 1, blue: 1, opacity: 0.18)
+        )
+
         // ─── 본문 / 보조 fg ───────────────────────────────────────────
         static let labelPrimary = Color(
             light: Color(red: 0, green: 0, blue: 0, opacity: 0.88),
@@ -524,6 +589,20 @@ enum DesignTokens {
         // TASK-052 — 힌트바 영역 (Divider + FlowLayout + padding) 동적 가감 토큰. 실측 42pt (ON 1410 - OFF 1368). hintBar OFF 시 totalOverhead 에서 차감해 clipList cap 확장 → clipList 가 한 행 더 표시 + popover total height ON/OFF 동일 유지 (method2 우하단 anchor 시 상단 공백 잔존 차단).
         // TASK-056 — NSPanel 실측 (popover open log) ON - OFF fitting.height 차이 34pt. 기존 42pt 추정값 폐기, 실측 34pt 박음.
         static let hintBarOverhead:        CGFloat = 34
+
+        // TASK-099 — 다중 선택 프리뷰 바.
+        // 실제 높이는 본문 줄 수(1~3)와 혼합 안내 유무로 달라지며, popover 높이는 SwiftUI fittingSize 가 따라간다.
+        // 아래 `previewBarOverhead` 는 *화면 cap 계산* 에만 쓰는 보수적 추정치다 — 바가 떠 있는 동안
+        // 클립 목록 상한을 그만큼 낮춰, 선택 중에 popover 가 화면 밖으로 자라는 것을 막는다.
+        static let previewBarPaddingHorz:  CGFloat = 9
+        static let previewBarPaddingVert:  CGFloat = 6
+        static let previewBarBottomGap:    CGFloat = 6
+        static let previewBarMaxLines:     Int = 3
+        static let previewBarOverhead:     CGFloat = 62
+        /// 칩 사이 간격 (가로·세로 공통). 검수 fix-3 — 칩 구조 전환.
+        static let previewChipGap:         CGFloat = 4
+        /// 칩 하나의 최대 너비. 긴 본문이 바를 세로로 부풀리지 않도록 여기서 말줄임한다.
+        static let previewChipMaxWidth:    CGFloat = 150
         // 디스플레이 탭 슬라이더 최대 너비.
         static let displaySliderMaxWidth:  CGFloat = 240
 

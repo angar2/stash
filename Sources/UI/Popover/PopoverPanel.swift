@@ -20,6 +20,7 @@ enum PopoverHotkey: CaseIterable {
     case deleteAll              // ⌥+⌘+⌫ default (TASK-033 fix-2 — .deleteAll)
     case copy                   // ⌘+C default (TASK-033 fix-2 — .copy. 항상 .copyBack 호출, 권한 무관 활성)
     case paste                  // ⌘+V default (TASK-033 fix-2 — .paste. Accessibility 권한 게이트 조건부 활성)
+    case multiSelectToggle      // ⌥+C default (TASK-099 — .multiSelectToggle. 히스토리 활성 클립 선택 토글)
     case confirm                // Enter 단독 (TASK-051, 변경 불가 — 일반 Return keyCode 36 + Numpad Enter keyCode 76 동시 매칭. autoPasteEnabled 분기 paste/copy 라우팅. IME marked text 시 monitor 가 forward)
     case escape                 // ESC 단독 (변경 불가 — macOS 표준 닫기/취소)
     case toggleClipDetail       // ⌘+D (TASK-055, 변경 불가 — 활성 클립 상세 sub-window toggle. NSTextField field editor 기본 키바인딩 충돌 X. PopoverShortcut defaults 비충돌)
@@ -29,6 +30,7 @@ enum PopoverHotkey: CaseIterable {
         switch self {
         case .copy: return .copy
         case .paste: return .paste
+        case .multiSelectToggle: return .multiSelectToggle
         case .togglePin: return .pinToggle
         case .togglePinSidebar: return .pinSidebarToggle
         case .deleteOne: return .deleteOne
@@ -36,6 +38,11 @@ enum PopoverHotkey: CaseIterable {
         case .moveSelectionUp, .moveSelectionDown, .pageUp, .pageDown, .moveSelectionToFirst, .moveSelectionToLast, .confirm, .escape, .toggleClipDetail: return nil
         }
     }
+
+    /// TASK-099 — `⌥C` 를 popover 가 가로채는 근거. macOS 에서 `⌥C` 는 본래 `ç` 입력이라
+    /// 검색란에 커서가 있으면 field editor 가 먼저 먹는다. `installPopoverKeyEventMonitor` 가
+    /// responder chain 앞에서 매칭해 소비하므로 검색 중에도 선택이 동작한다 (↑↓·ESC 와 동일 원칙).
+    /// popover 가 닫혀 있으면 monitor 자체가 없어 시스템 기본 동작 그대로다.
 
     /// 변경 불가 단축키만 사용하는 hardcoded keyCode (NSEvent.keyCode raw 값).
     /// TASK-051 — `.confirm` 은 일반 Return 36 + Numpad Enter 76 둘 다 매칭하므로 본 프로퍼티는 *primary* (36) 반환. matches(event:) 분기에서 76 도 함께 검사.
@@ -46,7 +53,7 @@ enum PopoverHotkey: CaseIterable {
         case .confirm: return Constants.KeyCodes.returnKey                                              // Return (primary — matches(event:) 가 Numpad Enter 도 함께 검사)
         case .escape: return Constants.KeyCodes.escape                                                  // ESC
         case .toggleClipDetail: return Constants.KeyCodes.keyD                                          // D (TASK-055 — ⌘+D)
-        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return 0             // PopoverShortcutStore 동적 조회
+        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste, .multiSelectToggle: return 0  // PopoverShortcutStore 동적 조회
         }
     }
 
@@ -57,7 +64,7 @@ enum PopoverHotkey: CaseIterable {
         case .pageUp, .pageDown: return [.command]                              // TASK-036 — ⌘+↑/⌘+↓ 페이지 점프
         case .moveSelectionToFirst, .moveSelectionToLast: return [.command, .shift]  // TASK-036 — ⌘+⇧+↑/⌘+⇧+↓ 양 끝 점프
         case .toggleClipDetail: return [.command]                               // TASK-055 — ⌘+D
-        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste: return []  // PopoverShortcutStore 동적 조회
+        case .togglePin, .togglePinSidebar, .deleteOne, .deleteAll, .copy, .paste, .multiSelectToggle: return []  // PopoverShortcutStore 동적 조회
         }
     }
 
@@ -273,6 +280,31 @@ enum PopoverPanel {
         await viewModel.copy(at: idx, zone: zone)
     }
 
+    /// TASK-099 — 묶음 실행 흐름. 단일 클립 흐름(`performPasteFlow`/`performCopyFlow`)과 같은 순서
+    /// (popover 내림 → 안정 대기 → 실행) 를 쓰되, **막힌 경우에는 내리지 않는다** —
+    /// 안내 토스트만 띄우고 선택도 그대로 둬야 사용자가 무엇이 막혔는지 보고 고칠 수 있다.
+    static func performMultiPasteFlow(
+        viewModel: ClipsViewModel,
+        action: ClipsViewModel.MultiPasteAction,
+        sourceLabel: String,
+        hide: () -> Void
+    ) async {
+        if let reason = viewModel.multiPasteBlockReason(for: action) {
+            Logger.ui.info("MultiPaste 중단 — \(sourceLabel, privacy: .public) 사유=\(String(describing: reason), privacy: .public)")
+            viewModel.publishMultiPasteBlockedToast(reason)
+            return
+        }
+        // **무엇을 붙일지 먼저 확정한다.** `hide()` 가 popover 를 닫으면서 선택을 비우므로(닫힘 = 초기화 정책),
+        // 실행 시점에 상태를 다시 읽으면 빈 선택을 보고 아무것도 하지 않는다.
+        let snapshot = viewModel.multiSelectedClips
+        guard !snapshot.isEmpty else { return }
+        if !viewModel.keepOpenAfterAction {
+            hide()
+            try? await Task.sleep(for: .milliseconds(Int(DesignTokens.Animation.appActivationDelay * 1000)))
+        }
+        await viewModel.runMultiPaste(action, clips: snapshot)
+    }
+
     /// KeyablePanel.keyDownHandler 셋업 — Method1/2/3 공통 키 이벤트 처리 (TASK-017).
     /// SwiftUI .onKeyPress가 NSPanel(.nonactivatingPanel) 환경에서 발화 안 해 AppKit 단에서 직접 처리.
     /// 단축키 정의는 PopoverHotkey enum (단일 진실 소스) — 본 함수는 매칭 후 dispatch만.
@@ -334,6 +366,14 @@ enum PopoverPanel {
         case .moveSelectionToLast:
             // TASK-036 — ⌘+⇧+↓ 맨 아래 (End).
             viewModel.moveSelectionToLast()
+            return true
+        case .multiSelectToggle:
+            // TASK-099 — 활성 클립의 선택 토글. 방식 3 (보류) 차단.
+            guard mode != .method3 else { return false }
+            // 대상 행 판정은 뷰모델이 한다 (히스토리 커서 / Pin 사이드바 커서 — fix-4).
+            // 토글 성공 여부와 무관하게 이벤트는 **항상 소비한다** — 검색란에 커서가 있는 상태에서
+            // forward 하면 `ç` 가 입력된다.
+            viewModel.toggleMultiSelectAtActiveRow()
             return true
         case .togglePin:
             // TASK-019 — focusZone == .pin 이면 *pinnedClips 안 항목 unpin*. .clip 이면 본체 toggle.
@@ -403,6 +443,12 @@ enum PopoverPanel {
         case .escape:
             // TASK-025 — 2-tier 단순화. 검색어 clear 분기 폐기 (검색 활성 단계 개념 제거).
             // 핀 사이드바 열림 → 사이드바만 닫기 / 그 외 → popover dismiss.
+            // TASK-099 — 선택이 있으면 *해제만* 하고 popover 는 유지한다. 방금 만든 상태를 되돌리는 것이
+            // 사용자가 ESC 에 기대하는 첫 동작이고, 한 번 더 누르면 기존대로 닫힌다.
+            if !viewModel.multiSelection.isEmpty {
+                viewModel.clearMultiSelection()
+                return true
+            }
             if viewModel.pinSidebarOpen {
                 viewModel.collapsePinSidebar()
                 return true

@@ -15,6 +15,16 @@ enum Constants {
     // F-004 Pin 한도
     static let maxPinnedClips: Int = 10
 
+    // TASK-099 다중 선택 붙여넣기 연결자 기본값 = 줄바꿈. 저장 형식이 *원문* 이라 두 글자 표기 `\n` 로 둔다
+    // (설정 입력란에도 이 두 글자가 그대로 보이고, 실제 연결 시점에 개행으로 해석된다).
+    static let multiPasteSeparatorDefault: String = "\\n"
+
+    // TASK-099 혼합 계열 붙여넣기의 *묶음 사이* 지연 (파일 배열 → 텍스트). 앞 붙여넣기를 앱이 처리하기 전에
+    // 다음 것이 클립보드를 덮어쓰면 *같은 내용이 두 번 붙거나 하나가 누락된다*.
+    // 사용자 검수 fix-2 — 항목마다 합성하던 구조에서 계열별 2회로 줄이면서, 기다리는 횟수도 1회뿐이라
+    // 220ms → 400ms 로 여유를 늘렸다(총 대기는 오히려 짧아진다). 실기 검수로 조정할 값이다.
+    static let multiPasteSequentialDelay: Duration = .milliseconds(400)
+
     // TASK-098 — 핀 명칭(pin_alias) 길이 상한. 사이드바 최소 너비(180)에서 어차피 말줄임되므로 무제한 입력은 이득 없음.
     // 초과 입력은 차단하고 편집 중 글자 수(`n/40`)를 표시한다. DATA-MODEL §1 `pin_alias` 정책 정합.
     static let pinAliasMaxLength: Int = 40
@@ -114,6 +124,11 @@ enum Constants {
 
         // TASK-097 Pin 사이드바 width 영속 — 항상 영속 (위치 토글과 무관). 조회는 PopoverWindow.storedPinSidebarWidth.
         static let pinSidebarWidth: String = "pinSidebarWidth"
+
+        // TASK-099 다중 선택 붙여넣기 *연결자* — 설정 일반 탭 자유 텍스트. 저장값은 **사용자가 입력한 원문**이며
+        // `\n`·`\t` 두 글자 표기의 해석은 `MultiPasteComposer.resolveSeparator` 가 단일 지점에서 한다.
+        // 빈 문자열은 미설정이 아니라 *구분 없이 연결* 이라는 유효한 값이다 (그래서 default fallback 은 키 부재로만 판정).
+        static let multiPasteSeparator: String = "multiPasteSeparator"
 
         // TASK-098 설정 단축키 탭 묶음 접힘 상태 영속. 초기값 = 기본 단축키 열림 / PIN 단축키 닫힘.
         // (PIN 행이 2줄 구조라 함께 펼치면 탭 진입만으로 스크롤 발생 — UX-UI §4-4.)

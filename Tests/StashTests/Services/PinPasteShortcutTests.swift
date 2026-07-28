@@ -77,9 +77,10 @@ struct PinPasteShortcutResolverTests {
         for id in PopoverShortcutID.pinPasteIDs {
             #expect(id.globalName != nil, "\(id.rawValue) 가 전역 등록 대상이 아니면 어디서나 동작하지 않는다")
         }
-        // 강제 초기화 루프 조건(`globalName == nil`)에 걸리는 것은 popover 안 6종뿐이어야 한다.
+        // 강제 초기화 루프 조건(`globalName == nil`)에 걸리는 것은 popover 안 단축키뿐이어야 한다.
+        // TASK-099 — 다중 선택 토글(⌥C)이 popover 내부 단축키로 합류해 6 → 7종.
         let resetTargets = PopoverShortcutID.allCases.filter { $0.globalName == nil }
-        #expect(resetTargets.count == 6)
+        #expect(resetTargets.count == 7)
         #expect(resetTargets.allSatisfy { $0.pinOrdinal == nil })
     }
 
