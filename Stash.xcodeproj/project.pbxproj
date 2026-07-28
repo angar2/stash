@@ -113,6 +113,7 @@
 		9D2F4103DAC96697A0E8D442 /* RecoverFromCorruptionV4Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26235EA7629A853778AC673E /* RecoverFromCorruptionV4Tests.swift */; };
 		9D9B5109CD30139440D3F4D1 /* PopoverAnchorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8515360475C55170C80AF3C7 /* PopoverAnchorTests.swift */; };
 		9E6E3E8AD555622B783715E8 /* SystemPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E6D55A437BE08A35A52C864 /* SystemPasteboard.swift */; };
+		A0884C64822879DDF1975D69 /* HistoryLimitPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9310CDB8805D6CF1F414CB32 /* HistoryLimitPolicy.swift */; };
 		A313E4BBAF98C653B358ADB3 /* ToastWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E561615595B7DF28F572174A /* ToastWindow.swift */; };
 		A382DFD76D33197B83750CD4 /* LaunchArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF5C8404125A683D441722A /* LaunchArguments.swift */; };
 		A573AAEB31C08F706D61C797 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD2A6EE47E785AB37920B53 /* OnboardingViewModel.swift */; };
@@ -142,6 +143,7 @@
 		C988966B4D0E4545ADB5B743 /* ClipsViewModelPinPasteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3136EC7DC34B7193FE72333 /* ClipsViewModelPinPasteTests.swift */; };
 		CA491CA02629FBF262C788D3 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC0FDADBBDC497C2B5FDB4A /* DesignTokens.swift */; };
 		CBB6C9F3F5F4048C92046AF8 /* MockPasteSynthesizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5050C8CF57E0B8E2D58F1EF /* MockPasteSynthesizer.swift */; };
+		CD4CA34801A02029465F16E9 /* HistoryLimitPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3F49FCEA907D9CF095F5F /* HistoryLimitPolicyTests.swift */; };
 		CFE05BE97E8909ABE4FF358F /* MockPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 041E0C8D498A4653E7A45160 /* MockPermissionChecker.swift */; };
 		D0BBE7689D42254C7CD7191B /* SettingsWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E5E42DE58EB5646EDB098F /* SettingsWindowTests.swift */; };
 		D219055CC22951AD1CE0C093 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0B323B0086ED7C09A13DE1E /* SettingsViewModel.swift */; };
@@ -251,6 +253,7 @@
 		34FF26ACC47DF1C825B7566C /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		37DFFE35671884E08F2593B4 /* OnboardingWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindowTests.swift; sourceTree = "<group>"; };
 		38804B35D9347EB2DD25978E /* PasteServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteServiceTests.swift; sourceTree = "<group>"; };
+		3AD3F49FCEA907D9CF095F5F /* HistoryLimitPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLimitPolicyTests.swift; sourceTree = "<group>"; };
 		3BF56131E7482F92E091DB02 /* FocusZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusZone.swift; sourceTree = "<group>"; };
 		3F077E74AB1620A75BDC4749 /* DatabaseError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseError.swift; sourceTree = "<group>"; };
 		3FE3E99BD5FB42B40C379DEC /* MockFileClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFileClipService.swift; sourceTree = "<group>"; };
@@ -306,6 +309,7 @@
 		8FBED857A7F2D40D35714AC2 /* DirectFileClipServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectFileClipServiceTests.swift; sourceTree = "<group>"; };
 		902ABF16AD6FA20C8726591C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		907C2FFF7604AC32E4DE2209 /* ClipsViewModelMultiSelectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsViewModelMultiSelectTests.swift; sourceTree = "<group>"; };
+		9310CDB8805D6CF1F414CB32 /* HistoryLimitPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLimitPolicy.swift; sourceTree = "<group>"; };
 		96F279DD4DDF40853DD95296 /* PopoverResizeAutoFitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverResizeAutoFitTests.swift; sourceTree = "<group>"; };
 		96FD827DCB14EAF0A6D4203C /* DirectFileClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectFileClipService.swift; sourceTree = "<group>"; };
 		9937EA18AD77F87E47D8D111 /* ClipDetailProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProvider.swift; sourceTree = "<group>"; };
@@ -477,6 +481,7 @@
 				E1994144DF9B943A7F43B4CA /* AppLanguageServiceTests.swift */,
 				F5E307CE143B4BE28AD248FB /* ClipboardWatcherTests.swift */,
 				8FBED857A7F2D40D35714AC2 /* DirectFileClipServiceTests.swift */,
+				3AD3F49FCEA907D9CF095F5F /* HistoryLimitPolicyTests.swift */,
 				4057198F25D797408CC6EFA2 /* HotkeyManagerTests.swift */,
 				48B789A2950432886E3E3D51 /* HotkeyMonitorTests.swift */,
 				B7DB8419FEA3CAB308AC87BB /* LoginItemServiceTests.swift */,
@@ -803,6 +808,7 @@
 				D1521A6C1717572ED2E6B8C6 /* ClipboardWatcher.swift */,
 				96FD827DCB14EAF0A6D4203C /* DirectFileClipService.swift */,
 				30A2AC65026DC920053EA520 /* FrontmostAppTracker.swift */,
+				9310CDB8805D6CF1F414CB32 /* HistoryLimitPolicy.swift */,
 				8A090C79B07396FDA215A312 /* HotkeyManager.swift */,
 				0D0552E8694A01A1E0ECE618 /* HotkeyMonitor.swift */,
 				0F7E299D69958AC35861329F /* KeyboardShortcutsRegistrar.swift */,
@@ -995,6 +1001,7 @@
 				04F5CD5471B974B9B58A505B /* FrontmostAppTracking.swift in Sources */,
 				982CF3AE71897E278394CB93 /* GRDBClipRepository.swift in Sources */,
 				726F7522601A941752320019 /* GeneralTab.swift in Sources */,
+				A0884C64822879DDF1975D69 /* HistoryLimitPolicy.swift in Sources */,
 				F4823973C3B528CCF3034515 /* HistoryPopover.swift in Sources */,
 				ACB22FADA45A1CDAFCB3511D /* HotkeyManager.swift in Sources */,
 				0EAFF23489B9832ED1624089 /* HotkeyMonitor.swift in Sources */,
@@ -1091,6 +1098,7 @@
 				D6B077EA45060188A61673CE /* ComputeOriginTests.swift in Sources */,
 				795D72B8DBCB4721B74FB257 /* DirectFileClipServiceTests.swift in Sources */,
 				AA9DC32D2245C9994563060E /* GRDBClipRepositoryTests.swift in Sources */,
+				CD4CA34801A02029465F16E9 /* HistoryLimitPolicyTests.swift in Sources */,
 				B09D2C5A6039E22637400E61 /* HotkeyManagerTests.swift in Sources */,
 				881D9F3218BD606B2248B891 /* HotkeyMonitorTests.swift in Sources */,
 				279B76F91F8DDE0EF541CB5E /* HoverTooltipControllerTests.swift in Sources */,

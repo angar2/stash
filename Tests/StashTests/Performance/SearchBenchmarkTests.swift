@@ -21,7 +21,10 @@ struct SearchBenchmarkTests {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let dbPath = tempDir.appendingPathComponent("bench.db")
-        let repo = try GRDBClipRepository(dbPath: dbPath)
+        // TASK-100 — 한도를 200 으로 고정해 주입한다. 보관 한도가 사용자 설정이 되면서 기본값(50)으로는
+        // 아래 200건 중 150건이 LRU 로 잘려 `#150`~`#190` 매칭이 0건이 된다. 전역 설정을 바꾸는 대신
+        // 이 인스턴스에만 한도를 준다 — 공유 키에 쓰면 같은 키를 읽는 다른 스위트와 병렬 실행에서 간섭한다.
+        let repo = try GRDBClipRepository(dbPath: dbPath, historyLimit: { 200 })
 
         // 200건 insert — body `UITest seed clip #N` (N=1~200).
         for i in 1...200 {

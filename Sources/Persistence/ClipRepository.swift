@@ -6,10 +6,14 @@ import Foundation
 protocol ClipRepository: Sendable {
 
     /// 최신순 정렬 클립 목록 fetch (popover 호출 시).
-    /// - Returns: `is_pinned DESC, last_used_at DESC` 정렬, 최대 210 row.
+    /// - Returns: `is_pinned DESC, last_used_at DESC` 정렬, 최대 `보관 한도 + 10` row (한도는 사용자 설정 — TASK-100).
     func fetchAll() async throws -> [Clip]
 
-    /// 새 클립 insert + 200 한도 자동 정리 (LRU). DB 작업은 한 트랜잭션 atomic.
+    /// 핀 제외 클립 개수 (TASK-100). 보관 한도를 어디까지 내릴 수 있는지 정하는 비교 기준이다 —
+    /// 한도는 핀이 아닌 클립에만 적용되므로 목록 전체 개수를 쓰면 핀 개수만큼 잘못 부풀려진다.
+    func unpinnedCount() async throws -> Int
+
+    /// 새 클립 insert + 보관 한도 자동 정리 (LRU). DB 작업은 한 트랜잭션 atomic.
     /// - Note: LRU 정리로 삭제된 클립의 디스크 파일 삭제는 호출자 책임.
     /// - Returns: LRU 정리로 삭제된 클립 목록.
     @discardableResult

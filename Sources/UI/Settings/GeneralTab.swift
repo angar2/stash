@@ -79,16 +79,14 @@ struct GeneralTab: View {
         }
     }
 
-    /// TASK-033 — 히스토리 한도 정보 라인. 사용자 변경 X (정보 노출만). 값은 `Constants.maxUnpinnedClips` 동적 바인딩.
+    /// TASK-100 — 히스토리 한도 입력 행. 정보 라인(사용자 변경 X)에서 입력란 + 증감 버튼으로 전환.
     private var historyLimitRow: some View {
         settingsRow(
             label: L10n("settings.general.historyLimit"),
-            hint: nil,
+            hint: L10n("settings.general.historyLimit.hint"),
             showDivider: true
         ) {
-            Text("\(viewModel.maxUnpinnedClips)\(L10n("settings.general.historyLimit.unit"))")
-                .font(DesignTokens.Typography.settingsBody)
-                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+            _HistoryLimitField(viewModel: viewModel)
         }
     }
 
@@ -128,6 +126,129 @@ struct GeneralTab: View {
         ) {
             _SeparatorField()
         }
+    }
+}
+
+/// 보관 한도 입력란 (TASK-100). 숫자 입력란 + 입력란 안쪽 우측 증감 버튼.
+///
+/// 다른 설정 항목과 달리 **입력 즉시 반영하지 않는다** — 확정(Enter · 포커스 이탈) 시점에만 판정한다.
+/// 즉시 반영하면 `200` 을 `50` 으로 고치는 도중 `2` · `20` 이 각각 확정으로 취급돼 경고가 연달아 뜨고,
+/// 심지어 그 중간값이 한도로 저장된다.
+@MainActor
+private struct _HistoryLimitField: View {
+    @Bindable var viewModel: SettingsViewModel
+    /// 입력란에 보이는 문자열. 확정 전까지는 뷰모델 값과 다를 수 있다(그게 이 상태를 따로 두는 이유다).
+    @State private var text: String = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            fieldWithStepper
+            maxHint
+        }
+        .onAppear { text = String(viewModel.maxUnpinnedClips) }
+        // 숫자만 받는다 — *확정 후 되돌리기* 가 아니라 애초에 안 쳐지게 막는다.
+        // 되돌리는 방식은 사용자가 친 글자가 잠시 남았다가 사라져 무엇이 잘못됐는지 알기 어렵다.
+        // 빈 문자열은 허용한다(다 지우고 새로 치는 정상 흐름) — 그 상태로 확정하면 직전 값으로 복원된다.
+        .onChange(of: text) { _, new in
+            let digitsOnly = new.filter { $0.isASCII && $0.isNumber }
+            if digitsOnly != new { text = digitsOnly }
+        }
+        // 증감 버튼 · 확정 결과 · 다른 경로의 변경을 입력란에 되비춘다.
+        .onChange(of: viewModel.maxUnpinnedClips) { _, value in
+            let rendered = String(value)
+            if text != rendered { text = rendered }
+        }
+        .onChange(of: focused) { _, isFocused in
+            guard !isFocused else { return }
+            commit()
+        }
+    }
+
+    /// 입력란 바로 아래 상한 안내. 라벨 쪽 설명이 아니라 **입력란 아래**에 두는 이유 —
+    /// 얼마까지 칠 수 있는지는 치는 자리에서 보여야 한다(연결자 입력란의 escape 안내와 같은 규칙).
+    /// 숫자를 문구에 박지 않고 상수에서 받는 이유는 상한이 바뀌면 화면이 저절로 따라오게 하려는 것이다.
+    private var maxHint: some View {
+        Text(String(format: L10n("settings.general.historyLimit.max"), Constants.maxUnpinnedClipsMax))
+            .font(.system(size: 10.5))
+            .foregroundStyle(DesignTokens.Colors.labelSecondary)
+    }
+
+    private var fieldWithStepper: some View {
+        HStack(spacing: 0) {
+            TextField("", text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11.5, design: .monospaced))
+                .foregroundStyle(DesignTokens.Colors.labelPrimary)
+                .multilineTextAlignment(.leading)
+                .focused($focused)
+                .onSubmit { commit() }
+                .padding(.leading, 8)
+            Spacer(minLength: 4)
+            stepper
+                .padding(.trailing, 3)
+        }
+        .frame(width: 92, height: 24)
+        .background(
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(DesignTokens.Colors.inputFieldBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .stroke(
+                    focused ? DesignTokens.Colors.accent : DesignTokens.Colors.inputFieldBorder,
+                    lineWidth: focused ? 1 : 0.5
+                )
+        )
+        .animation(.easeInOut(duration: 0.12), value: focused)
+    }
+
+    /// 입력란 *안쪽* 에 두는 상하 버튼. 바깥에 두면 라벨 폭 정렬이 흐트러지고 클릭 대상이 입력란과 멀어진다.
+    private var stepper: some View {
+        VStack(spacing: 0) {
+            _StepButton(systemName: "chevron.up") { step(1) }
+            _StepButton(systemName: "chevron.down") { step(-1) }
+        }
+    }
+
+    private func commit() {
+        // 표시값이 그대로면 판정할 것이 없다 — 굳이 조회 · 저장을 돌리지 않는다.
+        guard text != String(viewModel.maxUnpinnedClips) else { return }
+        let input = text
+        Task { text = String(await viewModel.commitMaxUnpinnedClips(input)) }
+    }
+
+    private func step(_ delta: Int) {
+        // 아직 확정하지 않은 입력이 떠 있으면 그 값을 기준으로 움직인다 (사용자는 보이는 숫자를 기준으로 기대한다).
+        let base = Int(text.trimmingCharacters(in: .whitespaces)) ?? viewModel.maxUnpinnedClips
+        Task { text = String(await viewModel.stepMaxUnpinnedClips(from: base, delta: delta)) }
+    }
+}
+
+/// 입력란 안쪽 증감 버튼 한 개. hover 시 배경이 옅게 들어와 눌리는 자리임을 알린다.
+///
+/// hover 배경에 흰색을 직접 쓰지 않는 이유 — 라이트 모드에서는 입력란 배경도 밝아 흰색 hover 가 통째로 묻힌다
+/// (TASK-068 이 popover 액션 버튼에서 같은 회귀를 겪었다). 설정 윈도우용 라이트/다크 대응 토큰을 쓴다.
+@MainActor
+private struct _StepButton: View {
+    let systemName: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 7, weight: .bold))
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                .frame(width: 16, height: 9)
+                .background(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(isHovered ? DesignTokens.Colors.settingsCardBgHover : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.1), value: isHovered)
     }
 }
 

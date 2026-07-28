@@ -39,13 +39,16 @@ final class SettingsViewModel {
     let settingsToast: ToastQueue = ToastQueue()
 
     private let loginItemService: LoginItemService
+    /// TASK-100 — 보관 한도 판정에 필요한 *핀 제외 개수* 조회용. 단위 테스트는 주입하지 않는다(옵셔널).
+    private let repository: (any ClipRepository)?
     /// TASK-033 fix-2 — 7항목 (popoverOpen + 6종) 변경 revert 용 마지막 valid 단축키 추적.
     private var lastValidPopoverShortcuts: [PopoverShortcutID: PopoverShortcut] = [:]
     /// TASK-033 — revert 호출 재진입 가드.
     private var isRevertingShortcut: Bool = false
 
-    init(loginItemService: LoginItemService) {
+    init(loginItemService: LoginItemService, repository: (any ClipRepository)? = nil) {
         self.loginItemService = loginItemService
+        self.repository = repository
         self.loginItemEnabled = (try? loginItemService.isEnabled) ?? false
         loadAutoPasteEnabled()
         loadBlockedApps()
@@ -210,6 +213,8 @@ final class SettingsViewModel {
         popoverRememberLastPosition = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.popoverRememberLastPosition)
         // TASK-073 — 앱 사용자 표시 언어. `AppLanguage.current` 가 키 부재/잘못된 값 → systemDefault fallback.
         appLanguage = AppLanguage.current
+        // TASK-100 — 보관 한도. clamp · 기본값 fallback 은 `Constants.maxUnpinnedClips` 가 단일 지점에서 처리한다.
+        maxUnpinnedClips = Constants.maxUnpinnedClips
         Logger.ui.info("loadDisplayPreferences — clipsPerPage=\(self.clipsPerPage, privacy: .public) autoFit=\(self.autoFitClipListHeight, privacy: .public) hintBarVisible=\(self.hintBarVisible, privacy: .public) accentColorMode=\(self.accentColorMode.rawValue, privacy: .public) popoverAnchor=\(self.popoverDefaultAnchor.rawValue, privacy: .public) rememberLast=\(self.popoverRememberLastPosition, privacy: .public) appLanguage=\(self.appLanguage.rawValue, privacy: .public)")
     }
 
@@ -221,8 +226,73 @@ final class SettingsViewModel {
         }
     }
 
-    /// TASK-033 — 일반 탭 히스토리 한도 정보 라인 동적 바인딩.
-    var maxUnpinnedClips: Int { Constants.maxUnpinnedClips }
+    // MARK: - 보관 한도 (TASK-100)
+
+    /// 일반 탭 히스토리 한도 입력란의 현재 값.
+    ///
+    /// TASK-100 이전에는 `Constants.maxUnpinnedClips` 를 그대로 읽는 계산 프로퍼티였다. 저장 상태로 바꾼 이유는
+    /// `Constants` 가 UserDefaults 를 읽는 계산 프로퍼티라 Observation 이 변경을 추적하지 못하기 때문이다 —
+    /// 값을 바꿔도 화면이 갱신되지 않는다. `clipsPerPage` 와 같은 패턴이다.
+    ///
+    /// 여기 초기값은 자리만 잡는다 — 실제 값은 init 의 `loadDisplayPreferences()` 가 저장소에서 읽어 덮는다
+    /// (초기값으로 저장값을 읽어두면 진실 소스가 둘로 보인다).
+    var maxUnpinnedClips: Int = Constants.maxUnpinnedClipsDefault
+
+    /// 보관 한도 확정. 판정은 `HistoryLimitPolicy` 가 하고 여기서는 저장 · 토스트 · 표시값만 다룬다.
+    ///
+    /// 개수를 캐시하지 않고 매번 조회하는 이유 — 캐시가 실제보다 적으면 현재 보관 개수보다 낮은 한도가
+    /// 저장되고, 그 다음 insert 가 LRU 정리로 클립을 지운다. 조회 비용(COUNT 한 번)보다 그 위험이 크다.
+    /// - Returns: 입력란에 표시할 값 (수용값 / 되돌릴 현재 개수 / 직전 값).
+    @discardableResult
+    func commitMaxUnpinnedClips(_ input: String) async -> Int {
+        let count = await currentUnpinnedCount()
+        switch HistoryLimitPolicy.resolve(input: input, currentUnpinnedCount: count) {
+        case .accepted(let value):
+            storeMaxUnpinnedClips(value)
+            return value
+        case .belowCurrentCount(let currentCount):
+            // 사용자 의도는 *한도를 낮추는 것* 이므로 거부만 하고 끝내지 않는다 — 내릴 수 있는 데까지 내려준다.
+            settingsToast.enqueue(.warn, L10n("toast.historyLimit.belowCurrent"))
+            storeMaxUnpinnedClips(currentCount)
+            return currentCount
+        case .invalid:
+            // 토스트 X — 오타 한 번에 경고를 띄우면 입력 도중 성가시다. 조용히 직전 값으로 되돌린다.
+            return maxUnpinnedClips
+        }
+    }
+
+    /// 증감 버튼 1회. 확정 입력과 같은 이유로 여기서도 개수를 그때그때 조회한다.
+    ///
+    /// 시작값을 인자로 받는 이유 — 입력란에 아직 확정하지 않은 숫자가 떠 있을 수 있고, 그 상태에서 버튼을
+    /// 누르면 사용자는 *화면에 보이는 값* 기준으로 오르내리길 기대한다.
+    /// 경계에서 막힐 때 토스트를 띄우지 않는 것은 의도다 — 연타하면 같은 경고가 그대로 쌓인다.
+    /// - Returns: 입력란에 표시할 값.
+    @discardableResult
+    func stepMaxUnpinnedClips(from base: Int, delta: Int) async -> Int {
+        let count = await currentUnpinnedCount()
+        let next = HistoryLimitPolicy.step(from: base, delta: delta, currentUnpinnedCount: count)
+        if next != maxUnpinnedClips { storeMaxUnpinnedClips(next) }
+        return next
+    }
+
+    private func storeMaxUnpinnedClips(_ value: Int) {
+        maxUnpinnedClips = value
+        UserDefaults.standard.set(value, forKey: Constants.UserDefaultsKeys.maxUnpinnedClips)
+        Logger.ui.info("maxUnpinnedClips set: \(value, privacy: .public)")
+    }
+
+    /// 핀 제외 보관 개수. 리포지토리가 없는 경로(단위 테스트)는 0 — 한도 하한이 1 이 되어 판정이 막히지 않는다.
+    private func currentUnpinnedCount() async -> Int {
+        guard let repository else { return 0 }
+        do {
+            return try await repository.unpinnedCount()
+        } catch {
+            // 조회 실패 시 0 을 쓰면 한도를 현재 개수 아래로 내릴 수 있게 되어 클립이 지워질 수 있다.
+            // 안전한 쪽은 *지금 한도* 를 하한으로 삼는 것 — 내리는 것만 막히고 올리는 것은 그대로 된다.
+            Logger.ui.error("보관 개수 조회 실패 — 현재 한도를 하한으로 사용: \(error)")
+            return maxUnpinnedClips
+        }
+    }
 
     // MARK: - Shortcut validation (TASK-033 fix-2)
 

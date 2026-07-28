@@ -81,6 +81,19 @@ struct StashApp: App {
         }
         self.repository = grdbRepo
 
+        // TASK-100 — 보관 한도 첫 실행 초기화. **클립보드 감시 생성보다 앞** 이어야 한다:
+        // 한도가 정해지기 전에 클립 하나가 저장되면 그 insert 가 기본값(50) 기준으로 LRU 정리를 돌려
+        // 한도 200 시절에 쌓아둔 클립을 지운다. 그래서 비동기가 아니라 동기 조회를 쓴다.
+        // 조회 실패는 DB 를 새로 만든 직후(손상 복구 포함)와 구분되지 않으므로 0 으로 본다 — 그 경우 기본값이 맞다.
+        do {
+            let unpinned = try grdbRepo.unpinnedCountSync()
+            HistoryLimitPolicy.initializeStoredLimitIfNeeded(currentUnpinnedCount: unpinned)
+        } catch {
+            Logger.database.error("보관 한도 초기화용 개수 조회 실패 — 0 으로 진행: \(error)")
+            HistoryLimitPolicy.initializeStoredLimitIfNeeded(currentUnpinnedCount: 0)
+        }
+        Logger.appLifecycle.info("보관 한도 = \(Constants.maxUnpinnedClips, privacy: .public)")
+
         // ② 시스템 wrapper (protocol 구현체 생성 — ARCHITECTURE §9-4 step 4)
         let pb: any Pasteboard = SystemPasteboard.shared
         let fcs: any FileClipService = DirectFileClipService()
@@ -149,7 +162,8 @@ struct StashApp: App {
         // TASK-043 — toggleCapture 호출 시 watcher.setEnabled actor 메서드 호출 대상 주입.
         clipsVM.setClipboardWatcher(watcher)
         self.clipsViewModel = clipsVM
-        let settingsVM = SettingsViewModel(loginItemService: self.loginItemService)
+        // TASK-100 — 보관 한도 판정에 쓸 *핀 제외 개수* 조회 경로로 리포지토리 주입.
+        let settingsVM = SettingsViewModel(loginItemService: self.loginItemService, repository: grdbRepo)
         self.settingsViewModel = settingsVM
         let onboardingVM = OnboardingViewModel(permissionService: permSvc)
         self.onboardingViewModel = onboardingVM

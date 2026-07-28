@@ -29,8 +29,23 @@ enum Constants {
     // 초과 입력은 차단하고 편집 중 글자 수(`n/40`)를 표시한다. DATA-MODEL §1 `pin_alias` 정책 정합.
     static let pinAliasMaxLength: Int = 40
 
-    // F-002 + SERVICE-POLICY §3 LRU
-    static let maxUnpinnedClips: Int = 200
+    // F-002 + SERVICE-POLICY §3-1 LRU
+    // TASK-100 — 고정 200 → **사용자 설정**. 호출처(조회 상한 / LRU 정리 / 설정 표시)는 전부 이 프로퍼티만 보므로
+    // 시그니처를 그대로 두고 조회 지점만 UserDefaults 로 옮겼다.
+    //
+    // 키가 없을 때 기본값으로 떨어지는 것은 *첫 실행 초기화 전* 과 *사용자가 값을 지운 경우* 두 가지다.
+    // 초기화(`StashApp` 기동 경로)는 키 존재 여부로만 판정하므로 여기의 fallback 과 겹치지 않는다.
+    static let maxUnpinnedClipsDefault: Int = 50
+    static let maxUnpinnedClipsMin: Int = 1
+    static let maxUnpinnedClipsMax: Int = 500
+    // 저장값 → 한도 변환은 `HistoryLimitPolicy.storedLimit(raw:)` 단일 지점이다. 여기서 직접 계산하지 않는 이유는
+    // UserDefaults 를 건드리지 않고 그 변환만 단위 테스트로 검증하기 위함이다 — 테스트가 공유 UserDefaults 에
+    // 값을 쓰기 시작하면 같은 키를 읽는 다른 스위트와 병렬 실행에서 서로 간섭한다.
+    static var maxUnpinnedClips: Int {
+        HistoryLimitPolicy.storedLimit(
+            raw: UserDefaults.standard.integer(forKey: UserDefaultsKeys.maxUnpinnedClips)
+        )
+    }
 
     // SERVICE-POLICY §4 파일 클립
     static let fileClipCopyMaxSize: Int = 100 * 1024 * 1024  // 100MB
@@ -105,6 +120,10 @@ enum Constants {
 
         // TASK-037 한 페이지 클립 수 (1~50).
         static let clipsPerPage: String = "clipsPerPage"
+
+        // TASK-100 보관 한도 (핀 제외 클립 최대 개수, 1~500). 조회는 `Constants.maxUnpinnedClips`.
+        // 키 *부재* 는 첫 실행 초기화가 아직 안 됐다는 뜻이라 `StashApp` 기동 경로가 1회 기록한다.
+        static let maxUnpinnedClips: String = "maxUnpinnedClips"
 
         // TASK-037 클립 리스트 높이 자동 조정.
         static let autoFitClipListHeight: String = "autoFitClipListHeight"
