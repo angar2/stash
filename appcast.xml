@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Stash 버전 이정표 (Sparkle appcast) — TASK-102
+
+  앱이 하루에 한 번 이 파일을 읽어 자기 버전과 대조한다.
+  주소: https://raw.githubusercontent.com/angar2/stash/main/appcast.xml
+
+  **손으로 고치지 않는다.** 출시 스크립트(`/release`)가 dmg 빌드 직후
+  서명과 함께 항목을 추가한다. 절차는 RELEASE-GUIDE §5-1 참조.
+
+  각 항목의 sparkle:edSignature 는 배포자 비밀키로 만든 서명이며,
+  앱은 자신이 내장한 공개키로 이를 검증한다. 검증에 실패한 파일은 설치하지 않는다.
+-->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Stash</title>
+    <link>https://raw.githubusercontent.com/angar2/stash/main/appcast.xml</link>
+    <description>Stash 업데이트</description>
+    <language>ko</language>
+  </channel>
+</rss>
