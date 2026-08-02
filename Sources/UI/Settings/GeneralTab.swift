@@ -16,6 +16,10 @@ struct GeneralTab: View {
         return VStack(spacing: 0) {
             settingsCard {
                 loginItemRow
+                // TASK-102 — 앱의 기동·유지 성격끼리 묶는다. 취향 설정(언어·연결자)은 아래에 남긴다 (UX-UI *자동 업데이트*).
+                if viewModel.updateAvailable {
+                    autoUpdateRow
+                }
                 autoPasteRow
                 historyLimitRow
                 languageRow
@@ -36,6 +40,27 @@ struct GeneralTab: View {
                 isOn: Binding(
                     get: { viewModel.loginItemEnabled },
                     set: { viewModel.toggleLoginItem($0) }
+                ),
+                disabled: false
+            )
+        }
+    }
+
+    /// TASK-102 — 자동 확인 토글. 저장 버튼 없이 즉시 반영한다(다른 항목과 동일 관례).
+    /// 끄면 자동 확인이 멈추므로 popover 배너도 뜨지 않는다. `정보` 탭 직접 확인은 그대로 동작한다.
+    ///
+    /// 설명 줄은 두지 않는다 (사용자 검수 2026-08-02) — 항목명만으로 뜻이 통해 군더더기였다.
+    /// 바로 위 *Mac 켤 때 자동 실행* 도 같은 이유로 설명이 없다.
+    private var autoUpdateRow: some View {
+        settingsRow(
+            label: L10n("settings.general.autoUpdate.label"),
+            hint: nil,
+            showDivider: true
+        ) {
+            customSettingsToggle(
+                isOn: Binding(
+                    get: { viewModel.automaticUpdateChecksEnabled },
+                    set: { viewModel.setAutomaticUpdateChecks($0) }
                 ),
                 disabled: false
             )

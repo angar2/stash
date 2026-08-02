@@ -9,4 +9,6 @@ extension Logger {
     static let permission   = Logger(subsystem: "com.angar2.stash", category: "permission")
     static let ui           = Logger(subsystem: "com.angar2.stash", category: "ui")
     static let appLifecycle = Logger(subsystem: "com.angar2.stash", category: "appLifecycle")
+    // TASK-102 자동 업데이트 — 확인 시작/결과, 배너 표시·닫기, 표준 창 억제 추적.
+    static let update       = Logger(subsystem: "com.angar2.stash", category: "update")
 }

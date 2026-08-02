@@ -11,6 +11,8 @@ final class PopoverWindow: NSObject {
     private let viewModel: ClipsViewModel
     /// TASK-054 fix-1 — `windowWillResize` 안에서 `setClipsPerPage` 직접 호출 위해 약 reference. Composition Root 가 inject.
     private weak var settingsViewModel: SettingsViewModel?
+    /// TASK-102 — 자동 업데이트 창구. 헤더 배너 표시 + resize 시 높이 cap 계산에 쓰인다. Composition Root 가 inject.
+    private weak var updateService: UpdateService?
     private let onOpenSettings: @MainActor () -> Void
 
     /// 현재 표시 중인 mode. nil = hidden. mode 전환 시 hide → showInternal에서 갱신.
@@ -264,10 +266,12 @@ final class PopoverWindow: NSObject {
     init(
         viewModel: ClipsViewModel,
         settingsViewModel: SettingsViewModel? = nil,
+        updateService: UpdateService? = nil,
         onOpenSettings: @MainActor @escaping () -> Void
     ) {
         self.viewModel = viewModel
         self.settingsViewModel = settingsViewModel
+        self.updateService = updateService
         self.onOpenSettings = onOpenSettings
         // TASK-054 fix-1 — popover width 영속. UserDefaults 저장값 우선 + cap clamp + default fallback.
         let savedWidth = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverWidth) as? Double)
@@ -958,7 +962,9 @@ final class PopoverWindow: NSObject {
             onDismiss: { [weak self] in self?.hide(force: true) },
             handleClipPaste: { [weak self] idx, zone in
                 await self?.handleClipPaste(at: idx, zone: zone)
-            }
+            },
+            // TASK-102 — 헤더 업데이트 배너 + 클립 목록 높이 cap.
+            updateService: updateService
         )
         // TASK-037 fix-9 — hosting 보관 (fittingSize 측정용).
         self.currentHosting = PopoverPanel.mount(view, in: visualEffectView)
@@ -1012,7 +1018,12 @@ extension PopoverWindow: NSWindowDelegate {
             let visibleCount = viewModel.visibleClips.count
             let hasPinnedForCap = !viewModel.pinnedClips.isEmpty
             let hintBarVisibleForCap: Bool = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) as? Bool) ?? true
-            let capRowsForCap = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: hasPinnedForCap, hintBarVisible: hintBarVisibleForCap)
+            // TASK-102 — 배너가 떠 있으면 그만큼 cap 을 낮춰야 popover 가 화면 밖으로 자라지 않는다.
+            let capRowsForCap = ClipsViewModel.cappedRowsForCurrentScreen(
+                hasPinned: hasPinnedForCap,
+                hintBarVisible: hintBarVisibleForCap,
+                updateBannerVisible: updateService?.pendingUpdateVersion != nil
+            )
             cap = ClipsViewModel.computeAutoFitCap(
                 measured: m,
                 visibleCount: visibleCount,
@@ -1053,7 +1064,12 @@ extension PopoverWindow: NSWindowDelegate {
         // 해결: 분기 결정을 `ClipsViewModel.resolveNewClipsPerPageForResize` 위임. raw>cap 축소 케이스에서는 raw 를 capRows 로 jump 동기화 후 ±1 진행.
         let hasPinned = !viewModel.pinnedClips.isEmpty
         let hintBarVisible: Bool = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.hintBarVisible) as? Bool) ?? true
-        let capRows = ClipsViewModel.cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible)
+        // TASK-102 — 배너가 떠 있으면 cap 이 그만큼 낮아진다 (위 autoFit cap 분기와 같은 기준).
+        let capRows = ClipsViewModel.cappedRowsForCurrentScreen(
+            hasPinned: hasPinned,
+            hintBarVisible: hintBarVisible,
+            updateBannerVisible: updateService?.pendingUpdateVersion != nil
+        )
         let newRaw = ClipsViewModel.resolveNewClipsPerPageForResize(current: current, signDelta: signDelta, capRows: capRows)
         if newRaw != current {
             Logger.ui.info("PopoverWindow.windowWillResize — clipsPerPage resize sync current=\(current, privacy: .public) signDelta=\(signDelta, privacy: .public) capRows=\(capRows, privacy: .public) newRaw=\(newRaw, privacy: .public)")

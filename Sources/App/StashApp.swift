@@ -24,6 +24,8 @@ struct StashApp: App {
     let hotkeyManager: HotkeyManager
     let hotkeyMonitor: HotkeyMonitor
     let pasteService: PasteService
+    /// TASK-102 — 자동 업데이트 창구. 업데이터 보유 + 즉시 확인 / 자동 확인 토글 / 배너 대기 상태.
+    let updateService: UpdateService
 
     // MARK: - UI ViewModels
     let clipsViewModel: ClipsViewModel
@@ -157,6 +159,11 @@ struct StashApp: App {
         )
         self.pasteService = pasteSvc
 
+        // ⑤-2 자동 업데이트 (TASK-102) — 생성 즉시 업데이터가 기동해 다음 runloop 부터 자동 확인 주기가 돈다.
+        // App lifetime 보관. UI(설정 항목 / popover 배너)는 이 창구만 사용한다.
+        let updateSvc = UpdateService()
+        self.updateService = updateSvc
+
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
         let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, fileClipService: fcs, toastQueue: toastQ)
         // TASK-043 — toggleCapture 호출 시 watcher.setEnabled actor 메서드 호출 대상 주입.
@@ -164,6 +171,8 @@ struct StashApp: App {
         self.clipsViewModel = clipsVM
         // TASK-100 — 보관 한도 판정에 쓸 *핀 제외 개수* 조회 경로로 리포지토리 주입.
         let settingsVM = SettingsViewModel(loginItemService: self.loginItemService, repository: grdbRepo)
+        // TASK-102 — 설정 두 탭(업데이트 확인 / 자동 확인 토글)이 쓸 창구 주입.
+        settingsVM.setUpdateService(updateSvc)
         self.settingsViewModel = settingsVM
         let onboardingVM = OnboardingViewModel(permissionService: permSvc)
         self.onboardingViewModel = onboardingVM
@@ -184,6 +193,7 @@ struct StashApp: App {
         let popover = PopoverWindow(
             viewModel: clipsVM,
             settingsViewModel: settingsVM,  // TASK-054 fix-1 — windowWillResize 안에서 setClipsPerPage 직접 호출.
+            updateService: updateSvc,       // TASK-102 — 헤더 업데이트 배너 + 높이 cap.
             onOpenSettings: { [prefsController] in prefsController.show() }
         )
         self.popoverWindow = popover

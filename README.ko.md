@@ -42,6 +42,15 @@
 
 설치에 관한 자세한 내용은 위 릴리즈 페이지의 설명을 참고해주세요.
 
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 업데이트는 어떻게 하나요?
+
+한 번 설치하면 그다음부터는 Stash가 알아서 알려드려요. 새 버전이 나오면 보관함 위쪽에 안내가 뜨고, 누르면 내려받기부터 설치까지 진행돼요. 직접 받으러 가실 필요 없어요.
+
+- 지금 새 버전이 있는지 확인하고 싶다면 — 설정 `정보` 탭의 **업데이트 확인**
+- 알림이 부담스럽다면 — 설정 `일반` 탭의 **업데이트 자동 확인**을 꺼주세요 (꺼도 `정보` 탭에서 직접 확인할 수 있어요)
+
+> 이 기능이 없던 버전을 쓰고 계셨다면 이번 한 번만 위 방법으로 직접 설치해주세요. 그다음부터는 자동으로 알려드려요.
+
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 어떻게 사용하나요?
 
 앱을 실행하면 메뉴바에 Stash 땅콩 아이콘( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> )이 나타나요. 아이콘을 클릭하거나 보관함 열기 단축키를 누르면 보관함이 열립니다.

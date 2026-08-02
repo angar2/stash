@@ -133,6 +133,35 @@ enum DesignTokens {
         static var previewFileChipBorder: Color { keycapInset }
         static var previewFileChipForeground: Color { keycapFg }
 
+        // ─── 업데이트 배너 (TASK-102) ──────────────────────────────
+        // 프리뷰 바가 *어두운* 바탕을 쓰므로 배너는 강조 톤 바탕 한 겹으로 간다 — 둘이 동시에 떠도 구분된다.
+        static var updateBannerBackground: Color {
+            Color(
+                light: accent.opacity(0.10),
+                dark:  accent.opacity(0.16)
+            )
+        }
+        static var updateBannerBorder: Color {
+            Color(
+                light: accent.opacity(0.32),
+                dark:  accent.opacity(0.42)
+            )
+        }
+        /// 배너 위 마우스 — 배너 전체가 눌리는 영역이라는 단서.
+        static var updateBannerBackgroundHover: Color {
+            Color(
+                light: accent.opacity(0.17),
+                dark:  accent.opacity(0.24)
+            )
+        }
+        /// 버전 번호 강조. 배너에서 가장 먼저 읽혀야 하는 정보다.
+        static var updateBannerVersionForeground: Color {
+            Color(
+                light: accent.opacity(0.95),
+                dark:  Color(red: 207/255, green: 228/255, blue: 1, opacity: 1)
+            )
+        }
+
         /// 설정 화면 텍스트 입력란 (TASK-099 연결자). 단축키 Recorder 와 같은 톤을 쓴다 —
         /// 같은 탭 안에서 *값을 넣는 자리* 라는 인상이 어긋나지 않도록.
         static let inputFieldBackground = Color(nsColor: .controlBackgroundColor).opacity(0.5)
@@ -603,6 +632,21 @@ enum DesignTokens {
         static let previewChipGap:         CGFloat = 4
         /// 칩 하나의 최대 너비. 긴 본문이 바를 세로로 부풀리지 않도록 여기서 말줄임한다.
         static let previewChipMaxWidth:    CGFloat = 150
+
+        // TASK-102 — 업데이트 배너 (헤더 안, 로고 행 아래·검색부 위).
+        // 프리뷰 바와 달리 본문이 한 줄 고정(버전 문구)이라 높이가 변하지 않는다.
+        static let updateBannerHeight:      CGFloat = 30
+        static let updateBannerPaddingHorz: CGFloat = 9
+        /// 위아래 이웃과의 간격을 **둘 다 8pt** 로 맞춘다 (검수 2026-08-02 — 처음엔 위가 붙고, 고친 뒤엔 아래가 벌어졌다).
+        /// 이웃이 이미 자기 여백을 갖고 있어 배너가 더하는 값은 서로 다르다:
+        ///   위 = `wordmarkPaddingBottom`(2) + 여기 6 = 8
+        ///   아래 = 여기 4 + `searchContainerPaddingTop`(4) = 8
+        static let updateBannerTopGap:      CGFloat = 6
+        static let updateBannerBottomGap:   CGFloat = 4
+        /// 화면 cap 계산용 — 배너가 떠 있는 동안 클립 목록 상한을 그만큼 낮춰 popover 가 화면 밖으로 자라는 것을 막는다.
+        /// 높이(30) + 위 간격(6) + 아래 간격(4).
+        static let updateBannerOverhead:    CGFloat = 40
+
         // 디스플레이 탭 슬라이더 최대 너비.
         static let displaySliderMaxWidth:  CGFloat = 240
 

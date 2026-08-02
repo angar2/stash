@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Stash 버전 이정표 (Sparkle appcast) — TASK-102
+
+  앱이 하루에 한 번 이 파일을 읽어 자기 버전과 대조한다.
+  주소: https://raw.githubusercontent.com/angar2/stash/main/appcast.xml
+
+  **손으로 고치지 않는다.** 출시 스크립트(`/release`)가 dmg 빌드 직후
+  서명과 함께 항목을 추가한다. 절차는 RELEASE-GUIDE §5-1 참조.
+
+  각 항목의 sparkle:edSignature 는 배포자 비밀키로 만든 서명이며,
+  앱은 자신이 내장한 공개키로 이를 검증한다. 검증에 실패한 파일은 설치하지 않는다.
+-->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Stash</title>
+    <link>https://raw.githubusercontent.com/angar2/stash/main/appcast.xml</link>
+    <description>Stash 업데이트</description>
+    <language>ko</language>
+    <item>
+      <title>1.3.0</title>
+      <pubDate>Sun, 02 Aug 2026 23:38:29 +0900</pubDate>
+      <sparkle:version>336</sparkle:version>
+      <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown" xml:lang="en"><![CDATA[# New Features
+
+When a new version is out, an update banner appears in the app — click it to update right away.]]></description>
+      <description sparkle:format="markdown" xml:lang="ko"><![CDATA[# 새로운 기능
+
+새 버전이 나오면 앱에 업데이트 배너가 표시되며, 배너를 눌러 바로 업데이트할 수 있습니다.]]></description>
+      <enclosure url="https://github.com/angar2/stash/releases/download/v1.3.0/Stash-1.3.0.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="FYvfyy8QYxFHwRuc9RZWd06jW+o47CB9ibGMXmhP5LjbwNwQcC9MLvwfTeUkpE6qk6W240ZeBFlBfkeMykH6AA==" length="7340805" />
+    </item>
+  </channel>
+</rss>

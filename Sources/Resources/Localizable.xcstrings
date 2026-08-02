@@ -1,166 +1,2862 @@
 {
-  "sourceLanguage" : "ko",
-  "strings" : {
-    "about.copyright" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "MIT License · Copyright © 2026 angar2" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "MIT License · Copyright © 2026 angar2" } } } },
-    "about.dataFolder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "데이터 폴더 열기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Data Folder" } } } },
-    "about.description" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "macOS 클립보드 매니저" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS Clipboard Manager" } } } },
-    "about.github" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "GitHub 저장소 열기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Open GitHub Repository" } } } },
-    "about.releaseNotes" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "릴리스 노트 보기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "View Release Notes" } } } },
-    "clip.row.file" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "File" } } } },
-    "clip.row.image" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미지" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Image" } } } },
-    "clip.row.multiFile.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "여러 파일" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Multiple Files" } } } },
-    "clipDetail.characterCount.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "글자수" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Characters" } } } },
-    "clipDetail.characterCount.value" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@자" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ chars" } } } },
-    "clipDetail.location.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "복사 위치" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied From" } } } },
-    "clipDetail.location.multiFolder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "여러 폴더" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Multiple Folders" } } } },
-    "clipDetail.meta.unknownApp" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "알 수 없음" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } } } },
-    "hint.clipDetail" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "상세" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Details" } } } },
-    "hint.copy" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "복사" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } } },
-    "hint.delete" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } } } },
-    "hint.deleteAll" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear All" } } } },
-    "hint.move" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이동" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Move" } } } },
-    "hint.multiSelect" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\uc120\ud0dd" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Select" } } } },
-    "hint.or" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "또는" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "or" } } } },
-    "hint.paste" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "붙여넣기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } } },
-    "hint.pin" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin" } } } },
-    "menu.quit" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Stash 종료" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Stash" } } } },
-    "notification.dbRecovered.body" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립보드 DB가 복구되었습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Clipboard database has been recovered." } } } },
-    "notification.permissionGranted.body" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "손쉬운 사용 권한이 허용되었습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility permission granted." } } } },
-    "onboarding.permission.body.granted" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "바로 붙여넣기 기능을 사용할 수 있어요." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto Paste is ready to use." } } } },
-    "onboarding.permission.body.waiting" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "바로 붙여넣기 기능을 사용하려면 권한이 필요해요." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto Paste requires accessibility permission." } } } },
-    "onboarding.permission.next" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 활성화함" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "I've Enabled It" } } } },
-    "onboarding.permission.openSystemSettings" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 환경설정 열기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } } } },
-    "onboarding.permission.skip" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "건너뛰기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip" } } } },
-    "onboarding.permission.title.granted" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "권한이 부여되었어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Permission Granted" } } } },
-    "onboarding.permission.title.waiting" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "접근성 권한이 필요해요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility Permission Required" } } } },
-    "onboarding.tutorial.complete" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } } } },
-    "onboarding.tutorial.complete.alt" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "다음으로" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } } } },
-    "onboarding.tutorial.method1.detail" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "메뉴바 아이콘 클릭" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Click the menu bar icon" } } } },
-    "onboarding.tutorial.method1.keys" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클릭" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Click" } } } },
-    "onboarding.tutorial.method1.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "방식 1" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Method 1" } } } },
-    "onboarding.tutorial.method2.detail" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키로 즉시 표시" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Open instantly with a shortcut" } } } },
-    "onboarding.tutorial.method2.keys" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "⇧⌘C" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "⇧⌘C" } } } },
-    "onboarding.tutorial.method2.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "방식 2" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Method 2" } } } },
-    "onboarding.tutorial.subtitle.code" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정 > 단축키" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings > Shortcuts" } } } },
-    "onboarding.tutorial.subtitle.prefix" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키는 " } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "You can change shortcuts in " } } } },
-    "onboarding.tutorial.subtitle.suffix" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : " 에서 변경할 수 있어요." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "." } } } },
-    "onboarding.tutorial.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이렇게 호출할 수 있어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "How to Open Stash" } } } },
-    "onboarding.welcome.next" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시작하기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Get Started" } } } },
-    "onboarding.welcome.subtitle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "복사한 항목을 보관해두고 필요할 때 골라 사용해보세요." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Save what you copy, then pick from it whenever you need." } } } },
-    "onboarding.welcome.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Stash에 오신 것을 환영합니다" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to Stash" } } } },
-    "pin.row.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 목록" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pins" } } } },
-    "pin.sidebar.empty" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Pin된 항목이 없습니다" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "No pinned items yet" } } } },
-    "pin.sidebar.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 목록" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pins" } } } },
-    "popoverAnchor.bottomLeft" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "좌하단" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Bottom Left" } } } },
-    "popoverAnchor.bottomRight" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "우하단" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Bottom Right" } } } },
-    "popoverAnchor.center" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "중앙" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Center" } } } },
-    "popoverAnchor.topLeft" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "좌상단" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Top Left" } } } },
-    "popoverAnchor.topRight" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "우상단" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Top Right" } } } },
-    "preferences.row" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } } } },
-    "preview.count" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "%d\uac1c \uc120\ud0dd" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "%d selected" } } } },
-    "preview.mode.fileBundle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud30c\uc77c %d\uac1c \ubd99\uc5ec\ub123\uae30" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste %d files" } } } },
-    "preview.mode.sequential" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud14d\uc2a4\ud2b8\uc640 \ud30c\uc77c %d\uac1c \ubd99\uc5ec\ub123\uae30" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste text and %d files" } } } },
-    "preview.mode.textJoin" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud14d\uc2a4\ud2b8 \uc774\uc5b4\uc11c \ubd99\uc5ec\ub123\uae30" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste text joined together" } } } },
-    "privacy.blocked.addApp" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "앱 추가" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Add App" } } } },
-    "privacy.blocked.empty" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "추가된 앱이 없습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "No apps added." } } } },
-    "privacy.blocked.remove" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove" } } } },
-    "privacy.blocked.subtitle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 앱에서 복사한 데이터는 보관함에 저장되지 않습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Data copied from these apps won't be saved." } } } },
-    "privacy.blocked.title" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "저장하지 않을 앱" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Excluded Apps" } } } },
-    "search.deleteAll" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear All" } } } },
-    "search.placeholder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "검색" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Search" } } } },
-    "settings.display.accentColor.default" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본 색상" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Default" } } } },
-    "settings.display.accentColor.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "콘텐츠 색상" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Accent Color" } } } },
-    "settings.display.accentColor.system" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 색상" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "System" } } } },
-    "settings.display.autoFit.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "저장 클립 개수가 설정값보다 적으면 윈도우의 높이를 자동으로 맞춥니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "The window height adjusts automatically when the number of saved clips is below the limit." } } } },
-    "settings.display.autoFit.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "높이 자동 조정" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto-Fit Height" } } } },
-    "settings.display.clipsPerPage.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "화면 높이 초과 시 자동으로 윈도우가 줄어듭니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "The window shrinks automatically if it exceeds the screen height." } } } },
-    "settings.display.clipsPerPage.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "한번에 보이는 클립 수" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Clips Per Page" } } } },
-    "settings.display.hintBar.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "윈도우 하단 단축키 가이드를 숨깁니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide the keyboard shortcut guide at the bottom of the window." } } } },
-    "settings.display.hintBar.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키 가이드 숨기기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide Shortcut Guide" } } } },
-    "settings.display.popoverPosition.defaultAnchor" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본 오픈 위치" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Default Position" } } } },
-    "settings.display.popoverPosition.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "보관함 오픈 위치" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Stash Window Position" } } } },
-    "settings.display.popoverPosition.rememberLast" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전 위치 기억하기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Remember Last Position" } } } },
-    "settings.general.historyLimit" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "최대 클립 개수" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Maximum Clips" } } } },
-    "settings.general.historyLimit.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀으로 고정한 클립은 여기에 포함되지 않습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned clips are not counted here." } } } },
-    "settings.general.historyLimit.max" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "최대 %d개" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Up to %d" } } } },
-    "settings.general.language.english" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "영어" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "English" } } } },
-    "settings.general.language.korean" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "한국어" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Korean" } } } },
-    "settings.general.language.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "언어" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } } } },
-    "settings.general.loginItem" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "Mac 켤 때 자동 실행" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch at Login" } } } },
-    "settings.general.paste.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립보드에 복사 + 바로 붙여넣기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy to clipboard and paste instantly" } } } },
-    "settings.general.paste.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "바로 붙여넣기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto Paste" } } } },
-    "settings.general.paste.permission.denied.suffix" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "해제됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "disabled" } } } },
-    "settings.general.paste.permission.granted.suffix" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "enabled" } } } },
-    "settings.general.paste.permission.linkText" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 접근 권한" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility Permission" } } } },
-    "settings.general.separator.escape.newline" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\uc904\ubc14\uafc8" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Newline" } } } },
-    "settings.general.separator.escape.tab" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud0ed" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Tab" } } } },
-    "settings.general.separator.hint" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\uc5ec\ub7ec \ud074\ub9bd\uc744 \ud55c\ubc88\uc5d0 \ubcf5\uc0ac/\ubd99\uc5ec\ub123\uc744 \ub54c \uc774 \ubb38\uc790\ub85c \uc774\uc5b4\ubd99\uc785\ub2c8\ub2e4." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Joins multiple clips when you copy or paste them together." } } } },
-    "settings.general.separator.label" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\uc5f0\uacb0\uc790" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Separator" } } } },
-    "settings.tab.about" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "정보" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "About" } } } },
-    "settings.tab.collection" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "수집" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Collection" } } } },
-    "settings.tab.display" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "디스플레이" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Display" } } } },
-    "settings.tab.general" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "일반" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "General" } } } },
-    "settings.tab.shortcuts" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts" } } } },
-    "shortcuts.copy" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "복사" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } } },
-    "shortcuts.deleteAll" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear All" } } } },
-    "shortcuts.deleteAll.note" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 고정 데이터는 제외합니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned items are excluded." } } } },
-    "shortcuts.deleteOne" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택 삭제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Selected" } } } },
-    "shortcuts.group.basic" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본 단축키" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Basic Shortcuts" } } } },
-    "shortcuts.group.pin" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "PIN 단축키" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "PIN Shortcuts" } } } },
-    "shortcuts.multiSelectToggle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ub2e4\uc911 \uc120\ud0dd" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Multi-select" } } } },
-    "shortcuts.multiSelectToggle.note" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud074\ub9bd\uc744 \uc5ec\ub7ec \uac1c \uace8\ub77c \ud55c \ubc88\uc5d0 \ubd99\uc5ec\ub123\uae30" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pick several clips and paste them at once" } } } },
-    "shortcuts.note" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "키 조합을 클릭한 뒤 새 조합을 누르세요. macOS 표준 단축키는 변경할 수 없습니다." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Click a shortcut, then press a new key combination. macOS system shortcuts can't be changed." } } } },
-    "shortcuts.paste" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "붙여넣기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } } },
-    "shortcuts.pin.aliasEmpty" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "명칭 없음" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "No name" } } } },
-    "shortcuts.pin.aliasPlaceholder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키명" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcut name" } } } },
-    "shortcuts.pin.cancel" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } } } },
-    "shortcuts.pin.save" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "저장" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Save" } } } },
-    "shortcuts.pin.slotEmpty" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "비어 있음" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Empty" } } } },
-    "shortcuts.pin.unpin" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 해제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin" } } } },
-    "shortcuts.pin.valueLocked" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "값 수정 불가" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Value can\u2019t be edited" } } } },
-    "shortcuts.pin.valuePlaceholder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키값" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcut value" } } } },
-    "shortcuts.pinPaste" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 붙여넣기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste Pin" } } } },
-    "shortcuts.pinSidebarToggle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 목록 열기/닫기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Toggle Pins Sidebar" } } } },
-    "shortcuts.pinToggle" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀 고정/해제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin / Unpin" } } } },
-    "shortcuts.popoverOpen" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "보관함 열기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Stash" } } } },
-    "shortcuts.recorder.change" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "변경" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Change" } } } },
-    "shortcuts.recorder.placeholder" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키 입력..." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter shortcut..." } } } },
-    "shortcuts.resetAll" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 되돌리기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Reset All" } } } },
-    "shortcuts.resetItem" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "되돌리기" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Reset" } } } },
-    "time.now" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "방금" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Just now" } } } },
-    "time.suffix.days" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "일 전" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "d ago" } } } },
-    "time.suffix.hours" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시간 전" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "h ago" } } } },
-    "time.suffix.minutes" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "분 전" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "m ago" } } } },
-    "time.yesterday" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "어제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Yesterday" } } } },
-    "toast.capture.disabled" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립 수집 일시정지됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Capture paused" } } } },
-    "toast.capture.enabled" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립 수집 재개됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Capture resumed" } } } },
-    "toast.copy.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "복사됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied" } } } },
-    "toast.deleteAll.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "히스토리 전체 삭제됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "History cleared" } } } },
-    "toast.loginItem.failed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 로그인 등록 실패" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to register login item" } } } },
-    "toast.multiFile.limitExceeded" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일은 한 번에 최대 %d개까지만 수집할 수 있어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "You can capture up to %d files at a time" } } } },
-    "toast.multiFile.saveFailed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "멀티 파일 수집 실패" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to capture files" } } } },
-    "toast.multiPaste.failed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ubb36\uc74c \ubd99\uc5ec\ub123\uae30\uc5d0 \uc2e4\ud328\ud588\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not paste the selected clips" } } } },
-    "toast.multiPaste.files.copied" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud30c\uc77c %d\uac1c\ub97c \ubcf5\uc0ac\ud588\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied %d files" } } } },
-    "toast.multiPaste.files.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud30c\uc77c %d\uac1c\ub97c \ubd99\uc5ec\ub123\uc5c8\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasted %d files" } } } },
-    "toast.multiPaste.mixed.copyUnsupported" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud14d\uc2a4\ud2b8\uc640 \ud30c\uc77c\uc740 \ud568\uaed8 \ubcf5\uc0ac\ud560 \uc218 \uc5c6\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Text and files cannot be copied together" } } } },
-    "toast.multiPaste.mixed.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud30c\uc77c\uacfc \ud14d\uc2a4\ud2b8\ub97c \ub098\ub220 \ubd99\uc5ec\ub123\uc5c8\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasted the files and the text separately" } } } },
-    "toast.multiPaste.mixed.needsAutoPaste" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\ud14d\uc2a4\ud2b8\uc640 \ud30c\uc77c\uc744 \ud568\uaed8 \ubd99\uc5ec\ub123\uc73c\ub824\uba74 \ubc14\ub85c \ubd99\uc5ec\ub123\uae30\uc640 \uc2dc\uc2a4\ud15c \uc811\uadfc \uad8c\ud55c\uc774 \ud544\uc694\ud574\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasting mixed text and files requires auto-paste and accessibility access" } } } },
-    "toast.multiPaste.text.copied" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "%d\uac1c\ub97c \uc5f0\uacb0\ud574 \ubcf5\uc0ac\ud588\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied %d clips joined together" } } } },
-    "toast.multiPaste.text.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "%d\uac1c\ub97c \uc5f0\uacb0\ud574 \ubd99\uc5ec\ub123\uc5c8\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasted %d clips joined together" } } } },
-    "toast.paste.done" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "붙여넣기됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasted" } } } },
-    "toast.permission.granted" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "바로 붙여넣기 활성화됨" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto Paste enabled" } } } },
-    "toast.pin.alreadyPinned" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "\uac19\uc740 \ub0b4\uc6a9\uc774 %d\ubc88\uc5d0 \uc774\ubbf8 \uace0\uc815\ub3fc \uc788\uc5b4\uc694" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "That content is already pinned in slot %d" } } } },
-    "toast.pin.createFailed" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀을 만들지 못했어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn\u2019t create the pin" } } } },
-    "toast.pin.limit" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀은 최대 %d개까지 가능해요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "You can pin up to %d items" } } } },
-    "toast.pin.unpinned" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "핀을 해제했어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin removed" } } } },
-    "toast.pin.valueRequired" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "값을 입력해야 저장할 수 있어요" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter a value to save" } } } },
-    "toast.historyLimit.belowCurrent" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 클립 수보다 적은 값은 설정할 수 없어요." } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "You can't set a limit below the number of clips you have." } } } },
-    "toast.shortcut.conflict" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 '%@' 항목에 설정되어 있는 단축키입니다" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Already assigned to '%@'" } } } },
-    "toast.shortcut.modifierRequired" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키에는 보조 키(⌘ ⇧ ⌥ ⌃)를 하나 이상 포함해야 합니다" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcut must include at least one modifier key (⌘ ⇧ ⌥ ⌃)" } } } },
-    "tooltip.capture.disable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립 수집 일시정지" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Pause capture" } } } },
-    "tooltip.capture.enable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "클립 수집 재개" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Resume capture" } } } },
-    "tooltip.keepOpen.disable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "창 고정 해제" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn Off Keep Open" } } } },
-    "tooltip.keepOpen.enable" : { "extractionState" : "manual", "localizations" : { "ko" : { "stringUnit" : { "state" : "translated", "value" : "창 고정" } }, "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn On Keep Open" } } } }
+  "sourceLanguage": "ko",
+  "strings": {
+    "about.copyright": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License · Copyright © 2026 angar2"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License · Copyright © 2026 angar2"
+          }
+        }
+      }
+    },
+    "about.dataFolder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터 폴더 열기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Data Folder"
+          }
+        }
+      }
+    },
+    "about.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 클립보드 매니저"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS Clipboard Manager"
+          }
+        }
+      }
+    },
+    "about.github": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub 저장소 열기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open GitHub Repository"
+          }
+        }
+      }
+    },
+    "about.releaseNotes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "릴리스 노트 보기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View Release Notes"
+          }
+        }
+      }
+    },
+    "about.update.check": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트 확인"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates"
+          }
+        }
+      }
+    },
+    "about.update.checking": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인 중…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        }
+      }
+    },
+    "about.update.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인하지 못했습니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check for updates"
+          }
+        }
+      }
+    },
+    "about.update.upToDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최신 버전입니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're up to date"
+          }
+        }
+      }
+    },
+    "clip.row.file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
+          }
+        }
+      }
+    },
+    "clip.row.image": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image"
+          }
+        }
+      }
+    },
+    "clip.row.multiFile.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여러 파일"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multiple Files"
+          }
+        }
+      }
+    },
+    "clipDetail.characterCount.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "글자수"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters"
+          }
+        }
+      }
+    },
+    "clipDetail.characterCount.value": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@자"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ chars"
+          }
+        }
+      }
+    },
+    "clipDetail.location.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사 위치"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied From"
+          }
+        }
+      }
+    },
+    "clipDetail.location.multiFolder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여러 폴더"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multiple Folders"
+          }
+        }
+      }
+    },
+    "clipDetail.meta.unknownApp": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알 수 없음"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
+          }
+        }
+      }
+    },
+    "hint.clipDetail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상세"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "hint.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "hint.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "hint.deleteAll": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All"
+          }
+        }
+      }
+    },
+    "hint.move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이동"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        }
+      }
+    },
+    "hint.multiSelect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        }
+      }
+    },
+    "hint.or": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "또는"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or"
+          }
+        }
+      }
+    },
+    "hint.paste": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste"
+          }
+        }
+      }
+    },
+    "hint.pin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        }
+      }
+    },
+    "menu.quit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stash 종료"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit Stash"
+          }
+        }
+      }
+    },
+    "notification.dbRecovered.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드 DB가 복구되었습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clipboard database has been recovered."
+          }
+        }
+      }
+    },
+    "notification.permissionGranted.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손쉬운 사용 권한이 허용되었습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility permission granted."
+          }
+        }
+      }
+    },
+    "onboarding.permission.body.granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바로 붙여넣기 기능을 사용할 수 있어요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto Paste is ready to use."
+          }
+        }
+      }
+    },
+    "onboarding.permission.body.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바로 붙여넣기 기능을 사용하려면 권한이 필요해요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto Paste requires accessibility permission."
+          }
+        }
+      }
+    },
+    "onboarding.permission.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 활성화함"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I've Enabled It"
+          }
+        }
+      }
+    },
+    "onboarding.permission.openSystemSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 환경설정 열기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "onboarding.permission.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        }
+      }
+    },
+    "onboarding.permission.title.granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한이 부여되었어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permission Granted"
+          }
+        }
+      }
+    },
+    "onboarding.permission.title.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "접근성 권한이 필요해요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility Permission Required"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.complete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.complete.alt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음으로"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method1.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴바 아이콘 클릭"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the menu bar icon"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method1.keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method1.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방식 1"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Method 1"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method2.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키로 즉시 표시"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open instantly with a shortcut"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method2.keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⇧⌘C"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⇧⌘C"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.method2.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방식 2"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Method 2"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.subtitle.code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 > 단축키"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings > Shortcuts"
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.subtitle.prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키는 "
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change shortcuts in "
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.subtitle.suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " 에서 변경할 수 있어요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "."
+          }
+        }
+      }
+    },
+    "onboarding.tutorial.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이렇게 호출할 수 있어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to Open Stash"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작하기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Started"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사한 항목을 보관해두고 필요할 때 골라 사용해보세요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save what you copy, then pick from it whenever you need."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stash에 오신 것을 환영합니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Stash"
+          }
+        }
+      }
+    },
+    "pin.row.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 목록"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pins"
+          }
+        }
+      }
+    },
+    "pin.sidebar.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin된 항목이 없습니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No pinned items yet"
+          }
+        }
+      }
+    },
+    "pin.sidebar.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 목록"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pins"
+          }
+        }
+      }
+    },
+    "popoverAnchor.bottomLeft": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좌하단"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottom Left"
+          }
+        }
+      }
+    },
+    "popoverAnchor.bottomRight": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "우하단"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottom Right"
+          }
+        }
+      }
+    },
+    "popoverAnchor.center": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Center"
+          }
+        }
+      }
+    },
+    "popoverAnchor.topLeft": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좌상단"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top Left"
+          }
+        }
+      }
+    },
+    "popoverAnchor.topRight": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "우상단"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top Right"
+          }
+        }
+      }
+    },
+    "preferences.row": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "preview.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d개 선택"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d selected"
+          }
+        }
+      }
+    },
+    "preview.mode.fileBundle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 %d개 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste %d files"
+          }
+        }
+      }
+    },
+    "preview.mode.sequential": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트와 파일 %d개 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste text and %d files"
+          }
+        }
+      }
+    },
+    "preview.mode.textJoin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 이어서 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste text joined together"
+          }
+        }
+      }
+    },
+    "privacy.blocked.addApp": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 추가"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add App"
+          }
+        }
+      }
+    },
+    "privacy.blocked.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추가된 앱이 없습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps added."
+          }
+        }
+      }
+    },
+    "privacy.blocked.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "privacy.blocked.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 앱에서 복사한 데이터는 보관함에 저장되지 않습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data copied from these apps won't be saved."
+          }
+        }
+      }
+    },
+    "privacy.blocked.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장하지 않을 앱"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluded Apps"
+          }
+        }
+      }
+    },
+    "search.deleteAll": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All"
+          }
+        }
+      }
+    },
+    "search.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "settings.display.accentColor.default": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 색상"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        }
+      }
+    },
+    "settings.display.accentColor.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콘텐츠 색상"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accent Color"
+          }
+        }
+      }
+    },
+    "settings.display.accentColor.system": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 색상"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
+    "settings.display.autoFit.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장 클립 개수가 설정값보다 적으면 윈도우의 높이를 자동으로 맞춥니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The window height adjusts automatically when the number of saved clips is below the limit."
+          }
+        }
+      }
+    },
+    "settings.display.autoFit.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "높이 자동 조정"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Fit Height"
+          }
+        }
+      }
+    },
+    "settings.display.clipsPerPage.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 높이 초과 시 자동으로 윈도우가 줄어듭니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The window shrinks automatically if it exceeds the screen height."
+          }
+        }
+      }
+    },
+    "settings.display.clipsPerPage.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한번에 보이는 클립 수"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clips Per Page"
+          }
+        }
+      }
+    },
+    "settings.display.hintBar.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "윈도우 하단 단축키 가이드를 숨깁니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide the keyboard shortcut guide at the bottom of the window."
+          }
+        }
+      }
+    },
+    "settings.display.hintBar.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키 가이드 숨기기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Shortcut Guide"
+          }
+        }
+      }
+    },
+    "settings.display.popoverPosition.defaultAnchor": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 오픈 위치"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default Position"
+          }
+        }
+      }
+    },
+    "settings.display.popoverPosition.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함 오픈 위치"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stash Window Position"
+          }
+        }
+      }
+    },
+    "settings.display.popoverPosition.rememberLast": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 위치 기억하기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remember Last Position"
+          }
+        }
+      }
+    },
+    "settings.general.autoUpdate.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트 자동 확인"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates Automatically"
+          }
+        }
+      }
+    },
+    "settings.general.historyLimit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최대 클립 개수"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum Clips"
+          }
+        }
+      }
+    },
+    "settings.general.historyLimit.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀으로 고정한 클립은 여기에 포함되지 않습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinned clips are not counted here."
+          }
+        }
+      }
+    },
+    "settings.general.historyLimit.max": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최대 %d개"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to %d"
+          }
+        }
+      }
+    },
+    "settings.general.language.english": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영어"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        }
+      }
+    },
+    "settings.general.language.korean": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한국어"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korean"
+          }
+        }
+      }
+    },
+    "settings.general.language.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
+    "settings.general.loginItem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac 켤 때 자동 실행"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch at Login"
+          }
+        }
+      }
+    },
+    "settings.general.paste.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 복사 + 바로 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy to clipboard and paste instantly"
+          }
+        }
+      }
+    },
+    "settings.general.paste.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바로 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto Paste"
+          }
+        }
+      }
+    },
+    "settings.general.paste.permission.denied.suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해제됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "disabled"
+          }
+        }
+      }
+    },
+    "settings.general.paste.permission.granted.suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "enabled"
+          }
+        }
+      }
+    },
+    "settings.general.paste.permission.linkText": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 접근 권한"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility Permission"
+          }
+        }
+      }
+    },
+    "settings.general.separator.escape.newline": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄바꿈"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newline"
+          }
+        }
+      }
+    },
+    "settings.general.separator.escape.tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "탭"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
+          }
+        }
+      }
+    },
+    "settings.general.separator.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여러 클립을 한번에 복사/붙여넣을 때 이 문자로 이어붙입니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins multiple clips when you copy or paste them together."
+          }
+        }
+      }
+    },
+    "settings.general.separator.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결자"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separator"
+          }
+        }
+      }
+    },
+    "settings.tab.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정보"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "settings.tab.collection": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수집"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection"
+          }
+        }
+      }
+    },
+    "settings.tab.display": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "디스플레이"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display"
+          }
+        }
+      }
+    },
+    "settings.tab.general": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일반"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
+      }
+    },
+    "settings.tab.shortcuts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts"
+          }
+        }
+      }
+    },
+    "shortcuts.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "shortcuts.deleteAll": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All"
+          }
+        }
+      }
+    },
+    "shortcuts.deleteAll.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 고정 데이터는 제외합니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinned items are excluded."
+          }
+        }
+      }
+    },
+    "shortcuts.deleteOne": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 삭제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Selected"
+          }
+        }
+      }
+    },
+    "shortcuts.group.basic": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 단축키"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basic Shortcuts"
+          }
+        }
+      }
+    },
+    "shortcuts.group.pin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN 단축키"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN Shortcuts"
+          }
+        }
+      }
+    },
+    "shortcuts.multiSelectToggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다중 선택"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multi-select"
+          }
+        }
+      }
+    },
+    "shortcuts.multiSelectToggle.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립을 여러 개 골라 한 번에 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick several clips and paste them at once"
+          }
+        }
+      }
+    },
+    "shortcuts.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키 조합을 클릭한 뒤 새 조합을 누르세요. macOS 표준 단축키는 변경할 수 없습니다."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a shortcut, then press a new key combination. macOS system shortcuts can't be changed."
+          }
+        }
+      }
+    },
+    "shortcuts.paste": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.aliasEmpty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "명칭 없음"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No name"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.aliasPlaceholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키명"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcut name"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.slotEmpty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비어 있음"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.unpin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 해제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpin"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.valueLocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "값 수정 불가"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value can’t be edited"
+          }
+        }
+      }
+    },
+    "shortcuts.pin.valuePlaceholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키값"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcut value"
+          }
+        }
+      }
+    },
+    "shortcuts.pinPaste": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 붙여넣기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste Pin"
+          }
+        }
+      }
+    },
+    "shortcuts.pinSidebarToggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 목록 열기/닫기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle Pins Sidebar"
+          }
+        }
+      }
+    },
+    "shortcuts.pinToggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀 고정/해제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin / Unpin"
+          }
+        }
+      }
+    },
+    "shortcuts.popoverOpen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함 열기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Stash"
+          }
+        }
+      }
+    },
+    "shortcuts.recorder.change": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        }
+      }
+    },
+    "shortcuts.recorder.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키 입력..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter shortcut..."
+          }
+        }
+      }
+    },
+    "shortcuts.resetAll": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 되돌리기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset All"
+          }
+        }
+      }
+    },
+    "shortcuts.resetItem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "되돌리기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        }
+      }
+    },
+    "time.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Just now"
+          }
+        }
+      }
+    },
+    "time.suffix.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일 전"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "d ago"
+          }
+        }
+      }
+    },
+    "time.suffix.hours": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간 전"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "h ago"
+          }
+        }
+      }
+    },
+    "time.suffix.minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분 전"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "m ago"
+          }
+        }
+      }
+    },
+    "time.yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "toast.capture.disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립 수집 일시정지됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture paused"
+          }
+        }
+      }
+    },
+    "toast.capture.enabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립 수집 재개됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture resumed"
+          }
+        }
+      }
+    },
+    "toast.copy.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        }
+      }
+    },
+    "toast.deleteAll.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "히스토리 전체 삭제됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History cleared"
+          }
+        }
+      }
+    },
+    "toast.historyLimit.belowCurrent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 클립 수보다 적은 값은 설정할 수 없어요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can't set a limit below the number of clips you have."
+          }
+        }
+      }
+    },
+    "toast.loginItem.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 로그인 등록 실패"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to register login item"
+          }
+        }
+      }
+    },
+    "toast.multiFile.limitExceeded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일은 한 번에 최대 %d개까지만 수집할 수 있어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can capture up to %d files at a time"
+          }
+        }
+      }
+    },
+    "toast.multiFile.saveFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멀티 파일 수집 실패"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to capture files"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음 붙여넣기에 실패했어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not paste the selected clips"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.files.copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 %d개를 복사했어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied %d files"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.files.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 %d개를 붙여넣었어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasted %d files"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.mixed.copyUnsupported": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트와 파일은 함께 복사할 수 없어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text and files cannot be copied together"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.mixed.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일과 텍스트를 나눠 붙여넣었어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasted the files and the text separately"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.mixed.needsAutoPaste": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트와 파일을 함께 붙여넣으려면 바로 붙여넣기와 시스템 접근 권한이 필요해요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasting mixed text and files requires auto-paste and accessibility access"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.text.copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d개를 연결해 복사했어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied %d clips joined together"
+          }
+        }
+      }
+    },
+    "toast.multiPaste.text.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d개를 연결해 붙여넣었어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasted %d clips joined together"
+          }
+        }
+      }
+    },
+    "toast.paste.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasted"
+          }
+        }
+      }
+    },
+    "toast.permission.granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바로 붙여넣기 활성화됨"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto Paste enabled"
+          }
+        }
+      }
+    },
+    "toast.pin.alreadyPinned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 내용이 %d번에 이미 고정돼 있어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That content is already pinned in slot %d"
+          }
+        }
+      }
+    },
+    "toast.pin.createFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀을 만들지 못했어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t create the pin"
+          }
+        }
+      }
+    },
+    "toast.pin.limit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀은 최대 %d개까지 가능해요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can pin up to %d items"
+          }
+        }
+      }
+    },
+    "toast.pin.unpinned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핀을 해제했어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin removed"
+          }
+        }
+      }
+    },
+    "toast.pin.valueRequired": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "값을 입력해야 저장할 수 있어요"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a value to save"
+          }
+        }
+      }
+    },
+    "toast.shortcut.conflict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 '%@' 항목에 설정되어 있는 단축키입니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already assigned to '%@'"
+          }
+        }
+      }
+    },
+    "toast.shortcut.modifierRequired": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키에는 보조 키(⌘ ⇧ ⌥ ⌃)를 하나 이상 포함해야 합니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcut must include at least one modifier key (⌘ ⇧ ⌥ ⌃)"
+          }
+        }
+      }
+    },
+    "tooltip.capture.disable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립 수집 일시정지"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause capture"
+          }
+        }
+      }
+    },
+    "tooltip.capture.enable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립 수집 재개"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume capture"
+          }
+        }
+      }
+    },
+    "tooltip.keepOpen.disable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "창 고정 해제"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn Off Keep Open"
+          }
+        }
+      }
+    },
+    "tooltip.keepOpen.enable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "창 고정"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn On Keep Open"
+          }
+        }
+      }
+    },
+    "update.banner.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update"
+          }
+        }
+      }
+    },
+    "update.banner.prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 버전 "
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version "
+          }
+        }
+      }
+    },
+    "update.banner.suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " 이 있습니다"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " is available"
+          }
+        }
+      }
+    }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
