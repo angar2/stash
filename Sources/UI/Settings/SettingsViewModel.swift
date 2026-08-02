@@ -16,6 +16,9 @@ final class SettingsViewModel {
     var shortcutConflictMessage: String?
     /// PermissionService.statusPublisher 구독으로 Composition Root 가 갱신.
     var accessibilityGranted: Bool = false
+    /// TASK-102 — 자동 업데이트 창구. Composition Root 가 주입한다.
+    /// 관찰 대상이어야 확인 상태(*확인 중…* / *최신 버전입니다*)가 정보 탭에 즉시 반영된다.
+    private(set) var updateService: UpdateService?
 
     // MARK: - Display tab (TASK-037)
     /// 한 페이지에 보여줄 클립 개수. 1~30 clamp. default 6.
@@ -411,4 +414,34 @@ final class SettingsViewModel {
             NSWorkspace.shared.open(url)
         }
     }
+
+    // MARK: - 자동 업데이트 (TASK-102)
+
+    /// Composition Root 가 주입. `nil` 이면 설정 화면의 업데이트 항목이 표시되지 않는다 (테스트 경로).
+    func setUpdateService(_ service: UpdateService) {
+        self.updateService = service
+    }
+
+    /// 정보 탭 *업데이트 확인*. 진행·결과는 `updateCheckState` 로 노출되어 항목 우측 문구가 된다.
+    func checkForUpdates() {
+        updateService?.checkForUpdatesManually()
+    }
+
+    /// 일반 탭 *업데이트 자동 확인* 토글. 저장 버튼 없이 즉시 반영한다.
+    func setAutomaticUpdateChecks(_ enabled: Bool) {
+        updateService?.setAutomaticChecksEnabled(enabled)
+    }
+
+    /// 자동 확인 켜짐 여부. 저장은 Sparkle 이 담당하므로 여기서는 그 값을 그대로 읽는다.
+    var automaticUpdateChecksEnabled: Bool {
+        updateService?.automaticChecksEnabled ?? false
+    }
+
+    /// 정보 탭 항목 우측에 표시할 확인 상태. `nil` = 표시할 것 없음.
+    var updateCheckState: ManualUpdateCheckState? {
+        updateService?.manualCheckState
+    }
+
+    /// 업데이트 항목 표시 여부 — 창구가 주입되지 않은 경로(테스트·프리뷰)에서는 그리지 않는다.
+    var updateAvailable: Bool { updateService != nil }
 }
