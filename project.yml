@@ -20,6 +20,10 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift
     from: "7.0.0"
+  # TASK-102 자동 업데이트 (TECH-STACK §3-6). 이정표 조회 → 서명 검증 → 번들 교체 → 재실행 담당.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.9.0"
 
 targets:
   Stash:
@@ -43,6 +47,8 @@ targets:
         product: KeyboardShortcuts
       - package: GRDB
         product: GRDB
+      - package: Sparkle
+        product: Sparkle
 
   StashTests:
     type: bundle.unit-test

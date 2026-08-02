@@ -26,5 +26,21 @@
 	<string>NSApplication</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 angar2. All rights reserved.</string>
+	<!-- TASK-102 자동 업데이트 (Sparkle). 항목 목록의 단일 진실 소스는 TECH-STACK §3-6. -->
+	<!-- 버전 이정표 주소. main 브랜치 루트의 appcast.xml 을 raw 로 읽는다 (CDN 캐시로 수 분 지연 가능). -->
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/angar2/stash/main/appcast.xml</string>
+	<!-- 배포 파일 서명 검증용 공개키. 비밀키는 로그인 키체인 (RELEASE-GUIDE 참조). -->
+	<key>SUPublicEDKey</key>
+	<string>daJYrsBDx0U/cKSkD95ICgBykoeeNpla/IxFpFUjiIQ=</string>
+	<!-- 자동 확인 기본 켜짐 — 첫 실행 시 동의를 묻지 않는다. 사용자는 설정 일반 탭에서 끌 수 있다. -->
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<!-- 확인 주기 24시간 (초). 앱이 실행 중일 때만 확인한다 — 별도 상주 데몬 없음. -->
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<!-- 익명 시스템 정보 전송 안 함. -->
+	<key>SUEnableSystemProfiling</key>
+	<false/>
 </dict>
 </plist>
