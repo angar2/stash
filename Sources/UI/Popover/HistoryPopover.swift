@@ -20,6 +20,11 @@ struct HistoryPopover: View {
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
     let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
+    /// TASK-102 — 자동 업데이트 창구. 헤더 배너 표시 + 클립 목록 높이 cap 계산에 쓰인다.
+    var updateService: UpdateService?
+
+    /// 업데이트 배너가 떠 있는가 — 높이 계산과 헤더 표시가 같은 값을 본다.
+    private var updateBannerVisible: Bool { updateService?.pendingUpdateVersion != nil }
 
     private var hasPinned: Bool { !viewModel.pinnedClips.isEmpty }
     // TASK-019 fix 6차 — `filter { !$0.isPinned }` 제거. 핀 항목도 본체 일반 히스토리에 *시간순 자연 노출* (FEATURES F-002 / §3-4 정합).
@@ -34,7 +39,8 @@ struct HistoryPopover: View {
         onOpenSettings: @escaping () -> Void,
         onDismiss: @escaping () -> Void,
         handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
-        anchorOffsetX: CGFloat? = nil
+        anchorOffsetX: CGFloat? = nil,
+        updateService: UpdateService? = nil
     ) {
         self.viewModel = viewModel
         self.mode = mode
@@ -42,6 +48,7 @@ struct HistoryPopover: View {
         self.onDismiss = onDismiss
         self.handleClipPaste = handleClipPaste
         self.anchorOffsetX = anchorOffsetX
+        self.updateService = updateService
     }
 
     // TASK-053 — 콘텐츠 색상 모드 변경 시 popover body 재평가 트리거. 자식 view (ClipRowView / SearchBarView 등) 도 각자 @AppStorage 박아 자체 추적.
@@ -59,7 +66,7 @@ struct HistoryPopover: View {
     private var popoverBody: some View {
         VStack(spacing: 0) {
             // 1·2·3 동일 form — 방식 2도 검색바·환경설정 노출 (입력 비활성, TASK-018).
-            PopoverHeaderView(viewModel: viewModel, mode: mode)
+            PopoverHeaderView(viewModel: viewModel, mode: mode, updateService: updateService)
             // TASK-099 — 다중 선택 프리뷰 바. 선택이 없으면 아예 그리지 않아 popover 높이가 원래대로 돌아간다.
             // 연결자는 `@AppStorage` 로 추적해야 설정 변경이 *즉시* 반영된다 (ViewModel 안 UserDefaults 직접 조회는 SwiftUI 가 추적 못 함).
             if let preview = MultiPasteComposer.preview(
@@ -182,7 +189,9 @@ struct HistoryPopover: View {
                 hasPinned: hasPinned,
                 hintBarVisible: hintBarVisible,
                 // TASK-099 — 프리뷰 바가 떠 있으면 클립 목록 상한을 그만큼 낮춘다 (화면 밖으로 자라는 것 차단).
-                previewBarVisible: !viewModel.multiSelection.isEmpty
+                previewBarVisible: !viewModel.multiSelection.isEmpty,
+                // TASK-102 — 업데이트 배너도 같은 이유로 상한을 낮춘다.
+                updateBannerVisible: updateBannerVisible
             ))
             // TASK-061 — 빈 영역 안내 (emptyState / searchEmptyResult) 자체 폐기 (사용자 요구). visibleClips.isEmpty 시 clipsList 영역 빈 채로 박힘.
             // TASK-019 fix 6차 — anchor:nil 모델. multiline 행 가변 height 무관. SwiftUI 가 *id 가 visible 안이면 변화 X, 밖이면 가장 가까운 위치로 자동 끌어옴*. 커서 항상 가시.

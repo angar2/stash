@@ -46,6 +46,16 @@ Like a squirrel hoarding acorns, it keeps everything you copy so you never lose 
 For detailed installation notes, see the description on the Releases page above.
 
 
+### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I update it?
+
+Once installed, Stash lets you know on its own. When a new version is out, a notice appears at the top of your stash — click it and the download and install happen for you. No need to go fetch it yourself.
+
+- Want to check right now? — **Check for Updates** in the `About` tab of Settings
+- Rather not be notified? — turn off **Check for Updates Automatically** in the `General` tab (you can still check manually from the `About` tab)
+
+> If you're on a version from before this feature, install manually one last time using the steps above. From then on, Stash will tell you.
+
+
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I use it?
 
 Once you launch the app, the Stash acorn icon ( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> ) shows up in your menu bar. Click it or hit your shortcut to open the stash.

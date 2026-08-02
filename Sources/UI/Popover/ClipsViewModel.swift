@@ -685,7 +685,9 @@ final class ClipsViewModel {
     /// TASK-052 — `hintBarVisible` 인자 추가. OFF 시 totalOverhead 에서 `hintBarOverhead` (실측 42pt) 차감 → clipList cap 확장 → 한 행 더 표시 + popover total ON/OFF 동일 (method2 우하단 anchor 시 상단 공백 잔존 차단).
     /// TASK-099 — `previewBarVisible` 인자 추가. 프리뷰 바가 떠 있는 동안은 clipList cap 을 그만큼 줄여
     /// popover 가 화면 밖으로 자라는 것을 막는다. 기본값 false = 기존 호출처 동작 불변.
-    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false) -> CGFloat {
+    /// TASK-102 — `updateBannerVisible` 인자 추가. 업데이트 배너가 떠 있는 동안도 같은 이유로 cap 을 낮춘다.
+    /// 기본값 false = 기존 호출처 동작 불변.
+    static func effectiveClipListHeight(visibleCount: Int, clipsPerPage: Int, autoFit: Bool, hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false, updateBannerVisible: Bool = false) -> CGFloat {
         let n = max(Constants.clipsPerPageMin, min(Constants.clipsPerPageMax, clipsPerPage))
         let rowHeight = DesignTokens.Spacing.rowMinHeight
         let rowGap = DesignTokens.Spacing.rowGap
@@ -698,7 +700,7 @@ final class ClipsViewModel {
         }
         let raw = CGFloat(rows) * rowHeight + CGFloat(max(0, rows - 1)) * rowGap
         // 화면 cap — TASK-057 cappedRowsForCurrentScreen 헬퍼 위임 (windowWillResize raw 동기화 분기와 공유).
-        let cappedRows = cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible, previewBarVisible: previewBarVisible)
+        let cappedRows = cappedRowsForCurrentScreen(hasPinned: hasPinned, hintBarVisible: hintBarVisible, previewBarVisible: previewBarVisible, updateBannerVisible: updateBannerVisible)
         let cap = CGFloat(cappedRows) * rowHeight + CGFloat(max(0, cappedRows - 1)) * rowGap
         return min(raw, cap)
     }
@@ -708,14 +710,16 @@ final class ClipsViewModel {
     /// TASK-054 fix-2 정합 — cap 을 *정수 행 단위 floor* 박음 (fractional 잔여 공간 차단). (rowHeight + rowGap) 단위 floor — gap 1 개 분량 보정 위해 (screenAvailable + rowGap) 사용.
     /// TASK-052 정합 — hintBarVisible=false 시 baseOverhead 에서 hintBarOverhead 차감 (clipList cap 확장).
     /// TASK-099 정합 — `previewBarVisible` 시 프리뷰 바 높이만큼 overhead 를 더해 cap 을 낮춘다.
-    static func cappedRowsForCurrentScreen(hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false) -> Int {
+    /// TASK-102 정합 — `updateBannerVisible` 시 배너 높이만큼 overhead 를 더해 cap 을 낮춘다.
+    static func cappedRowsForCurrentScreen(hasPinned: Bool, hintBarVisible: Bool, previewBarVisible: Bool = false, updateBannerVisible: Bool = false) -> Int {
         let rowHeight = DesignTokens.Spacing.rowMinHeight
         let rowGap = DesignTokens.Spacing.rowGap
         let baseOverhead = DesignTokens.Spacing.clipListOverheadBase
         let pinRowOverhead: CGFloat = hasPinned ? (DesignTokens.Spacing.pinRowHeight + DesignTokens.Spacing.pinRowMarginVert * 2) : 0
         let hintBarAdjust: CGFloat = hintBarVisible ? 0 : DesignTokens.Spacing.hintBarOverhead
         let previewBarOverhead: CGFloat = previewBarVisible ? DesignTokens.Spacing.previewBarOverhead : 0
-        let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust + previewBarOverhead
+        let updateBannerOverhead: CGFloat = updateBannerVisible ? DesignTokens.Spacing.updateBannerOverhead : 0
+        let totalOverhead = baseOverhead + pinRowOverhead - hintBarAdjust + previewBarOverhead + updateBannerOverhead
         let screenAvailable = (NSScreen.main?.visibleFrame.height ?? 800) - totalOverhead
         return max(1, Int((screenAvailable + rowGap) / (rowHeight + rowGap)))
     }
