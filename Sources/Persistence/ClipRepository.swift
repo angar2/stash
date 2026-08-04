@@ -19,7 +19,16 @@ protocol ClipRepository: Sendable {
     @discardableResult
     func insert(_ clip: Clip) async throws -> [Clip]
 
-    /// LIKE 검색 (body 컬럼만, case-insensitive, substring 매칭).
+    /// LIKE 검색 (case-insensitive, substring 매칭).
+    ///
+    /// 검색 대상 (TASK-103, DATA-MODEL §7) — 본문(`body`) + 파일 클립의 원본 경로(`file_original_path`)
+    /// + 묶음 클립 항목의 원본 경로(`file_paths_json`). 전체 경로가 대상이라 파일명뿐 아니라
+    /// 상위 폴더명으로도 찾을 수 있다. **내부 보관 복사본 경로(`file_path`)는 제외** — 이름이
+    /// `UUID_원본파일명` 형태라 짧은 검색어와 우연히 매칭되는 잡음이 된다.
+    ///
+    /// 검색어의 `%` / `_` / `!` 는 와일드카드가 아니라 *글자 그대로* 매칭된다 (TASK-103).
+    ///
+    /// 검색되지 않는 것 — 원본 경로가 없는 이미지 클립(화면 캡처 등). 본문도 경로도 없어 대조할 문자열이 없다.
     /// - Parameter query: 빈 문자열이면 `fetchAll()` 동일 동작.
     func search(query: String) async throws -> [Clip]
 

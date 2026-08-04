@@ -87,6 +87,32 @@ final class GRDBClipRepository: ClipRepository {
         return result
     }
 
+    /// LIKE 이스케이프 문자 (TASK-103, DATA-MODEL §7 정책 #6).
+    ///
+    /// 백슬래시를 쓰지 않은 이유 — 묶음 클립의 경로는 JSON 문자열로 저장되면서 `/` 가 `\/` 로 표기된다.
+    /// 백슬래시가 이스케이프 문자면 그 표기가 *이스케이프 시퀀스* 로 해석돼 충돌한다.
+    /// `!` 를 쓰면 처리 대상이 `!` / `%` / `_` 세 글자로 끝나고 백슬래시는 자연히 글자 그대로 남는다.
+    private static let likeEscape = "!"
+
+    /// 검색어의 와일드카드 문자를 글자 그대로 매칭되도록 이스케이프한다 (TASK-103).
+    /// 자기 자신(`!`)을 **먼저** 치환해야 뒤이어 삽입되는 이스케이프 문자가 다시 치환되지 않는다.
+    /// 단위 테스트 대상 — 외부 호출 가능하도록 internal static.
+    static func escapeLikePattern(_ query: String) -> String {
+        query
+            .replacingOccurrences(of: "!", with: "!!")
+            .replacingOccurrences(of: "%", with: "!%")
+            .replacingOccurrences(of: "_", with: "!_")
+    }
+
+    /// TASK-103 — 검색 대상 = `body` + 파일 원본 경로 + 묶음 파일 경로 (DATA-MODEL §7).
+    ///
+    /// 내부 보관 복사본 경로(`file_path`)는 대상이 아니다 — 이름이 `UUID_원본파일명` 형태라
+    /// 16진 문자열이 짧은 검색어와 우연히 매칭되는 잡음이 된다.
+    ///
+    /// 묶음 클립(`file_paths_json`)은 SQL 만으로 판정할 수 없다. JSON 문자열이라 열쇠말
+    /// (`original_path` / `file_path` / `is_file_external`)까지 LIKE 에 걸려, `file` / `path` 같은
+    /// 흔한 단어를 입력하면 묶음 클립이 전부 매칭된다. SQL 은 후보를 좁히는 역할만 하고
+    /// 최종 판정은 디코드한 항목의 `originalPath` 값이 한다.
     func search(query: String) async throws -> [Clip] {
         Logger.database.debug("search — query: \"\(query)\"")
         let clips = try await dbQueue.read { db in
@@ -96,14 +122,34 @@ final class GRDBClipRepository: ClipRepository {
                     .limit(self.historyLimit() + Constants.maxPinnedClips)
                     .fetchAll(db)
             }
+            let pattern = "%\(Self.escapeLikePattern(query))%"
+            // 묶음 JSON 안에서 `/` 는 `\/` 로 저장된다 (Foundation JSONEncoder 기본 동작).
+            let jsonPattern = pattern.replacingOccurrences(of: "/", with: "\\/")
             return try Clip
-                .filter(Column("body").like("%\(query)%"))
+                .filter(
+                    Column("body").like(pattern, escape: Self.likeEscape)
+                        || Column("file_original_path").like(pattern, escape: Self.likeEscape)
+                        || Column("file_paths_json").like(jsonPattern, escape: Self.likeEscape)
+                )
                 .order(Column("last_used_at").desc)
                 .limit(self.historyLimit() + Constants.maxPinnedClips)
                 .fetchAll(db)
         }
-        Logger.database.debug("search — \(clips.count)개 반환")
-        return clips
+        guard !query.isEmpty else {
+            Logger.database.debug("search — \(clips.count)개 반환 (빈 검색어)")
+            return clips
+        }
+        let filtered = clips.filter { Self.matchesMultiFileEntries(clip: $0, query: query) }
+        Logger.database.debug("search — \(filtered.count)개 반환 (묶음 오탐 \(clips.count - filtered.count)개 제외)")
+        return filtered
+    }
+
+    /// 묶음 클립 2차 대조 (TASK-103). 묶음이 아니면 통과, 묶음이면 항목의 `originalPath` 중 하나가
+    /// 검색어를 포함할 때만 통과. JSON 디코드 실패 시 대조할 값이 없으므로 제외한다.
+    private static func matchesMultiFileEntries(clip: Clip, query: String) -> Bool {
+        guard clip.isMultiFile else { return true }
+        guard let entries = clip.fileEntries else { return false }
+        return entries.contains { $0.originalPath.localizedCaseInsensitiveContains(query) }
     }
 
     func updateLastUsedAt(id: UUID) async throws {
