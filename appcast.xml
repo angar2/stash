@@ -18,6 +18,22 @@
     <description>Stash 업데이트</description>
     <language>ko</language>
     <item>
+      <title>1.3.1</title>
+      <pubDate>Wed, 05 Aug 2026 01:51:58 +0900</pubDate>
+      <sparkle:version>343</sparkle:version>
+      <sparkle:shortVersionString>1.3.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown" xml:lang="en"><![CDATA[# Bug Fixes
+
+Fixed search issues.]]></description>
+      <description sparkle:format="markdown" xml:lang="ko"><![CDATA[# 버그 수정
+
+검색이 정상 동작하지 않던 문제를 수정했습니다.]]></description>
+      <enclosure url="https://github.com/angar2/stash/releases/download/v1.3.1/Stash-1.3.1.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="U9Lar2WCksVXzub/6c0xFzl6Lbzog/7XvBUT+USXSGde8gp7cNX6N9YKpyTAukLcr+4KBXYavcpDON9LWbspCg==" length="7344087" />
+    </item>
+    <item>
       <title>1.3.0</title>
       <pubDate>Sun, 02 Aug 2026 23:38:29 +0900</pubDate>
       <sparkle:version>336</sparkle:version>
