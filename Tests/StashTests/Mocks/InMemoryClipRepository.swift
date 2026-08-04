@@ -54,10 +54,19 @@ final class InMemoryClipRepository: ClipRepository, @unchecked Sendable {
         return toDelete
     }
 
+    /// TASK-103 — 검색 대상은 본문 + 파일 원본 경로 + 묶음 항목 원본 경로 (`GRDBClipRepository` 정합).
+    /// 내부 보관 복사본 경로(`filePath`)는 대상 아님. 문자열 포함 대조라 와일드카드 개념 자체가 없다
+    /// (실제 구현의 `!` 이스케이프는 SQL LIKE 한정 — 여기서는 이미 글자 그대로 매칭된다).
     func search(query: String) async throws -> [Clip] {
         searchCallCount += 1
         if query.isEmpty { return try await fetchAll() }
-        let matched = clips.filter { $0.body?.localizedCaseInsensitiveContains(query) == true }
+        let matched = clips.filter { clip in
+            if clip.body?.localizedCaseInsensitiveContains(query) == true { return true }
+            if clip.fileOriginalPath?.localizedCaseInsensitiveContains(query) == true { return true }
+            return clip.fileEntries?.contains {
+                $0.originalPath.localizedCaseInsensitiveContains(query)
+            } == true
+        }
         // TASK-019 fix 4차 — 정렬 룰 `last_used_at DESC` 만 (`is_pinned DESC` 제거).
         return matched.sorted { $0.lastUsedAt > $1.lastUsedAt }
     }
