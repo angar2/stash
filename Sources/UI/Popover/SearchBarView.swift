@@ -51,11 +51,9 @@ struct PopoverHeaderView: View {
     // 우측 trailing에 '전체 삭제' 버튼 위치 (지크 요구 — 검색부 내부에서 워드마크 우측으로 이동).
     private var wordmarkRow: some View {
         HStack(spacing: DesignTokens.Spacing.wordmarkIconLabelGap) {
-            // TASK-069 — stash 메뉴바 아이콘 (단색 검정 template — 작은 14 px 사이즈 시인성 위해 컬러풀 AppIcon 대신 채택). accent 색상 fill 부활.
-            Image("MenuBarIcon")
-                .renderingMode(.template)
-                .resizable()
-                .frame(width: 14, height: 14)
+            // TASK-069 — stash 메뉴바 아이콘 (단색 검정 template — 작은 사이즈 시인성 위해 컬러풀 AppIcon 대신 채택). accent 색상 fill 부활.
+            // TASK-105 — 땅콩 18×9. 투명 여백을 배치에서 빼 머리 줄 높이(clipListOverheadBase 실측 전제)를 유지한다.
+            StashLogoMark(width: 18)
                 .foregroundStyle(DesignTokens.Colors.accent)
             Text("Stash")
                 .font(DesignTokens.Typography.brandWordmark)

@@ -49,6 +49,7 @@
 		36DFE37E43388BAD26EC840F /* PinPasteShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042847DC6C4819C0C8138E6E /* PinPasteShortcutTests.swift */; };
 		3763B1BFFCD45AD64A768873 /* PopoverShortcutStoreDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313E23FDA20918D0C5DA0711 /* PopoverShortcutStoreDefaultsTests.swift */; };
 		381CDF0C20E399A78718CAE5 /* ClipDetailProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F8A1D9269F228B6D01BF4DB /* ClipDetailProviderTests.swift */; };
+		393177738756E3BC8D7123DB /* StashLogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13083164888544EFDA9DB9F5 /* StashLogoMark.swift */; };
 		3A3839BBC72B3B23F366001A /* PasteMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAC6C25963773C890B20892 /* PasteMode.swift */; };
 		403BE348BAFE2963ACF63515 /* AboutTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 543BDB89B2D2583BF29641C9 /* AboutTab.swift */; };
 		44D9B9D10B88F780DC72C603 /* ClipsViewModelMultiSelectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907C2FFF7604AC32E4DE2209 /* ClipsViewModelMultiSelectTests.swift */; };
@@ -59,6 +60,7 @@
 		4B0632585BF42E1109F01C05 /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B3DC3A3DA2F90E65D6192C /* OnboardingWindow.swift */; };
 		4BD509D8D30146E2577287DF /* MockHotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ABCB963ECB469752C30D05A /* MockHotkeyRegistrar.swift */; };
 		4DE194EF0790BE3CF2D4ADD7 /* UpdateBannerLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C826C7B4DBBDBC29F0FBB1 /* UpdateBannerLayoutTests.swift */; };
+		4E568A074FC41C8E72CC7A4C /* StashLogoMarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8079602BF06F67E637820D9A /* StashLogoMarkTests.swift */; };
 		4E77C9DCCD3557ECA10D679E /* WelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58BFB74CB92C9B67BCB96784 /* WelcomeStep.swift */; };
 		4F5E65372CFECDD7CF2D1BB4 /* MockPasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C137BD976664F84C72DE8CE2 /* MockPasteboard.swift */; };
 		4FA16D08C43CFDCE142EB04B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 22761CE670CBD659A7821DBA /* GRDB */; };
@@ -229,6 +231,7 @@
 		0FB543C318C1A624AEC1C40C /* ShortcutsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsTab.swift; sourceTree = "<group>"; };
 		111B4AA61A9FFDF0E7D78722 /* PopoverShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverShortcutRecorder.swift; sourceTree = "<group>"; };
 		12647B485E7E9E984AA4BF4F /* V5_AddBodyIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V5_AddBodyIndex.swift; sourceTree = "<group>"; };
+		13083164888544EFDA9DB9F5 /* StashLogoMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashLogoMark.swift; sourceTree = "<group>"; };
 		134285916DBAAD966A07BA4F /* ComputeClipDetailGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputeClipDetailGeometryTests.swift; sourceTree = "<group>"; };
 		15130D8AA4A6CF011CAEDE9C /* PopoverAnchor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverAnchor.swift; sourceTree = "<group>"; };
 		15649BF2F47376F168B8AC68 /* PopoverInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverInteractionTests.swift; sourceTree = "<group>"; };
@@ -306,6 +309,7 @@
 		7C4AECDEAD6FBFA00E0B729A /* PermissionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStep.swift; sourceTree = "<group>"; };
 		7D0669633694E605BA7EABA8 /* ClipDetailDirection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailDirection.swift; sourceTree = "<group>"; };
 		805E11309F13B12B8CBF4862 /* UNNotificationCenterImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNNotificationCenterImpl.swift; sourceTree = "<group>"; };
+		8079602BF06F67E637820D9A /* StashLogoMarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashLogoMarkTests.swift; sourceTree = "<group>"; };
 		82C71400AFDE05809CFB7651 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		8348FACF920D4CCE6E1B4F24 /* AccentColorIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorIntegrationTests.swift; sourceTree = "<group>"; };
 		83696ED7AF6C276E748568BE /* AppDataPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataPath.swift; sourceTree = "<group>"; };
@@ -604,6 +608,7 @@
 		80A0E76359123B9B1899645F /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				8079602BF06F67E637820D9A /* StashLogoMarkTests.swift */,
 				ADFDDBC3210DCE7FBFAF7469 /* ToastKindTTLTests.swift */,
 			);
 			path = UI;
@@ -614,6 +619,7 @@
 			children = (
 				DFC0FDADBBDC497C2B5FDB4A /* DesignTokens.swift */,
 				88A7B75C582E1F1F9DDC3BBD /* FlowLayout.swift */,
+				13083164888544EFDA9DB9F5 /* StashLogoMark.swift */,
 				27BFB19EF99B42A30B9FF262 /* ThumbnailCache.swift */,
 				57AA35EA643058F43D56624C /* VisualEffectView.swift */,
 			);
@@ -1067,6 +1073,7 @@
 				11898244205DE5CB315C8452 /* SettingsWindow.swift in Sources */,
 				E8DE9B7D8A74FD2D5BAA917B /* ShortcutsTab.swift in Sources */,
 				0D7E776FB8803EED17B92816 /* StashApp.swift in Sources */,
+				393177738756E3BC8D7123DB /* StashLogoMark.swift in Sources */,
 				066D79AA43016D269E307828 /* StashNotification.swift in Sources */,
 				0B1D8CCD585240FAB54C7896 /* StatusItemController.swift in Sources */,
 				F46B0406BC58A72AB7BF3087 /* StoredFile.swift in Sources */,
@@ -1160,6 +1167,7 @@
 				F27628E846B3EA564050AE8E /* SearchBenchmarkTests.swift in Sources */,
 				D8718114C4762E52DA0053D7 /* SettingsViewModelPopoverPositionTests.swift in Sources */,
 				680FDC118E8CE2B4F07BBCAB /* SettingsViewModelTests.swift in Sources */,
+				4E568A074FC41C8E72CC7A4C /* StashLogoMarkTests.swift in Sources */,
 				622567635E6CA95192CCFA76 /* StashTests.swift in Sources */,
 				AA0D9DE8F4FF0A343B613DCD /* SystemWrapperTests.swift in Sources */,
 				34D37FE0341A970161A2B351 /* ThumbnailCacheTests.swift in Sources */,
