@@ -7,3 +7,23 @@ CLAUDE.md
 build/
 *.dmg
 *.xcarchive
+
+AGENTS.md
+
+# taskery 템플릿 추가분
+.project/.env
+*.bak
+*.log
+Thumbs.db
+node_modules/
+dist/
+.next/
+.nuxt/
+out/
+.env
+.env.local
+.env.*.local
+coverage/
+.nyc_output/
+.idea/
+.vscode/

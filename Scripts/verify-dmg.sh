@@ -1,5 +1,5 @@
 #!/bin/bash
-# 완성된 .dmg 의 설치 창 설정이 실제로 담겼는지 대조하는 검증 스크립트 — build-dmg.sh 말미 게이트 겸 단독 실행용
+# 완성된 .dmg 의 설치 창 설정과 서명·공증이 실제로 담겼는지 대조하는 검증 스크립트 — build-dmg.sh 말미 게이트 겸 단독 실행용
 
 # 검사 항목을 끝까지 훑어 어긋난 것을 *모두* 보여줘야 하므로 -e 는 쓰지 않는다.
 set -uo pipefail
@@ -15,6 +15,9 @@ EXPECT_APP_POS="197,195"
 EXPECT_APPLICATIONS_POS="473,195"
 EXPECT_BG_WIDTH=654
 EXPECT_BG_HEIGHT=422
+# 서명 기대값 (TASK-108). project.yml Release 구성 + ExportOptions.plist + build-dmg.sh 와 한 쌍.
+EXPECT_BUNDLE_ID="com.angar2.stash"
+EXPECT_TEAM_ID="L7J8SQ9T5F"
 
 DMG_PATH="${1:-}"
 if [ -z "$DMG_PATH" ]; then
@@ -49,7 +52,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "dmg 설치 창 설정 검증 — $DMG_PATH"
+echo "dmg 설치 창 설정·서명 검증 — $DMG_PATH"
 
 # ── 1. 구성 파일 ─────────────────────────────────────────
 [ -d "$MOUNT_POINT/${APP_NAME}.app" ] && ok "${APP_NAME}.app 존재" || ng "${APP_NAME}.app 없음"
@@ -187,11 +190,63 @@ PYTHON
   FAILURES=$((FAILURES + DS_FAILURES))
 fi
 
+# ── 4. 서명·공증 (TASK-108) ──────────────────────────────
+APP_PATH="$MOUNT_POINT/${APP_NAME}.app"
+if [ -d "$APP_PATH" ]; then
+  codesign --verify --deep --strict "$APP_PATH" 2>/dev/null \
+    && ok "앱 서명 유효 (내장 코드 포함)" \
+    || ng "앱 서명 검증 실패 (codesign --verify --deep --strict)"
+
+  # 서명 요건이 번들 ID + 팀 ID 로 고정돼야 업데이트 뒤에도 손쉬운 사용 권한이 유지된다.
+  # ad-hoc 서명은 요건이 빌드마다 바뀌는 해시(cdhash)라 업데이트마다 권한이 풀린다.
+  REQUIREMENT=$(codesign -d -r- "$APP_PATH" 2>&1)
+  if echo "$REQUIREMENT" | grep -qF "identifier \"${EXPECT_BUNDLE_ID}\"" \
+    && echo "$REQUIREMENT" | grep -qF "anchor apple generic" \
+    && echo "$REQUIREMENT" | grep -qF "certificate leaf[subject.OU] = ${EXPECT_TEAM_ID}"; then
+    ok "서명 요건 = 번들 ID ${EXPECT_BUNDLE_ID} + 팀 ID ${EXPECT_TEAM_ID}"
+  else
+    ng "서명 요건이 번들 ID + 팀 ID 고정이 아님: $(echo "$REQUIREMENT" | grep designated)"
+  fi
+
+  # 앱 본체와 내장 프레임워크·도구가 모두 같은 팀 + Hardened Runtime 이어야 공증이 유지된다.
+  #   Sparkle 은 실행 파일(Autoupdate)·Updater.app·XPC 서비스를 프레임워크 안에 품고 있다.
+  #   Versions/Current 는 심볼릭 링크라 find 가 따라가지 않아 같은 코드를 두 번 세지 않는다.
+  NESTED_CODE=$( { echo "$APP_PATH"
+    find "$APP_PATH/Contents/Frameworks" -type d \( -name "*.framework" -o -name "*.app" -o -name "*.xpc" \) 2>/dev/null
+    find "$APP_PATH/Contents/Frameworks" -type f -name "Autoupdate" 2>/dev/null; } )
+  while IFS= read -r CODE; do
+    [ -z "$CODE" ] && continue
+    LABEL="${CODE#"$MOUNT_POINT/"}"
+    INFO=$(codesign -dv "$CODE" 2>&1)
+    TEAM=$(echo "$INFO" | awk -F= '/^TeamIdentifier=/ { print $2 }')
+    if [ "$TEAM" = "$EXPECT_TEAM_ID" ] && echo "$INFO" | grep -q "flags=.*runtime"; then
+      ok "팀 ${EXPECT_TEAM_ID} + Hardened Runtime: $LABEL"
+    else
+      ng "팀 ID(${TEAM:-없음}) 또는 Hardened Runtime 불일치: $LABEL"
+    fi
+  done <<< "$NESTED_CODE"
+
+  # Gatekeeper 판정. 사용자 맥이 처음 열 때 내리는 판정과 같다.
+  APP_ASSESS=$(spctl --assess --type execute -vv "$APP_PATH" 2>&1)
+  echo "$APP_ASSESS" | grep -q ": accepted" && echo "$APP_ASSESS" | grep -q "source=Notarized Developer ID" \
+    && ok "앱 Gatekeeper 판정: 허용 (Notarized Developer ID)" \
+    || ng "앱 Gatekeeper 판정 실패: $(echo "$APP_ASSESS" | tr '\n' ' ')"
+fi
+
+DMG_ASSESS=$(spctl --assess --type open --context context:primary-signature -vv "$DMG_PATH" 2>&1)
+echo "$DMG_ASSESS" | grep -q ": accepted" && echo "$DMG_ASSESS" | grep -q "source=Notarized Developer ID" \
+  && ok "dmg Gatekeeper 판정: 허용 (Notarized Developer ID)" \
+  || ng "dmg Gatekeeper 판정 실패: $(echo "$DMG_ASSESS" | tr '\n' ' ')"
+
+xcrun stapler validate "$DMG_PATH" >/dev/null 2>&1 \
+  && ok "dmg 공증 티켓 부착됨" \
+  || ng "dmg 공증 티켓 없음 (xcrun stapler staple 누락)"
+
 # ── 결과 ─────────────────────────────────────────────────
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
-  echo "✓ dmg 설치 창 설정 검증 통과"
+  echo "✓ dmg 설치 창 설정·서명 검증 통과"
   exit 0
 fi
-echo "✗ dmg 설치 창 설정 검증 실패 — 어긋난 항목 ${FAILURES}개" >&2
+echo "✗ dmg 설치 창 설정·서명 검증 실패 — 어긋난 항목 ${FAILURES}개" >&2
 exit 1

@@ -38,13 +38,13 @@ struct TutorialStep: View {
             // 2 카드 — 방식 1 (메뉴바 아이콘 클릭) + 방식 2 (⇧⌘C SPM 단축키)
             VStack(spacing: DesignTokens.Spacing.onboardingCardGap) {
                 tutorialCard(
-                    icon:  Image("MenuBarIcon"),
+                    showsLogo: true,
                     keys:  L10n("onboarding.tutorial.method1.keys"),
                     title: L10n("onboarding.tutorial.method1.title"),
                     desc:  L10n("onboarding.tutorial.method1.detail")
                 )
                 tutorialCard(
-                    icon:  nil,
+                    showsLogo: false,
                     keys:  L10n("onboarding.tutorial.method2.keys"),
                     title: L10n("onboarding.tutorial.method2.title"),
                     desc:  L10n("onboarding.tutorial.method2.detail")
@@ -60,9 +60,9 @@ struct TutorialStep: View {
         .padding(.top, 24)
     }
 
-    private func tutorialCard(icon: Image?, keys: String, title: String, desc: String) -> some View {
+    private func tutorialCard(showsLogo: Bool, keys: String, title: String, desc: String) -> some View {
         HStack(alignment: .center, spacing: DesignTokens.Spacing.onboardingCardInnerGap) {
-            keycap(icon: icon, keys: keys)
+            keycap(showsLogo: showsLogo, keys: keys)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -90,15 +90,12 @@ struct TutorialStep: View {
     }
 
     @ViewBuilder
-    private func keycap(icon: Image?, keys: String) -> some View {
-        if let icon = icon {
+    private func keycap(showsLogo: Bool, keys: String) -> some View {
+        if showsLogo {
             // 메뉴바 아이콘 + 라벨 세로 배치 (방식 1)
             VStack(spacing: 2) {
-                icon
-                    .resizable()
-                    .renderingMode(.template)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 18, height: 18)
+                // TASK-105 — 땅콩 24×12. 투명 여백을 배치에서 빼 64×36 키캡 안에 로고·라벨이 잘림 없이 들어간다 (위아래 여백 5).
+                StashLogoMark(width: 24)
                     .foregroundStyle(DesignTokens.Colors.labelPrimary)
                 Text(keys)
                     .font(.system(size: 9.5, weight: .semibold))
