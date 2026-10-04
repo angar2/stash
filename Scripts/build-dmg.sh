@@ -1,5 +1,5 @@
 #!/bin/bash
-# stash .dmg 배포 산출물 빌드 스크립트 — Release 빌드 → .app 추출 → .dmg 패키징
+# stash .dmg 배포 산출물 빌드 스크립트 — Release 빌드 → .app 추출(Developer ID 서명) → .dmg 패키징 → 공증 → 티켓 부착
 
 # 한 줄이라도 실패하면 즉시 중단 (-e) / 미정의 변수 사용 차단 (-u) / 파이프 중간 실패 전파 (-o pipefail)
 # 안 박으면 중간 명령 실패해도 다음 명령이 계속 실행돼 *반쪽짜리 dmg* 가 나옴
@@ -23,6 +23,26 @@ BUILD_NUMBER=$(git rev-list --count HEAD)
 APP_NAME="Stash"
 SCHEME="Stash"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
+
+# Developer ID 서명·공증 자격 (TASK-108)
+#   인증서와 공증 자격은 이 맥의 로그인 키체인에 있다. 암호는 스크립트·리포에 두지 않는다.
+#   SIGN_IDENTITY = dmg 서명에 쓰는 인증서 이름 (앱 서명은 project.yml Release 구성 + ExportOptions.plist 가 맡는다)
+#   NOTARY_PROFILE = xcrun notarytool store-credentials 로 저장해 둔 키체인 프로필 이름
+TEAM_ID="L7J8SQ9T5F"
+SIGN_IDENTITY="Developer ID Application: Kwanyong Eom (${TEAM_ID})"
+NOTARY_PROFILE="stash-notary"
+
+# 아카이브(수 분)를 돌리기 전에 서명·공증 자격부터 확인한다. 없으면 끝까지 가서야 실패한다.
+if ! security find-identity -v -p codesigning | grep -qF "\"${SIGN_IDENTITY}\""; then
+  echo "✗ 서명 인증서가 키체인에 없습니다: ${SIGN_IDENTITY}" >&2
+  echo "  키체인 접근에서 Developer ID Application 인증서(.p12)를 로그인 키체인으로 가져온 뒤 다시 실행하세요." >&2
+  exit 1
+fi
+if ! xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+  echo "✗ 공증 프로필을 쓸 수 없습니다: ${NOTARY_PROFILE}" >&2
+  echo "  xcrun notarytool store-credentials \"${NOTARY_PROFILE}\" 로 다시 저장한 뒤 다시 실행하세요." >&2
+  exit 1
+fi
 
 # 같은 이름의 볼륨이 이미 마운트돼 있으면 Finder 가 창 설정(.DS_Store)을 *조용히* 기록하지 않는다(실측).
 # 새 이미지는 /Volumes/Stash 2 같은 다른 경로에 붙지만, Finder 는 이름으로 볼륨을 식별해 먼저 붙어 있는
@@ -59,7 +79,8 @@ xcodebuild \
 # exportArchive = .xcarchive 안 .app 번들을 export 폴더로 꺼냄
 # .xcarchive 자체는 디버그 심볼·메타데이터까지 포함한 *번들* 이라 dmg 안에는 .app 만 들어가야 함
 #   -exportOptionsPlist = export 방법 설정 (루트의 ExportOptions.plist 인용)
-#     → 이 plist 안 method=mac-application 박혀 있어 사인 없는 단순 추출
+#     → method=developer-id. 앱과 내장 Sparkle 도구(실행 파일·XPC 서비스·Updater.app)를 모두
+#       Developer ID 인증서 + Hardened Runtime + 보안 타임스탬프로 다시 서명한다. 공증의 전제 조건이다.
 xcodebuild \
   -exportArchive \
   -archivePath "build/${APP_NAME}.xcarchive" \
@@ -214,8 +235,48 @@ hdiutil convert "$TEMP_DMG" \
 # 임시 작업 폴더 정리 — 최종 산출물만 남김
 rm -rf "$WORK_DIR"
 
-# ── 5. 산출물 검증 게이트 ─────────────────────────────────
-# 창 설정이 실제로 산출물에 담겼는지 대조. 어긋나면 여기서 빌드가 실패한다.
+# ── 5. dmg 서명 → 공증 → 티켓 부착 (TASK-108) ─────────────
+# 5-1. dmg 자체 서명. 앱은 3단계에서 서명됐고, 여기서는 그것을 감싼 디스크 이미지에 서명한다.
+#   서명이 없는 dmg 는 Gatekeeper 판정에서 출처를 확인할 수 없다.
+codesign --sign "$SIGN_IDENTITY" --timestamp "build/${DMG_NAME}"
+
+# 5-2. Apple 공증 제출. dmg 하나만 제출하면 안쪽 앱의 해시까지 함께 등록된다.
+#   --wait 는 결과가 나올 때까지 기다린다(보통 수 분). 결과 판정은 종료 코드가 아니라 상태 값으로 한다.
+#   Invalid(검사 불합격)여도 제출 자체는 성공이라 종료 코드만 보면 놓칠 수 있다.
+echo "공증 제출 중, 결과가 나올 때까지 수 분 걸립니다"
+NOTARY_JSON=$(xcrun notarytool submit "build/${DMG_NAME}" \
+  --keychain-profile "$NOTARY_PROFILE" \
+  --wait --timeout 30m \
+  --output-format json) || true
+NOTARY_STATUS=$(echo "$NOTARY_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+NOTARY_ID=$(echo "$NOTARY_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))' 2>/dev/null || true)
+# 시간 초과는 실패가 아니다. Apple 은 제출본 검사를 계속하므로 dmg 를 다시 만들지 말고 결과를 기다려 이어 간다.
+#   새 개발자 계정의 첫 제출은 1시간 가까이 걸린 적이 있다(TASK-108 실측, 2026-10-04). 이후 제출은 보통 수 분이다.
+if [ -z "$NOTARY_STATUS" ] && echo "$NOTARY_JSON" | grep -q "Timeout"; then
+  echo "✗ 공증 대기 시간 초과. Apple 은 검사를 계속하고 있습니다 (제출 ID: ${NOTARY_ID})" >&2
+  echo "  dmg 를 다시 빌드하지 말고, 아래로 결과를 확인해 Accepted 가 되면 이어서 실행하세요:" >&2
+  echo "    xcrun notarytool info ${NOTARY_ID} --keychain-profile ${NOTARY_PROFILE}" >&2
+  echo "    xcrun stapler staple build/${DMG_NAME} && Scripts/verify-dmg.sh build/${DMG_NAME}" >&2
+  exit 1
+fi
+if [ "$NOTARY_STATUS" != "Accepted" ]; then
+  echo "✗ 공증 실패 (상태: ${NOTARY_STATUS:-응답 없음})" >&2
+  echo "$NOTARY_JSON" >&2
+  # 불합격 사유(어느 파일이 왜 거부됐는지)는 제출 기록 로그에만 있다.
+  if [ -n "$NOTARY_ID" ]; then
+    xcrun notarytool log "$NOTARY_ID" --keychain-profile "$NOTARY_PROFILE" >&2 || true
+  fi
+  exit 1
+fi
+echo "✓ 공증 통과 (제출 ID: ${NOTARY_ID})"
+
+# 5-3. 공증 티켓을 dmg 에 부착한다(staple). 부착하지 않으면 사용자 맥이 처음 열 때
+#   Apple 서버에 티켓을 조회해야 하고, 오프라인이면 확인하지 못한다.
+#   부착은 dmg 파일 내용을 바꾸므로 Sparkle EdDSA 서명(release.sh)은 반드시 이 뒤에 만든다.
+xcrun stapler staple "build/${DMG_NAME}"
+
+# ── 6. 산출물 검증 게이트 ─────────────────────────────────
+# 창 설정과 서명·공증이 실제로 산출물에 담겼는지 대조. 어긋나면 여기서 빌드가 실패한다.
 Scripts/verify-dmg.sh "build/${DMG_NAME}"
 
 # ── 완료 ─────────────────────────────────────────────────
