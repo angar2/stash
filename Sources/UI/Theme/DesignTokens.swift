@@ -879,9 +879,9 @@ extension Color {
     }
 }
 
-// TASK-069 — AppIcon.appiconset 은 Asset Catalog *specialized slot* (Finder/Dock 용 .icns 박힘) 이라 SwiftUI `Image("AppIcon")` 으로 로드 X. NSWorkspace 로 *.app bundle 의 아이콘 추출* 후 SwiftUI 래핑. 4 곳 (WelcomeStep/AboutTab/ToastView/SearchBarView) 에서 호출.
+// TASK-069 — 앱 아이콘(TASK-106부터 Resources/AppIcon.icon)은 Finder/Dock 용 특수 슬롯으로 컴파일돼 SwiftUI `Image("AppIcon")` 으로 로드 X. NSWorkspace 로 *.app bundle 의 아이콘 추출* 후 SwiftUI 래핑. 4 곳 (WelcomeStep/AboutTab/ToastView/SearchBarView) 에서 호출.
 extension Image {
-    /// stash 앱 아이콘 — Finder/Dock 표시되는 AppIcon.appiconset PNG 와 동일 시각.
+    /// stash 앱 아이콘 — Finder/Dock 에 표시되는 아이콘과 동일 시각.
     static var stashAppIcon: Image {
         Image(nsImage: NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath))
     }
