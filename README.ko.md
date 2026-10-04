@@ -1,4 +1,4 @@
-<img src="Sources/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Stash icon" />
+<img src="docs/icons/app-icon.png" width="128" alt="Stash icon" />
 
 # Stash <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture>
 
@@ -12,7 +12,7 @@
 **Stash**는 텍스트·이미지·파일을 쟁여놓는 macOS 전용 클립보드 저장 앱입니다.  
 복사한 내용을 다람쥐 땅콩 쟁여두듯 잊지 않게 모아두고, 필요할 때 단축키 한 번으로 쏙 꺼내 쓸 수 있어요. 
 
-<img src="docs/screenshots/popover-ko.png" width="320" alt="Stash 보관함" />
+<img src="docs/screenshots/demo-ko.gif" width="720" alt="Stash 실제 동작 시연: 복사한 텍스트가 보관함에 쌓이고, 이미지 클립을 크게 본 뒤 클릭으로 붙여넣고, 단축키로 클립 여러 개를 골라 한 번에 붙여넣고, 검색으로 찾은 링크를 붙여넣고, 핀 목록에서 고정한 인사 문구를 골라 붙여넣는 화면" />
 
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> 이런 것들을 할 수 있어요
 
