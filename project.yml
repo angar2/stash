@@ -42,6 +42,16 @@ targets:
         ENABLE_PREVIEWS: "NO"
         # build 번호 디버그 빌드 기본값 — 릴리스(build-dmg.sh)는 git 커밋 수로 오버라이드 (TASK-096)
         CURRENT_PROJECT_VERSION: "1"
+      # 배포 빌드만 Developer ID 서명 + Hardened Runtime (TASK-108). 공증의 전제 조건이다.
+      # 서명 요건이 번들 ID + 팀 ID 로 고정되어 업데이트 뒤에도 손쉬운 사용 권한이 유지된다.
+      # Debug 는 기존 로컬 서명 그대로 둔다 (코드 테스트·개발 빌드에 인증서 불필요).
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          DEVELOPMENT_TEAM: L7J8SQ9T5F
+          ENABLE_HARDENED_RUNTIME: "YES"
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
     dependencies:
       - package: KeyboardShortcuts
         product: KeyboardShortcuts
