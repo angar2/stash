@@ -1,4 +1,4 @@
-<img src="Sources/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Stash icon" />
+<img src="docs/icons/app-icon.png" width="128" alt="Stash icon" />
 
 # Stash <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture>
 
@@ -10,9 +10,9 @@
 ## ☻ Hello!
 
 **Stash** is a macOS clipboard app that tucks away your text, images, and files.  
-Like a squirrel hoarding acorns, it keeps everything you copy so you never lose it — pop it right back out anytime with a single shortcut.
+Like a squirrel hoarding peanuts, it keeps everything you copy so you never lose it — pop it right back out anytime with a single shortcut.
 
-<img src="docs/screenshots/popover-en.png" width="320" alt="Stash popover" />
+<img src="docs/screenshots/demo-en.gif" width="720" alt="Stash in action: copied text stacks up in the clipboard history, an image clip is previewed and pasted with one click, several clips are selected with a shortcut and pasted together, a link is found by search and pasted, and a pinned reply is pasted from the pin list" />
 
 
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> Here's what you can do
@@ -58,7 +58,7 @@ Once installed, Stash lets you know on its own. When a new version is out, a not
 
 ### <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> How do I use it?
 
-Once you launch the app, the Stash acorn icon ( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> ) shows up in your menu bar. Click it or hit your shortcut to open the stash.
+Once you launch the app, the Stash peanut icon ( <picture><source media="(prefers-color-scheme: dark)" srcset="docs/icons/menubar-dark.png"><img src="docs/icons/menubar-light.png" width="22" alt="Stash Menubar icon" style="vertical-align: middle;" /></picture> ) shows up in your menu bar. Click it or hit your shortcut to open the stash.
 
 First, just copy things like you normally would.
 
