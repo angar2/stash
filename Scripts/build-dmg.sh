@@ -92,10 +92,29 @@ hdiutil create \
 # 4-2. 설치 창 구성 재료 준비 (배경 이미지 + 볼륨 아이콘)
 swift Scripts/make-dmg-background.swift "${WORK_DIR}/background"
 
-#   볼륨 아이콘 = 앱 아이콘. 에셋 카탈로그의 파일명이 이미 .iconset 규격(icon_16x16.png ...)이라 복사만 하면 된다.
+#   볼륨 아이콘 = 앱 아이콘. 원본은 Icon Composer 파일(AppIcon.icon) 하나이고 크기별 PNG 는 저장소에 두지 않는다 (TASK-106).
+#   Xcode 에 함께 들어 있는 ictool 로 기본(라이트) 모습을 크기별로 렌더해 .iconset 을 만든다.
+#   ictool 렌더는 둥근 사각형이 캔버스를 꽉 채운다. macOS 아이콘 규격(1024 캔버스에 824 본체)대로
+#   본체를 줄여 렌더한 뒤 투명 여백을 둘러야 Finder 에서 다른 아이콘과 같은 크기로 보인다.
+#   본체 크기는 여백이 좌우 같게 짝수 차이로 맞춘다.
+ICTOOL="$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool"
+if [ ! -x "$ICTOOL" ]; then
+  echo "✗ ictool 을 찾지 못했습니다 — Xcode 26 이상이 필요합니다: $ICTOOL" >&2
+  exit 1
+fi
 ICONSET_DIR="${WORK_DIR}/${APP_NAME}.iconset"
 mkdir -p "$ICONSET_DIR"
-cp Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon_*.png "$ICONSET_DIR/"
+for BASE in 16 32 128 256 512; do
+  for SCALE in 1 2; do
+    PX=$((BASE * SCALE))
+    BODY=$(( (PX * 824 / 1024 + 1) / 2 * 2 ))
+    NAME="icon_${BASE}x${BASE}"
+    [ "$SCALE" = 2 ] && NAME="${NAME}@2x"
+    "$ICTOOL" Sources/Resources/AppIcon.icon --export-image --output-file "${ICONSET_DIR}/${NAME}.png" \
+      --platform macOS --rendition Default --width "$BODY" --height "$BODY" --scale 1 >/dev/null
+    sips -p "$PX" "$PX" "${ICONSET_DIR}/${NAME}.png" >/dev/null
+  done
+done
 iconutil -c icns "$ICONSET_DIR" -o "${WORK_DIR}/VolumeIcon.icns"
 
 # 4-3. 임시 .dmg 마운트 → 구성 파일 배치
