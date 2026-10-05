@@ -18,6 +18,22 @@
     <description>Stash 업데이트</description>
     <language>ko</language>
     <item>
+      <title>1.4.1</title>
+      <pubDate>Mon, 05 Oct 2026 22:50:43 +0900</pubDate>
+      <sparkle:version>365</sparkle:version>
+      <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown" xml:lang="en"><![CDATA[# Bug Fixes
+
+Fixed an issue where clicking *Check for Updates* in Settings did nothing when a new version was available.]]></description>
+      <description sparkle:format="markdown" xml:lang="ko"><![CDATA[# 버그 수정
+
+새 버전이 있을 때 설정의 *업데이트 확인*을 눌러도 아무 반응이 없던 문제를 고쳤습니다.]]></description>
+      <enclosure url="https://github.com/angar2/stash/releases/download/v1.4.1/Stash-1.4.1.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="bDRvhNt7Qrqtz3bLyHq2QNdemQ+E5A7/mwBKQsOZzCZxYbFguHBeUpLTyU/H7H3xg+12orF+3nWU236yMH/FDw==" length="6965466" />
+    </item>
+    <item>
       <title>1.4.0</title>
       <pubDate>Mon, 05 Oct 2026 00:33:13 +0900</pubDate>
       <sparkle:version>359</sparkle:version>
