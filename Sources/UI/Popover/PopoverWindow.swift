@@ -11,8 +11,11 @@ final class PopoverWindow: NSObject {
     private let viewModel: ClipsViewModel
     /// TASK-054 fix-1 — `windowWillResize` 안에서 `setClipsPerPage` 직접 호출 위해 약 reference. Composition Root 가 inject.
     private weak var settingsViewModel: SettingsViewModel?
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. 헤더 배너 표시 + resize 시 높이 cap 계산에 쓰인다. Composition Root 가 inject.
+    /// TASK-112 — App Store판에는 업데이트 창구가 없어 이 참조도 빌드에서 빠진다. 주입은 `setUpdateService` 로 한다.
     private weak var updateService: UpdateService?
+    #endif
     private let onOpenSettings: @MainActor () -> Void
 
     /// 현재 표시 중인 mode. nil = hidden. mode 전환 시 hide → showInternal에서 갱신.
@@ -266,12 +269,10 @@ final class PopoverWindow: NSObject {
     init(
         viewModel: ClipsViewModel,
         settingsViewModel: SettingsViewModel? = nil,
-        updateService: UpdateService? = nil,
         onOpenSettings: @MainActor @escaping () -> Void
     ) {
         self.viewModel = viewModel
         self.settingsViewModel = settingsViewModel
-        self.updateService = updateService
         self.onOpenSettings = onOpenSettings
         // TASK-054 fix-1 — popover width 영속. UserDefaults 저장값 우선 + cap clamp + default fallback.
         let savedWidth = (UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.popoverWidth) as? Double)
@@ -953,19 +954,37 @@ final class PopoverWindow: NSObject {
         )
     }
 
+    #if !APP_STORE
+    /// TASK-102 — Composition Root 가 업데이트 창구를 주입한다 (TASK-112 — 생성 인자에서 옮김. 인자 목록은 조건부로 뺄 수 없다).
+    func setUpdateService(_ service: UpdateService) {
+        self.updateService = service
+    }
+    #endif
+
+    /// 업데이트 배너가 떠 있는가 — resize 시 높이 cap 계산에 쓴다. App Store판은 배너가 없어 늘 false 다.
+    private var updateBannerVisible: Bool {
+        #if APP_STORE
+        false
+        #else
+        updateService?.pendingUpdateVersion != nil
+        #endif
+    }
+
     private func rebuildHosting(mode: PopoverInvocationMode) {
         // TASK-071 — anchorOffsetX 인자 제거 (방식 1·2 통일 정합). HistoryPopover.anchorOffsetX 는 arrow tail 시각 단서용이었으나 미호출 dead. default nil 자연 정합.
-        let view = HistoryPopover(
+        var view = HistoryPopover(
             viewModel: viewModel,
             mode: mode,
             onOpenSettings: onOpenSettings,
             onDismiss: { [weak self] in self?.hide(force: true) },
             handleClipPaste: { [weak self] idx, zone in
                 await self?.handleClipPaste(at: idx, zone: zone)
-            },
-            // TASK-102 — 헤더 업데이트 배너 + 클립 목록 높이 cap.
-            updateService: updateService
+            }
         )
+        #if !APP_STORE
+        // TASK-102 — 헤더 업데이트 배너 + 클립 목록 높이 cap.
+        view.updateService = updateService
+        #endif
         // TASK-037 fix-9 — hosting 보관 (fittingSize 측정용).
         self.currentHosting = PopoverPanel.mount(view, in: visualEffectView)
     }
@@ -1022,7 +1041,7 @@ extension PopoverWindow: NSWindowDelegate {
             let capRowsForCap = ClipsViewModel.cappedRowsForCurrentScreen(
                 hasPinned: hasPinnedForCap,
                 hintBarVisible: hintBarVisibleForCap,
-                updateBannerVisible: updateService?.pendingUpdateVersion != nil
+                updateBannerVisible: updateBannerVisible
             )
             cap = ClipsViewModel.computeAutoFitCap(
                 measured: m,
@@ -1068,7 +1087,7 @@ extension PopoverWindow: NSWindowDelegate {
         let capRows = ClipsViewModel.cappedRowsForCurrentScreen(
             hasPinned: hasPinned,
             hintBarVisible: hintBarVisible,
-            updateBannerVisible: updateService?.pendingUpdateVersion != nil
+            updateBannerVisible: updateBannerVisible
         )
         let newRaw = ClipsViewModel.resolveNewClipsPerPageForResize(current: current, signDelta: signDelta, capRows: capRows)
         if newRaw != current {

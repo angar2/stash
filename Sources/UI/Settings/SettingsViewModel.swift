@@ -16,9 +16,11 @@ final class SettingsViewModel {
     var shortcutConflictMessage: String?
     /// PermissionService.statusPublisher 구독으로 Composition Root 가 갱신.
     var accessibilityGranted: Bool = false
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. Composition Root 가 주입한다.
-    /// 관찰 대상이어야 확인 상태(*확인 중…* / *최신 버전입니다*)가 정보 탭에 즉시 반영된다.
+    /// 관찰 대상이어야 확인 상태(*확인 중…* / *최신 버전입니다*)가 정보 탭에 즉시 반영된다. App Store판에는 없다 (TASK-112).
     private(set) var updateService: UpdateService?
+    #endif
 
     // MARK: - Display tab (TASK-037)
     /// 한 페이지에 보여줄 클립 개수. 1~30 clamp. default 6.
@@ -419,6 +421,8 @@ final class SettingsViewModel {
     }
 
     // MARK: - 자동 업데이트 (TASK-102)
+    // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 절 전체가 빌드에서 빠진다.
+    #if !APP_STORE
 
     /// Composition Root 가 주입. `nil` 이면 설정 화면의 업데이트 항목이 표시되지 않는다 (테스트 경로).
     func setUpdateService(_ service: UpdateService) {
@@ -447,4 +451,5 @@ final class SettingsViewModel {
 
     /// 업데이트 항목 표시 여부 — 창구가 주입되지 않은 경로(테스트·프리뷰)에서는 그리지 않는다.
     var updateAvailable: Bool { updateService != nil }
+    #endif
 }

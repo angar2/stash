@@ -5,6 +5,8 @@
 //
 // **배너 전체가 눌린다** — 작은 버튼을 정확히 겨냥하게 만들지 않는다. 닫기(`×`)만 따로 눌린다.
 // 대기 중인 버전이 없으면 호출처가 아예 그리지 않고, 그만큼 popover 높이가 자동으로 줄어든다.
+// TASK-112 — App Store판에는 배너가 없다. 파일 전체가 빌드에서 빠진다.
+#if !APP_STORE
 import SwiftUI
 
 struct UpdateBannerView: View {
@@ -98,3 +100,4 @@ struct UpdateBannerView: View {
             .accessibilityIdentifier("popover.updateBanner.close")
     }
 }
+#endif

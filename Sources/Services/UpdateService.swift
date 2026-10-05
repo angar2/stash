@@ -1,4 +1,6 @@
 // 자동 업데이트 창구 — Sparkle 업데이터를 단독 보유하고 UI 는 이 창구만 사용한다 (TASK-102 / TECH-STACK §3-6)
+// TASK-112 — App Store판은 업데이트를 App Store 가 맡으므로 이 파일 전체가 빌드에서 빠진다 (가이드라인 2.4.5(vii)).
+#if !APP_STORE
 import Foundation
 import Observation
 import OSLog
@@ -314,3 +316,4 @@ private final class UpdateDriverDelegate: NSObject, SPUStandardUserDriverDelegat
     // 갖기 전에 배너를 지워버린다(검수 2026-08-02). 배너 해제는 실제 선택을 아는
     // `updater:userDidMakeChoice:forUpdate:state:` 에서만 판단한다.
 }
+#endif

@@ -38,9 +38,12 @@ struct AboutTab: View {
             VStack(spacing: 8) {
                 // TASK-102 — 나머지 두 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
                 // 결과는 같은 자리 우측 문구로 알린다 — 결과 하나 보자고 창을 띄우지 않는다 (UX-UI *자동 업데이트*).
+                // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 항목이 빌드에서 빠진다.
+                #if !APP_STORE
                 if viewModel.updateAvailable {
                     updateCheckButton
                 }
+                #endif
                 aboutButton(label: L10n("about.github"), icon: "link", action: viewModel.openGitHubRepo)
                 aboutButton(label: L10n("about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
             }
@@ -68,6 +71,7 @@ struct AboutTab: View {
         .frame(maxWidth: .infinity)
     }
 
+    #if !APP_STORE
     /// TASK-102 — *업데이트 확인*. 다른 항목과 같은 형태를 쓰되, 우측에 확인 상태 문구가 붙는다.
     /// 확인 중에는 항목을 비활성으로 두어 연타를 막는다.
     private var updateCheckButton: some View {
@@ -119,6 +123,7 @@ struct AboutTab: View {
             return nil
         }
     }
+    #endif
 
     private func aboutButton(label: String, icon: String, action: @escaping () -> Void) -> some View {
         // TASK-065 — hover fill 컴포넌트 (HoverFillCardButton) 정합.
