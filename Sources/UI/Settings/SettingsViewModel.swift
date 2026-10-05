@@ -48,6 +48,8 @@ final class SettingsViewModel {
     private var lastValidPopoverShortcuts: [PopoverShortcutID: PopoverShortcut] = [:]
     /// TASK-033 — revert 호출 재진입 가드.
     private var isRevertingShortcut: Bool = false
+    /// TASK-111 — 오픈소스 라이선스 창. 화면 상태가 아니므로 관찰 대상에서 뺀다.
+    @ObservationIgnored private var licensesWindowController: LicensesWindowController?
 
     init(loginItemService: LoginItemService, repository: (any ClipRepository)? = nil) {
         self.loginItemService = loginItemService
@@ -401,18 +403,19 @@ final class SettingsViewModel {
         NSWorkspace.shared.open(AppDataPath.dataFolder())
     }
 
-    // MARK: - GitHub / Releases
+    // MARK: - GitHub / Licenses
     func openGitHubRepo() {
         if let url = URL(string: "https://github.com/angar2/stash") {
             NSWorkspace.shared.open(url)
         }
     }
 
-    /// TASK-033 — 정보 탭 *릴리즈 노트* 버튼 액션. GitHub releases 페이지 열기.
-    func openReleaseNotes() {
-        if let url = URL(string: "https://github.com/angar2/stash/releases") {
-            NSWorkspace.shared.open(url)
+    /// TASK-111 — 정보 탭 *오픈소스 라이선스* 링크 액션. 창은 처음 열 때 만든다.
+    func openLicenses() {
+        if licensesWindowController == nil {
+            licensesWindowController = LicensesWindowController()
         }
+        licensesWindowController?.show()
     }
 
     // MARK: - 자동 업데이트 (TASK-102)

@@ -35,32 +35,35 @@ struct AboutTab: View {
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .accessibilityIdentifier("about.version")
 
-            Text(L10n("about.description"))
-                .font(.system(size: 11.5, weight: .regular))
-                .foregroundStyle(DesignTokens.Colors.labelSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
-                .lineSpacing(2)
-                .padding(.top, 4)
-
             VStack(spacing: 8) {
-                // TASK-102 — 나머지 세 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
+                // TASK-102 — 나머지 두 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
                 // 결과는 같은 자리 우측 문구로 알린다 — 결과 하나 보자고 창을 띄우지 않는다 (UX-UI *자동 업데이트*).
                 if viewModel.updateAvailable {
                     updateCheckButton
                 }
                 aboutButton(label: L10n("about.github"), icon: "link", action: viewModel.openGitHubRepo)
                 aboutButton(label: L10n("about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
-                aboutButton(label: L10n("about.releaseNotes"), icon: "doc.text", action: viewModel.openReleaseNotes)
             }
             .padding(.top, 4)
             .frame(maxWidth: 320)
 
-            Text(L10n("about.copyright"))
-                .font(.system(size: 10.5, weight: .regular))
-                .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
-                .padding(.top, 12)
-                .padding(.bottom, 18)
+            VStack(spacing: 4) {
+                Text(L10n("about.copyright"))
+                    .font(.system(size: 10.5, weight: .regular))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
+
+                // TASK-111 — 포함된 오픈소스 라이브러리의 저작권·라이선스 고지. 버튼 묶음과 구분되게 작은 링크로 둔다.
+                Button(action: viewModel.openLicenses) {
+                    Text(L10n("about.licenses.link"))
+                        .font(.system(size: 10.5, weight: .regular))
+                        .underline()
+                        .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("about.licenses")
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
         .frame(maxWidth: .infinity)
     }
