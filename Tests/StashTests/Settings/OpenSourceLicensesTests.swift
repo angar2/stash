@@ -11,6 +11,17 @@ struct OpenSourceLicensesTests {
         #expect(OpenSourceLicenses.all.map(\.name) == ["KeyboardShortcuts", "GRDB", "Sparkle"])
     }
 
+    /// TASK-112 — 코드 테스트는 dmg판(`Stash` 타깃)으로 빌드된다. 위 `all` 검증이 dmg판 목록을 보는 근거다.
+    @Test func testBuildIsDirectDistribution() {
+        #expect(AppDistribution.current == .direct)
+    }
+
+    /// TASK-112 — App Store판은 Sparkle 을 넣지 않으므로 라이선스 창에서도 뺀다. dmg판은 세 개 그대로다.
+    @Test func listMatchesDistribution() {
+        #expect(OpenSourceLicenses.list(for: .direct).map(\.name) == ["KeyboardShortcuts", "GRDB", "Sparkle"])
+        #expect(OpenSourceLicenses.list(for: .appStore).map(\.name) == ["KeyboardShortcuts", "GRDB"])
+    }
+
     @Test func everyEntryCarriesCopyrightAndMITPermission() {
         for license in OpenSourceLicenses.all {
             let flattened = license.text.split(whereSeparator: \.isWhitespace).joined(separator: " ")

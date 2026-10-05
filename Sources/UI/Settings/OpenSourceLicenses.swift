@@ -11,8 +11,16 @@ struct OpenSourceLicense: Identifiable, Equatable {
 }
 
 enum OpenSourceLicenses {
-    /// 앱 묶음에 포함되는 라이브러리. 표시 순서 그대로다.
-    static let all: [OpenSourceLicense] = [keyboardShortcuts, grdb, sparkle]
+    /// 지금 빌드된 판의 앱 묶음에 포함되는 라이브러리. 라이선스 창이 표시 순서 그대로 보여 준다.
+    static var all: [OpenSourceLicense] { list(for: .current) }
+
+    /// 판별 목록 (TASK-112). App Store판은 Sparkle 을 넣지 않으므로 고지 목록에서도 뺀다.
+    static func list(for distribution: AppDistribution) -> [OpenSourceLicense] {
+        switch distribution {
+        case .direct: [keyboardShortcuts, grdb, sparkle]
+        case .appStore: [keyboardShortcuts, grdb]
+        }
+    }
 
     static let keyboardShortcuts = OpenSourceLicense(
         name: "KeyboardShortcuts",
