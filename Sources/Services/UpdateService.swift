@@ -47,6 +47,10 @@ final class UpdateService {
     /// 사용자가 직접 누른 확인이 진행 중인지. 자동 확인 콜백이 결과 문구를 건드리지 않도록 가르는 표시.
     @ObservationIgnored private var manualCheckInFlight = false
 
+    /// 수동 확인이 새 버전을 찾아 확인 주기가 끝나면 표준 창을 열어야 하는지.
+    /// 발견 콜백 시점에는 조회 세션이 아직 열려 있어 `checkForUpdates` 가 거절된다(BL-35).
+    @ObservationIgnored private var presentWindowWhenCycleEnds = false
+
     /// 결과 문구가 화면에 남아 있는 시간.
     private static let outcomeDisplayDuration: Duration = .seconds(4)
 
@@ -136,12 +140,15 @@ final class UpdateService {
     // MARK: - delegate 콜백 수신
 
     /// 조회 결과 새 버전이 있음. 수동 확인이었다면 문구 대신 표준 창을 연다.
+    ///
+    /// 창은 여기서 열지 않고 확인 주기가 끝난 뒤(`didFinishCheckCycle`) 연다. 이 콜백은 조회 세션 안에서
+    /// 불려 `checkForUpdates` 가 `sessionInProgress == YES` 로 거절된다(BL-35, v1.3.1 실기 로그).
     fileprivate func didFindUpdate(version: String) {
         Logger.update.info("새 버전 발견 — \(version, privacy: .public)")
         guard manualCheckInFlight else { return }
         manualCheckInFlight = false
         manualCheckState = nil
-        presentUpdateWindow()
+        presentWindowWhenCycleEnds = true
     }
 
     /// 조회 결과 최신 상태.
@@ -153,9 +160,16 @@ final class UpdateService {
     }
 
     /// 확인 주기 종료. 최신/발견 어느 쪽으로도 귀결되지 않았다면 실패다.
+    ///
+    /// Sparkle 은 세션을 닫은 뒤(`sessionInProgress = NO`) 이 콜백을 부르므로 여기서는 새 세션을 열 수 있다.
     fileprivate func didFinishCheckCycle(error: Error?) {
         if let error {
             Logger.update.error("확인 실패 — \(error.localizedDescription, privacy: .public)")
+        }
+        if presentWindowWhenCycleEnds {
+            presentWindowWhenCycleEnds = false
+            presentUpdateWindow()
+            return
         }
         guard manualCheckInFlight else {
             // 자동 확인의 실패는 화면에 아무것도 표시하지 않는다 — 로그로만 남긴다.
