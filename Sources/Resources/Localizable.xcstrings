@@ -35,23 +35,6 @@
         }
       }
     },
-    "about.description": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS 클립보드 매니저"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS Clipboard Manager"
-          }
-        }
-      }
-    },
     "about.github": {
       "extractionState": "manual",
       "localizations": {
@@ -69,19 +52,36 @@
         }
       }
     },
-    "about.releaseNotes": {
+    "about.licenses.link": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "릴리스 노트 보기"
+            "value": "오픈소스 라이선스"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "View Release Notes"
+            "value": "Open Source Licenses"
+          }
+        }
+      }
+    },
+    "about.licenses.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오픈소스 라이선스"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source Licenses"
           }
         }
       }
