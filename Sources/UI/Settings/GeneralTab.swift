@@ -17,9 +17,12 @@ struct GeneralTab: View {
             settingsCard {
                 loginItemRow
                 // TASK-102 — 앱의 기동·유지 성격끼리 묶는다. 취향 설정(언어·연결자)은 아래에 남긴다 (UX-UI *자동 업데이트*).
+                // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 행이 빌드에서 빠진다.
+                #if !APP_STORE
                 if viewModel.updateAvailable {
                     autoUpdateRow
                 }
+                #endif
                 autoPasteRow
                 historyLimitRow
                 languageRow
@@ -46,6 +49,7 @@ struct GeneralTab: View {
         }
     }
 
+    #if !APP_STORE
     /// TASK-102 — 자동 확인 토글. 저장 버튼 없이 즉시 반영한다(다른 항목과 동일 관례).
     /// 끄면 자동 확인이 멈추므로 popover 배너도 뜨지 않는다. `정보` 탭 직접 확인은 그대로 동작한다.
     ///
@@ -66,6 +70,7 @@ struct GeneralTab: View {
             )
         }
     }
+    #endif
 
     private var autoPasteRow: some View {
         settingsRow(

@@ -24,8 +24,11 @@ struct StashApp: App {
     let hotkeyManager: HotkeyManager
     let hotkeyMonitor: HotkeyMonitor
     let pasteService: PasteService
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. 업데이터 보유 + 즉시 확인 / 자동 확인 토글 / 배너 대기 상태.
+    /// TASK-112 — App Store판은 업데이트를 App Store 가 맡아 창구 자체가 없다.
     let updateService: UpdateService
+    #endif
 
     // MARK: - UI ViewModels
     let clipsViewModel: ClipsViewModel
@@ -160,9 +163,11 @@ struct StashApp: App {
         self.pasteService = pasteSvc
 
         // ⑤-2 자동 업데이트 (TASK-102) — 생성 즉시 업데이터가 기동해 다음 runloop 부터 자동 확인 주기가 돈다.
-        // App lifetime 보관. UI(설정 항목 / popover 배너)는 이 창구만 사용한다.
+        // App lifetime 보관. UI(설정 항목 / popover 배너)는 이 창구만 사용한다. App Store판에는 없다 (TASK-112).
+        #if !APP_STORE
         let updateSvc = UpdateService()
         self.updateService = updateSvc
+        #endif
 
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
         let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, fileClipService: fcs, toastQueue: toastQ)
@@ -172,7 +177,9 @@ struct StashApp: App {
         // TASK-100 — 보관 한도 판정에 쓸 *핀 제외 개수* 조회 경로로 리포지토리 주입.
         let settingsVM = SettingsViewModel(loginItemService: self.loginItemService, repository: grdbRepo)
         // TASK-102 — 설정 두 탭(업데이트 확인 / 자동 확인 토글)이 쓸 창구 주입.
+        #if !APP_STORE
         settingsVM.setUpdateService(updateSvc)
+        #endif
         self.settingsViewModel = settingsVM
         let onboardingVM = OnboardingViewModel(permissionService: permSvc)
         self.onboardingViewModel = onboardingVM
@@ -193,9 +200,11 @@ struct StashApp: App {
         let popover = PopoverWindow(
             viewModel: clipsVM,
             settingsViewModel: settingsVM,  // TASK-054 fix-1 — windowWillResize 안에서 setClipsPerPage 직접 호출.
-            updateService: updateSvc,       // TASK-102 — 헤더 업데이트 배너 + 높이 cap.
             onOpenSettings: { [prefsController] in prefsController.show() }
         )
+        #if !APP_STORE
+        popover.setUpdateService(updateSvc)  // TASK-102 — 헤더 업데이트 배너 + 높이 cap.
+        #endif
         self.popoverWindow = popover
         self.statusItemController = StatusItemController(popoverWindow: popover)
 

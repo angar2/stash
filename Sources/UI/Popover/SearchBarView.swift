@@ -5,9 +5,11 @@ struct PopoverHeaderView: View {
     @Bindable var viewModel: ClipsViewModel
     /// 방식 2 — popover form은 동일 노출, 검색 입력 + 전체 삭제 클릭 모두 차단 (TASK-018).
     let mode: PopoverInvocationMode
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. 대기 중인 새 버전이 있으면 로고 행 아래에 배너를 그린다.
-    /// `nil` 이면 배너 영역 자체가 없다 (테스트·프리뷰 경로).
+    /// `nil` 이면 배너 영역 자체가 없다 (테스트·프리뷰 경로). TASK-112 — App Store판에는 없다.
     var updateService: UpdateService?
+    #endif
     @State private var deleteAllHovered: Bool = false
     /// TASK-053 — 콘텐츠 색상 모드 변경 시 검색 박스 포커스 보더/ring 즉시 갱신.
     @AppStorage(AccentColorMode.userDefaultsKey) private var accentColorModeRaw: String = AccentColorMode.default.rawValue
@@ -28,11 +30,14 @@ struct PopoverHeaderView: View {
             wordmarkRow
             // TASK-102 — 업데이트 배너. 로고 행은 앱의 이름표라 그 위에 무엇도 얹지 않는다.
             // 대기 중인 버전이 없으면 아예 그리지 않아 popover 높이가 원래대로 돌아간다.
+            #if !APP_STORE
             updateBanner
+            #endif
             searchContainer
         }
     }
 
+    #if !APP_STORE
     /// 대기 중인 새 버전이 있을 때만 그린다 (UX-UI *자동 업데이트* §알림 방식).
     @ViewBuilder
     private var updateBanner: some View {
@@ -46,6 +51,7 @@ struct PopoverHeaderView: View {
             .padding(.horizontal, DesignTokens.Spacing.rowOuterHorzInset)
         }
     }
+    #endif
 
     // 워드마크 행 — popover.jsx L317-326 (padding 8 12 2)
     // 우측 trailing에 '전체 삭제' 버튼 위치 (지크 요구 — 검색부 내부에서 워드마크 우측으로 이동).

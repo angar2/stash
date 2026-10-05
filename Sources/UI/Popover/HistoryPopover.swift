@@ -20,11 +20,20 @@ struct HistoryPopover: View {
     /// TASK-028 — 본체 행 paste 호출 시 `zone: .clip` 명시 전달. hide() 흐름의 focusZone 리셋 영향 차단.
     let handleClipPaste: @MainActor (Int, FocusZone) async -> Void
     let anchorOffsetX: CGFloat?  // 방식 1 arrow tail 위치 (popover 좌표계 안 button center x)
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. 헤더 배너 표시 + 클립 목록 높이 cap 계산에 쓰인다.
+    /// TASK-112 — App Store판에는 없다. 생성 뒤 `PopoverWindow` 가 넣는다 (인자 목록은 조건부로 뺄 수 없다).
     var updateService: UpdateService?
+    #endif
 
-    /// 업데이트 배너가 떠 있는가 — 높이 계산과 헤더 표시가 같은 값을 본다.
-    private var updateBannerVisible: Bool { updateService?.pendingUpdateVersion != nil }
+    /// 업데이트 배너가 떠 있는가 — 높이 계산과 헤더 표시가 같은 값을 본다. App Store판은 늘 false 다.
+    private var updateBannerVisible: Bool {
+        #if APP_STORE
+        false
+        #else
+        updateService?.pendingUpdateVersion != nil
+        #endif
+    }
 
     private var hasPinned: Bool { !viewModel.pinnedClips.isEmpty }
     // TASK-019 fix 6차 — `filter { !$0.isPinned }` 제거. 핀 항목도 본체 일반 히스토리에 *시간순 자연 노출* (FEATURES F-002 / §3-4 정합).
@@ -39,8 +48,7 @@ struct HistoryPopover: View {
         onOpenSettings: @escaping () -> Void,
         onDismiss: @escaping () -> Void,
         handleClipPaste: @escaping @MainActor (Int, FocusZone) async -> Void,
-        anchorOffsetX: CGFloat? = nil,
-        updateService: UpdateService? = nil
+        anchorOffsetX: CGFloat? = nil
     ) {
         self.viewModel = viewModel
         self.mode = mode
@@ -48,7 +56,6 @@ struct HistoryPopover: View {
         self.onDismiss = onDismiss
         self.handleClipPaste = handleClipPaste
         self.anchorOffsetX = anchorOffsetX
-        self.updateService = updateService
     }
 
     // TASK-053 — 콘텐츠 색상 모드 변경 시 popover body 재평가 트리거. 자식 view (ClipRowView / SearchBarView 등) 도 각자 @AppStorage 박아 자체 추적.
@@ -66,7 +73,11 @@ struct HistoryPopover: View {
     private var popoverBody: some View {
         VStack(spacing: 0) {
             // 1·2·3 동일 form — 방식 2도 검색바·환경설정 노출 (입력 비활성, TASK-018).
+            #if APP_STORE
+            PopoverHeaderView(viewModel: viewModel, mode: mode)
+            #else
             PopoverHeaderView(viewModel: viewModel, mode: mode, updateService: updateService)
+            #endif
             // TASK-099 — 다중 선택 프리뷰 바. 선택이 없으면 아예 그리지 않아 popover 높이가 원래대로 돌아간다.
             // 연결자는 `@AppStorage` 로 추적해야 설정 변경이 *즉시* 반영된다 (ViewModel 안 UserDefaults 직접 조회는 SwiftUI 가 추적 못 함).
             if let preview = MultiPasteComposer.preview(
