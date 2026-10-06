@@ -9,6 +9,15 @@ struct PermissionStep: View {
 
     private var granted: Bool { viewModel.permissionGrantedSnapshot }
 
+    /// 재실행 안내 줄 표시 여부 — App Store판에서 권한 대기 중일 때만.
+    private var relaunchHintVisible: Bool {
+        #if APP_STORE
+        return !granted
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         let _ = appLanguageRaw      // TASK-073 — 언어 변경 시 body 재평가
         return VStack(spacing: 0) {
@@ -27,7 +36,19 @@ struct PermissionStep: View {
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
-                .padding(.bottom, 24)
+                .padding(.bottom, relaunchHintVisible ? 8 : 24)
+
+            #if APP_STORE
+            // TASK-113 — 샌드박스판 폴백 안내. 권한 값이 실행 중 갱신되지 않는 환경에서는 재실행해야 허용으로 읽힌다.
+            if relaunchHintVisible {
+                Text(L10n("onboarding.permission.relaunchHint"))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 380)
+                    .padding(.bottom, 20)
+            }
+            #endif
 
             if !granted {
                 VStack(spacing: 10) {
