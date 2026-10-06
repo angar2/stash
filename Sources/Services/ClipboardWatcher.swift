@@ -147,7 +147,8 @@ actor ClipboardWatcher {
                 return Clip(
                     id: id, type: clipType, body: nil,
                     filePath: stored.filePath.path, isFileExternal: stored.isFileExternal,
-                    fileOriginalPath: url.path, fileBookmark: nil,
+                    // TASK-113 — 클립보드 접근권이 살아 있는 지금 원본 북마크를 만든다 (App Store판만, dmg판은 nil).
+                    fileOriginalPath: url.path, fileBookmark: SecurityScopedAccess.makeBookmark(for: url),
                     sourceAppBundleId: frontmostBundle, isPinned: false,
                     createdAt: now, lastUsedAt: now
                 )
@@ -200,7 +201,8 @@ actor ClipboardWatcher {
                 ClipFileEntry(
                     originalPath: originalURL.path,
                     filePath: sf.filePath.path,
-                    isFileExternal: sf.isFileExternal
+                    isFileExternal: sf.isFileExternal,
+                    bookmark: SecurityScopedAccess.makeBookmark(for: originalURL)  // TASK-113
                 )
             }
             let json = try ClipFileEntry.encodeJSON(entries)

@@ -7,11 +7,15 @@ struct ClipFileEntry: Codable, Sendable, Equatable {
     let originalPath: String
     let filePath: String
     let isFileExternal: Bool
+    /// 원본 파일의 security-scoped 북마크 (TASK-113). App Store판(샌드박스)만 복사 시점에 만들고, dmg판은 늘 nil 이다.
+    /// nil 이면 JSON 에서 키째 빠진다 — dmg판 JSON 은 이 필드가 생기기 전과 같고, 기존 데이터(키 없음)는 nil 로 읽힌다.
+    var bookmark: Data? = nil
 
     enum CodingKeys: String, CodingKey {
         case originalPath = "original_path"
         case filePath = "file_path"
         case isFileExternal = "is_file_external"
+        case bookmark
     }
 }
 
@@ -23,6 +27,11 @@ extension ClipFileEntry {
         encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(entries)
         return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    /// 중복 판정용 — 북마크를 뺀 항목 (TASK-113). 같은 파일이라도 북마크 바이트는 복사마다 다를 수 있다.
+    var withoutBookmark: ClipFileEntry {
+        ClipFileEntry(originalPath: originalPath, filePath: filePath, isFileExternal: isFileExternal)
     }
 
     /// JSON 디코딩 — 실패 시 nil. `Clip.fileEntries` 컴퓨티드 + `PasteService.writeMultiFilePasteboard` / `DirectFileClipService.deleteMultiFileEntries` 사용처 공통화.
