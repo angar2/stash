@@ -386,13 +386,16 @@ struct ImageClipDetailProvider: ClipDetailProvider {
     func preferredHeight(for clip: Clip) -> CGFloat {
         let path = clip.filePath ?? ""
         let ratio: CGFloat
-        if !path.isEmpty,
-           let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
-           let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-           let width = props[kCGImagePropertyPixelWidth] as? Double,
-           let height = props[kCGImagePropertyPixelHeight] as? Double,
-           width > 0 {
-            ratio = CGFloat(height / width)
+        // TASK-113 — 파일을 읽는 두 호출(생성·속성 읽기)을 모두 접근 안에서 끝낸다.
+        let pixelSize: (width: Double, height: Double)? = path.isEmpty ? nil : clip.withOriginalImageAccess {
+            guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+                  let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = props[kCGImagePropertyPixelWidth] as? Double,
+                  let height = props[kCGImagePropertyPixelHeight] as? Double else { return nil }
+            return (width, height)
+        }
+        if let pixelSize, pixelSize.width > 0 {
+            ratio = CGFloat(pixelSize.height / pixelSize.width)
         } else {
             ratio = 10.0 / 16.0 // 16:10 fallback
         }
@@ -416,7 +419,7 @@ private struct ImageDetailContentView: View {
         // TASK-082 Phase 4 fix-1 — 1-frame fallback flicker 차단. init 시점 동기 로드 박음. body 첫 평가 시점에 이미 NSImage 박혀있음 → LinearGradient fallback 임시 표시 X.
         let initial: NSImage? = {
             guard let path = clip.filePath, !path.isEmpty else { return nil }
-            return NSImage(contentsOfFile: path)
+            return clip.withOriginalImageAccess { NSImage(contentsOfFile: path) }
         }()
         self._loadedImage = State(initialValue: initial)
     }
@@ -463,7 +466,16 @@ private struct ImageDetailContentView: View {
             loadedImage = nil
             return
         }
-        loadedImage = NSImage(contentsOfFile: path)
+        loadedImage = clip.withOriginalImageAccess { NSImage(contentsOfFile: path) }
+    }
+}
+
+extension Clip {
+    /// TASK-113 — 이미지 본문 읽기. 보관 카피본은 그대로 읽고, 원본 경로를 쓰는 대용량 이미지(`isFileExternal`)만
+    /// App Store판에서 북마크로 접근을 되살려 읽는다 (읽고 바로 닫는다). 썸네일(`ClipRowView`)과 같은 규칙.
+    fileprivate func withOriginalImageAccess<T>(_ body: () -> T) -> T {
+        guard isFileExternal else { return body() }
+        return SecurityScopedAccess.shared.withAccess(accessBookmarks, body)
     }
 }
 
@@ -509,7 +521,10 @@ private struct SingleFileDetailContentView: View {
     private var isDirectory: Bool {
         guard !pathString.isEmpty else { return false }
         var isDir: ObjCBool = false
-        _ = FileManager.default.fileExists(atPath: pathString, isDirectory: &isDir)
+        // TASK-113 — 원본 경로라 App Store판은 북마크로 접근을 되살려 확인한다 (확인 뒤 바로 닫는다).
+        _ = SecurityScopedAccess.shared.withAccess(clip.accessBookmarks) {
+            FileManager.default.fileExists(atPath: pathString, isDirectory: &isDir)
+        }
         return isDir.boolValue
     }
 
