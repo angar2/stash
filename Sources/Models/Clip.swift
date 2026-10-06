@@ -36,6 +36,13 @@ extension Clip {
     /// V4 (TASK-026) — `file_paths_json` 박혀있으면 다중 파일 묶음 클립.
     var isMultiFile: Bool { filePathsJson != nil }
 
+    /// TASK-113 — 원본 파일 접근에 쓰는 security-scoped 북마크들. 다중 파일은 항목 순서대로, 그 외는 `fileBookmark` 하나.
+    /// App Store판(샌드박스)만 값이 있고 dmg판은 모두 nil 이다. `SecurityScopedAccess` 가 nil 을 건너뛴다.
+    var accessBookmarks: [Data?] {
+        if isMultiFile { return (fileEntries ?? []).map(\.bookmark) }
+        return [fileBookmark]
+    }
+
     /// V4 (TASK-026) — JSON 디코드. 매 호출 디코드 (캐시 X), 실패 시 nil. 비용 무시 (200 row × μs).
     var fileEntries: [ClipFileEntry]? {
         guard let json = filePathsJson else { return nil }

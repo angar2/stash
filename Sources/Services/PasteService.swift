@@ -51,6 +51,8 @@ final class PasteService {
         // TASK-026 fix — paste 진행 동안 watcher tick 자체 차단 (race 차단). 다중 파일의 saveFiles 시간 소요로 인한
         // ack 대기 → synthesizeCommandV 지연 함정 fix. 실패 시 해제 보장은 `withPastePending` 이 맡는다.
         try await withPastePending {
+            // TASK-113 — App Store판은 재실행 뒤 원본 접근을 북마크로 되살린다. 받는 앱이 읽을 시간을 위해 다음 붙여넣기까지 열어 둔다.
+            SecurityScopedAccess.shared.hold(clip.accessBookmarks)
             try writeToPasteboard(clip: clip)
 
             // TASK-023 회귀 (e) fix — pasteboard 박은 직후 watcher 에 통보. synthesizer ⌘V 합성은 *읽기* 동작이라 추가 changeCount 증가 X, 콜백은 합성 전 호출 안전.

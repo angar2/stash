@@ -426,6 +426,8 @@ final class ClipsViewModel {
 
             case .files:
                 let urls = MultiPasteComposer.fileURLs(clips: selected)
+                // TASK-113 — 원본 접근을 되살려 다음 붙여넣기까지 열어 둔다 (App Store판만 효과).
+                SecurityScopedAccess.shared.hold(selected.flatMap(\.accessBookmarks))
                 try await pasteService.pasteFileURLs(urls, mode: mode)
                 await registerFileBundleClip(from: selected)
                 toastQueue?.enqueue(.success, String(
@@ -438,6 +440,7 @@ final class ClipsViewModel {
                 // 선택 순서를 그대로 따르지 않는 이유는 `MultiPasteComposer.sequentialGroups` 주석 참조.
                 let groups = MultiPasteComposer.sequentialGroups(clips: selected)
                 let separator = MultiPasteComposer.resolveSeparator(Self.multiPasteSeparatorRaw)
+                SecurityScopedAccess.shared.hold(groups.files.flatMap(\.accessBookmarks))  // TASK-113
                 try await pasteService.pasteMixed(
                     fileURLs: MultiPasteComposer.fileURLs(clips: groups.files),
                     joinedText: groups.texts.isEmpty
@@ -499,7 +502,8 @@ final class ClipsViewModel {
             return [ClipFileEntry(
                 originalPath: clip.fileOriginalPath ?? "",
                 filePath: path,
-                isFileExternal: clip.isFileExternal
+                isFileExternal: clip.isFileExternal,
+                bookmark: clip.fileBookmark  // TASK-113 — 묶음 클립도 재실행 뒤 원본을 열 수 있게 이어받는다
             )]
         }
         guard !entries.isEmpty, let json = try? ClipFileEntry.encodeJSON(entries) else {

@@ -678,7 +678,7 @@ final class PopoverWindow: NSObject {
             ClipDetailPanelView(
                 clip: request.clip,
                 onFileTap: { [weak self] url in
-                    self?.handleFileTap(url)
+                    self?.handleFileTap(url, bookmarks: request.clip.accessBookmarks)
                 },
                 searchQuery: viewModel.searchQuery,
                 direction: direction
@@ -746,9 +746,12 @@ final class PopoverWindow: NSObject {
     }
 
     /// 파일 행 클릭 → Finder reveal + popover dismiss. detailPanel 도 동반 hide (PopoverWindow.hide 안에서 처리).
-    private func handleFileTap(_ url: URL) {
+    /// TASK-113 — App Store판은 재실행 뒤 원본 접근을 북마크로 되살린 채 Finder 에 넘긴다 (읽기라 바로 닫는다).
+    private func handleFileTap(_ url: URL, bookmarks: [Data?]) {
         Logger.ui.info("ClipDetailPanel handleFileTap → \(url.path, privacy: .public)")
-        NSWorkspace.shared.activateFileViewerSelecting([url])
+        SecurityScopedAccess.shared.withAccess(bookmarks) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
         hide()
     }
 

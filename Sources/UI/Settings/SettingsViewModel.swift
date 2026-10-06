@@ -227,9 +227,20 @@ final class SettingsViewModel {
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.
     func openSystemSettingsForAccessibility() {
+        #if APP_STORE
+        // TASK-113 — 온보딩을 건너뛴 사용자도 여기서 처음 켤 수 있다. 목록 등록을 위해 열기 직전에 요청한다.
+        AXPermissionChecker.requestPostEventAccess()
+        #endif
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         if let url = URL(string: urlString) {
+            #if APP_STORE
+            // 샌드박스 앱의 열기는 시스템 대리자를 거쳐 설정 앱이 앞으로 오지 않을 수 있다. 열린 뒤 직접 앞으로 가져온다 (온보딩과 같은 사유).
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { app, _ in
+                _ = app?.activate()
+            }
+            #else
             NSWorkspace.shared.open(url)
+            #endif
         }
     }
 

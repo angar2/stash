@@ -104,11 +104,13 @@
 		53198FFBAF605DD92BC6D5D9 /* PasteError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F29E8DD6BC4351217559E5 /* PasteError.swift */; };
 		5320DFE978A65E183530073B /* StoredFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF4F389DF9707F82DFC4273 /* StoredFile.swift */; };
 		535EE80DA3C161F491C41F89 /* DisplayTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD443F913DFEAAD6236D7453 /* DisplayTab.swift */; };
+		53B18F30F32119EC59F1A113 /* SecurityScopedBookmarkStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36222C6099A1BE4BC44CBDDD /* SecurityScopedBookmarkStorageTests.swift */; };
 		54B715A98EC8DABA702D6560 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E9F116EA8941E85D110856 /* PreferencesWindowController.swift */; };
 		55E41145B36CA010B10938AF /* CollectionTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A15426500FC23C4252EB13 /* CollectionTab.swift */; };
 		56E565DAC9C2E64DFC6EAFF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6619048166B83A6A3B34A48 /* Assets.xcassets */; };
 		5774EC43E74F7B94158371D9 /* V6_AddPinAlias.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B377FC5220E0171339BFB72 /* V6_AddPinAlias.swift */; };
 		58268A61702831767910BE4F /* PlainNSTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D173B627EE1AA16FA3D4EDD4 /* PlainNSTextField.swift */; };
+		5828E5EC14C0BC9F72DF6B83 /* SecurityScopedAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20C2D77964C8AD2D9336CA54 /* SecurityScopedAccess.swift */; };
 		5953689A51F9A93FD448C45D /* ClipListHeightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BB59B807F3490130E03192 /* ClipListHeightTests.swift */; };
 		59A33099E884690EE5DBAAB9 /* PinPasteShortcutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F33D414866C2E395F886713C /* PinPasteShortcutResolver.swift */; };
 		5C98CE977684B2CFC5793096 /* ClipRowViewBadgeTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664C940AA77C13D6DE325B2A /* ClipRowViewBadgeTextTests.swift */; };
@@ -140,6 +142,7 @@
 		7582CF6D38A45AC16AE62FF6 /* ClipDetailPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A1E52B477C3AB7C4E6CF74 /* ClipDetailPanelView.swift */; };
 		760B81E95B10A6837AEF8494 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6619048166B83A6A3B34A48 /* Assets.xcassets */; };
 		76D2EBB658D70613FF61870F /* MultiFileClipModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E88F3BEAA5252F64384B72 /* MultiFileClipModelTests.swift */; };
+		77FB176E87B78253A58797AE /* SecurityScopedAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20C2D77964C8AD2D9336CA54 /* SecurityScopedAccess.swift */; };
 		795D72B8DBCB4721B74FB257 /* DirectFileClipServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FBED857A7F2D40D35714AC2 /* DirectFileClipServiceTests.swift */; };
 		79E13C9DD5122BD1D319AAF9 /* UNNotificationCenterImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805E11309F13B12B8CBF4862 /* UNNotificationCenterImpl.swift */; };
 		7A7ECFC86356054AB18E610E /* ClipFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C6B4DFF5A3C4AFE9230467 /* ClipFixture.swift */; };
@@ -357,6 +360,7 @@
 		1F8A1D9269F228B6D01BF4DB /* ClipDetailProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProviderTests.swift; sourceTree = "<group>"; };
 		1FADCBC1EB1D8AA64A3D436D /* PopoverWindowFirstResponderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindowFirstResponderTests.swift; sourceTree = "<group>"; };
 		1FC757344810149DD9BBE5F5 /* PopoverDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverDragTests.swift; sourceTree = "<group>"; };
+		20C2D77964C8AD2D9336CA54 /* SecurityScopedAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityScopedAccess.swift; sourceTree = "<group>"; };
 		22E5091E1EF7E3FE9AB02D21 /* AXPermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AXPermissionChecker.swift; sourceTree = "<group>"; };
 		23745DDF1430972FBDAB6179 /* KeyCodesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodesTests.swift; sourceTree = "<group>"; };
 		2388D7FB89EBA05F32AE9C69 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -375,6 +379,7 @@
 		313E23FDA20918D0C5DA0711 /* PopoverShortcutStoreDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverShortcutStoreDefaultsTests.swift; sourceTree = "<group>"; };
 		31F826AE31770EEBF9C13AD1 /* KeyboardHintsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHintsView.swift; sourceTree = "<group>"; };
 		34FF26ACC47DF1C825B7566C /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		36222C6099A1BE4BC44CBDDD /* SecurityScopedBookmarkStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityScopedBookmarkStorageTests.swift; sourceTree = "<group>"; };
 		37DFFE35671884E08F2593B4 /* OnboardingWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindowTests.swift; sourceTree = "<group>"; };
 		38804B35D9347EB2DD25978E /* PasteServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteServiceTests.swift; sourceTree = "<group>"; };
 		3AD3F49FCEA907D9CF095F5F /* HistoryLimitPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLimitPolicyTests.swift; sourceTree = "<group>"; };
@@ -447,6 +452,7 @@
 		9AD6F683A1FCABE3CE733B4A /* PopoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindow.swift; sourceTree = "<group>"; };
 		9CF5C8404125A683D441722A /* LaunchArguments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchArguments.swift; sourceTree = "<group>"; };
 		A07EE33DDB33E4957C9ABC4A /* ClipDetailProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDetailProvidersTests.swift; sourceTree = "<group>"; };
+		A21C90C2AA6CE46B1E0772EC /* StashAppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StashAppStore.entitlements; sourceTree = "<group>"; };
 		A4DB230AACA74B1757331BE7 /* ClipboardError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardError.swift; sourceTree = "<group>"; };
 		A68C7BE4B75A2309C8BFCACF /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
 		A7CF9DAEFBA4CA49A9CBD43F /* KeyboardHintsViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHintsViewTests.swift; sourceTree = "<group>"; };
@@ -680,6 +686,7 @@
 				E6619048166B83A6A3B34A48 /* Assets.xcassets */,
 				76B60B4BF3C0F9B5037B818C /* Info.plist */,
 				902ABF16AD6FA20C8726591C /* Localizable.xcstrings */,
+				A21C90C2AA6CE46B1E0772EC /* StashAppStore.entitlements */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -733,6 +740,7 @@
 				09E88F3BEAA5252F64384B72 /* MultiFileClipModelTests.swift */,
 				40C984EB45203B15E1DAD788 /* PinAliasGRDBTests.swift */,
 				26235EA7629A853778AC673E /* RecoverFromCorruptionV4Tests.swift */,
+				36222C6099A1BE4BC44CBDDD /* SecurityScopedBookmarkStorageTests.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -973,6 +981,7 @@
 				A961AC05EA1B81B5AB2E4412 /* PasteService.swift */,
 				AF269345DE11AE74F5F6CD60 /* PermissionService.swift */,
 				F33D414866C2E395F886713C /* PinPasteShortcutResolver.swift */,
+				20C2D77964C8AD2D9336CA54 /* SecurityScopedAccess.swift */,
 				6D260786410D2E0096809A8B /* SMLoginItemRegistrar.swift */,
 				2E6D55A437BE08A35A52C864 /* SystemPasteboard.swift */,
 				805E11309F13B12B8CBF4862 /* UNNotificationCenterImpl.swift */,
@@ -1303,6 +1312,7 @@
 				BCB5FB57CB550DD5DFD145E7 /* SMLoginItemRegistrar.swift in Sources */,
 				83BFF46BB862CBF4B961ED1C /* ScrollableTextView.swift in Sources */,
 				F42AE53A7E26C4C169C0E739 /* SearchBarView.swift in Sources */,
+				5828E5EC14C0BC9F72DF6B83 /* SecurityScopedAccess.swift in Sources */,
 				E5E9CAD27BBA081E55AA9C82 /* SelectionPreviewBar.swift in Sources */,
 				D219055CC22951AD1CE0C093 /* SettingsViewModel.swift in Sources */,
 				11898244205DE5CB315C8452 /* SettingsWindow.swift in Sources */,
@@ -1401,6 +1411,7 @@
 				E8D7AF8AB20EC79EE0E57FBA /* PopoverWindowFirstResponderTests.swift in Sources */,
 				9D2F4103DAC96697A0E8D442 /* RecoverFromCorruptionV4Tests.swift in Sources */,
 				F27628E846B3EA564050AE8E /* SearchBenchmarkTests.swift in Sources */,
+				53B18F30F32119EC59F1A113 /* SecurityScopedBookmarkStorageTests.swift in Sources */,
 				D8718114C4762E52DA0053D7 /* SettingsViewModelPopoverPositionTests.swift in Sources */,
 				680FDC118E8CE2B4F07BBCAB /* SettingsViewModelTests.swift in Sources */,
 				4E568A074FC41C8E72CC7A4C /* StashLogoMarkTests.swift in Sources */,
@@ -1496,6 +1507,7 @@
 				4508498A52DFE76F171DAD1B /* SMLoginItemRegistrar.swift in Sources */,
 				32941B4A6206D01324ECE907 /* ScrollableTextView.swift in Sources */,
 				BFABAB0AB137AF8FD66D5DB1 /* SearchBarView.swift in Sources */,
+				77FB176E87B78253A58797AE /* SecurityScopedAccess.swift in Sources */,
 				E02B69586010116F029B6F6F /* SelectionPreviewBar.swift in Sources */,
 				420F1A8B90C583BF58378836 /* SettingsViewModel.swift in Sources */,
 				66785AFBFCC1A3155ADE48D5 /* SettingsWindow.swift in Sources */,
@@ -1623,8 +1635,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Resources/StashAppStore.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/Resources/Info.plist;
@@ -1635,7 +1649,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.angar2.stash;
 				PRODUCT_MODULE_NAME = StashAppStore;
-				PRODUCT_NAME = Stash;
+				PRODUCT_NAME = StashAppStore;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
 				SWIFT_VERSION = 6.0;
@@ -1736,8 +1750,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Resources/StashAppStore.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/Resources/Info.plist;

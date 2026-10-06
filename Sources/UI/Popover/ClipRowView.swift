@@ -233,7 +233,7 @@ struct ClipRowView: View, Equatable {
             width: DesignTokens.WindowSize.clipImageThumbW,
             height: DesignTokens.WindowSize.clipImageThumbH
         )
-        if let path = clip.filePath, let nsImage = ThumbnailCache.shared.thumbnail(for: path, targetSize: thumbnailTarget) {
+        if let path = clip.filePath, let nsImage = loadThumbnail(path: path, targetSize: thumbnailTarget) {
             Image(nsImage: nsImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
@@ -266,6 +266,17 @@ struct ClipRowView: View, Equatable {
         }
     }
 
+    /// 썸네일 로드. 보관 카피본은 앱 데이터 폴더 안이라 그대로 읽고, 원본 경로를 쓰는 대용량 이미지(`isFileExternal`)만
+    /// App Store판에서 북마크로 접근을 되살려 읽는다 (TASK-113 — 읽고 바로 닫는다).
+    private func loadThumbnail(path: String, targetSize: NSSize) -> NSImage? {
+        guard clip.isFileExternal else {
+            return ThumbnailCache.shared.thumbnail(for: path, targetSize: targetSize)
+        }
+        return SecurityScopedAccess.shared.withAccess(clip.accessBookmarks) {
+            ThumbnailCache.shared.thumbnail(for: path, targetSize: targetSize)
+        }
+    }
+
     /// TASK-082 Phase 7 (C1) fix-1 — 디렉토리 여부 캐시. body 평가마다 동기 `FileManager.fileExists` 디스크 I/O 호출 회피.
     /// `@State + onAppear` 패턴이 1-frame `doc → folder` flicker 가능성 → static cache + computed property 동기 반환으로 변경.
     /// cache miss 시 디스크 I/O 1회 + 박음 / hit 시 즉시 반환. path 가 UUID 파일명이라 *동일 path 재사용* X — stale cache 영향 0.
@@ -281,7 +292,10 @@ struct ClipRowView: View, Equatable {
             return cached
         }
         var isDir: ObjCBool = false
-        let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
+        // TASK-113 — 원본 경로라 App Store판은 북마크로 접근을 되살려 확인한다 (캐시 미스 때만, 확인 뒤 바로 닫는다).
+        let exists = SecurityScopedAccess.shared.withAccess(clip.accessBookmarks) {
+            FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
+        }
         let result = exists && isDir.boolValue
         Self.directoryCheckCache[path] = result
         return result

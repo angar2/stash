@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- TASK-113 App Store판 — App Store 제출 조건인 App Sandbox 를 켠다 (가이드라인 2.4.5(i)). -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- 복사한 파일을 앱 재실행 뒤에도 다시 열기 위한 앱 범위 security-scoped 북마크 (SecurityScopedAccess). -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+</dict>
+</plist>

@@ -562,6 +562,23 @@
         }
       }
     },
+    "onboarding.permission.relaunchHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한을 켰는데 화면이 바뀌지 않으면 Stash를 종료했다가 다시 열어 주세요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If this screen doesn't change after you turn it on, quit Stash and open it again."
+          }
+        }
+      }
+    },
     "onboarding.permission.skip": {
       "extractionState": "manual",
       "localizations": {

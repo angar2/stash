@@ -68,7 +68,8 @@ targets:
   # TASK-112 — Mac App Store판. 같은 소스에 APP_STORE 조건을 켜서 자동 업데이트 코드를 빌드에서 뺀다.
   # Sparkle 은 의존에 넣지 않는다 (가이드라인 2.4.5(vii) — 업데이트는 App Store 만 맡는다).
   # 번들 ID 는 dmg판과 같다 (플랜 008 결정). 로컬 확인 빌드는 명령줄에서 접미사 ID 로 덮어 설치본과 분리한다.
-  # App Sandbox 권한(항목 3)과 배포 서명(항목 4)은 아직 두지 않는다 — Debug 로컬 서명만 쓴다.
+  # App Sandbox 는 TASK-113 에서 켰다 (권한은 실험에서 필요했던 두 가지만 — StashAppStore.entitlements).
+  # 배포 서명(항목 4)은 아직 두지 않는다 — Debug 로컬 서명만 쓴다.
   StashAppStore:
     type: application
     platform: macOS
@@ -88,6 +89,14 @@ targets:
         ENABLE_PREVIEWS: "NO"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) APP_STORE"
+        ENABLE_APP_SANDBOX: "YES"
+        CODE_SIGN_ENTITLEMENTS: Sources/Resources/StashAppStore.entitlements
+      # TASK-113 — Debug 는 제품 이름을 따로 둔다. 두 앱 타깃이 같은 Debug/Stash.app 경로를 만들면, dmg판 코드 테스트가
+      # 테스트 호스트 경로를 만드는 타깃으로 이 타깃까지 끌어와 "Multiple commands produce" 로 실패한다 (dev 에서도 재현).
+      # 배포 빌드(Release)는 위 기본값 Stash 그대로다. 산출 폴더를 가르는 방법은 패키지 산출물을 못 찾아 쓰지 않는다.
+      configs:
+        Debug:
+          PRODUCT_NAME: StashAppStore
     dependencies:
       - package: KeyboardShortcuts
         product: KeyboardShortcuts
@@ -133,3 +142,4 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: Stash
+
