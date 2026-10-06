@@ -233,14 +233,13 @@ final class SettingsViewModel {
         #endif
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         if let url = URL(string: urlString) {
-            #if APP_STORE
-            // 샌드박스 앱의 열기는 시스템 대리자를 거쳐 설정 앱이 앞으로 오지 않을 수 있다. 열린 뒤 직접 앞으로 가져온다 (온보딩과 같은 사유).
-            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { app, _ in
+            // 열기만으로는 설정 앱이 앞으로 오지 않을 수 있다. 열린 뒤 직접 앞으로 가져온다 (온보딩과 같은 사유, TASK-115 — 두 판 공통).
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { app, error in
+                if let error {
+                    Logger.ui.error("Settings: 시스템 설정 열기 실패 — \(error.localizedDescription, privacy: .public)")
+                }
                 _ = app?.activate()
             }
-            #else
-            NSWorkspace.shared.open(url)
-            #endif
         }
     }
 
