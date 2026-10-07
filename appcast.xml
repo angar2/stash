@@ -18,6 +18,22 @@
     <description>Stash 업데이트</description>
     <language>ko</language>
     <item>
+      <title>1.5.0</title>
+      <pubDate>Wed, 07 Oct 2026 23:17:26 +0900</pubDate>
+      <sparkle:version>391</sparkle:version>
+      <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown" xml:lang="en"><![CDATA[# New Features
+
+Added Privacy Policy and Open Source Licenses links to Settings → About, and made the Accessibility permission step in onboarding easier to follow.]]></description>
+      <description sparkle:format="markdown" xml:lang="ko"><![CDATA[# 새로운 기능
+
+설정 → 정보에 개인정보 처리방침과 오픈소스 라이선스 링크를 추가하고, 온보딩의 손쉬운 사용 권한 단계를 더 매끄럽게 개선했습니다.]]></description>
+      <enclosure url="https://github.com/angar2/stash/releases/download/v1.5.0/Stash-1.5.0.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="zNRvAyMN8AxMl/Xj1qoOZMlBsexWJjhX/6W8dnJuIsTG7xAec0VTP5pAxsusL2cOb4p4U29WQYUIbcIQcnKIDg==" length="6990973" />
+    </item>
+    <item>
       <title>1.4.1</title>
       <pubDate>Mon, 05 Oct 2026 22:50:43 +0900</pubDate>
       <sparkle:version>365</sparkle:version>
