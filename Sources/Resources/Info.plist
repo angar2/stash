@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.4.1</string>
+	<string>1.5.0</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<!-- TASK-116 Mac App Store 업로드 필수 키. 값은 App Store Connect 기본 카테고리(생산성)와 같아야 한다. -->
