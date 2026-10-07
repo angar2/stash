@@ -18,6 +18,12 @@
 	<string>1.4.1</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- TASK-116 Mac App Store 업로드 필수 키. 값은 App Store Connect 기본 카테고리(생산성)와 같아야 한다. -->
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<!-- TASK-116 표준 암호화 외의 암호화를 쓰지 않는다. 업로드마다 수출 규정 질문을 받지 않게 한다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

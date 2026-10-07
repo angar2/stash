@@ -39,7 +39,10 @@ struct AboutTab: View {
                 // TASK-102 — 나머지 두 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
                 // 결과는 같은 자리 우측 문구로 알린다 — 결과 하나 보자고 창을 띄우지 않는다 (UX-UI *자동 업데이트*).
                 // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 항목이 빌드에서 빠진다.
-                #if !APP_STORE
+                #if APP_STORE
+                // TASK-116 — App Store판은 *업데이트 확인* 자리에 App Store 상품 페이지 항목을 둔다 (UX-UI *배포판별 동작*).
+                aboutButton(label: L10n("about.appStore"), icon: "bag", action: viewModel.openAppStorePage)
+                #else
                 if viewModel.updateAvailable {
                     updateCheckButton
                 }
@@ -56,14 +59,16 @@ struct AboutTab: View {
                     .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
 
                 // TASK-111 — 포함된 오픈소스 라이브러리의 저작권·라이선스 고지. 버튼 묶음과 구분되게 작은 링크로 둔다.
-                Button(action: viewModel.openLicenses) {
-                    Text(L10n("about.licenses.link"))
+                // TASK-116 — 개인정보 처리방침도 같은 고지 목적이라 한 줄에 나란히 둔다 (가이드라인 5.1.1(i), 두 판 공통).
+                HStack(spacing: 6) {
+                    noticeLink(L10n("about.privacy.link"), action: viewModel.openPrivacyPolicy)
+                        .accessibilityIdentifier("about.privacy")
+                    Text("·")
                         .font(.system(size: 10.5, weight: .regular))
-                        .underline()
-                        .foregroundStyle(DesignTokens.Colors.labelSecondary)
+                        .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
+                    noticeLink(L10n("about.licenses.link"), action: viewModel.openLicenses)
+                        .accessibilityIdentifier("about.licenses")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("about.licenses")
             }
             .padding(.top, 12)
             .padding(.bottom, 18)
@@ -124,6 +129,17 @@ struct AboutTab: View {
         }
     }
     #endif
+
+    /// 저작권 문구 아래 고지 링크 (작은 밑줄 글자).
+    private func noticeLink(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .regular))
+                .underline()
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+        }
+        .buttonStyle(.plain)
+    }
 
     private func aboutButton(label: String, icon: String, action: @escaping () -> Void) -> some View {
         // TASK-065 — hover fill 컴포넌트 (HoverFillCardButton) 정합.

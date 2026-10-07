@@ -69,7 +69,8 @@ targets:
   # Sparkle 은 의존에 넣지 않는다 (가이드라인 2.4.5(vii) — 업데이트는 App Store 만 맡는다).
   # 번들 ID 는 dmg판과 같다 (플랜 008 결정). 로컬 확인 빌드는 명령줄에서 접미사 ID 로 덮어 설치본과 분리한다.
   # App Sandbox 는 TASK-113 에서 켰다 (권한은 실험에서 필요했던 두 가지만 — StashAppStore.entitlements).
-  # 배포 서명(항목 4)은 아직 두지 않는다 — Debug 로컬 서명만 쓴다.
+  # 배포 서명(TASK-116)은 Release 만 Xcode 자동 서명이다. 배포 인증서·App Store 프로파일은 Xcode 가 만든다
+  # (Scripts/build-appstore.sh 가 -allowProvisioningUpdates 로 아카이브·내보내기). Debug 는 로컬 서명 그대로다.
   StashAppStore:
     type: application
     platform: macOS
@@ -97,6 +98,9 @@ targets:
       configs:
         Debug:
           PRODUCT_NAME: StashAppStore
+        Release:
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPMENT_TEAM: L7J8SQ9T5F
     dependencies:
       - package: KeyboardShortcuts
         product: KeyboardShortcuts
