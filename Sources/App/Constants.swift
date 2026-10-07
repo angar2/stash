@@ -9,8 +9,6 @@ enum Constants {
     // TASK-018 Phase 6 — hold 200ms → 500ms. 단순 ⌘+key 단축키 조합(⌘C/V/Z 등) 시 사용자가 ⌘를 잠깐 더 누르고 있어도 popover 발동되던 오트리거 방지.
     // TASK-046 — ⌘ double-tap 트리거 폐기로 관련 상수 (`modifierDoubleTapInterval` / `hotkeyDoubleTapIntervalSeconds`) 제거. hold 상수만 잔존.
     static let modifierHoldThreshold: Duration = .milliseconds(500)
-    // HotkeyMonitor — NSEvent 글로벌 modifier hold 감지 (TimeInterval 형식, DispatchQueue async 용)
-    static let hotkeyHoldThresholdSeconds: TimeInterval = 0.5
 
     // F-004 Pin 한도
     static let maxPinnedClips: Int = 10
