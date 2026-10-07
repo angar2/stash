@@ -16,9 +16,11 @@ final class SettingsViewModel {
     var shortcutConflictMessage: String?
     /// PermissionService.statusPublisher 구독으로 Composition Root 가 갱신.
     var accessibilityGranted: Bool = false
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. Composition Root 가 주입한다.
-    /// 관찰 대상이어야 확인 상태(*확인 중…* / *최신 버전입니다*)가 정보 탭에 즉시 반영된다.
+    /// 관찰 대상이어야 확인 상태(*확인 중…* / *최신 버전입니다*)가 정보 탭에 즉시 반영된다. App Store판에는 없다 (TASK-112).
     private(set) var updateService: UpdateService?
+    #endif
 
     // MARK: - Display tab (TASK-037)
     /// 한 페이지에 보여줄 클립 개수. 1~30 clamp. default 6.
@@ -48,6 +50,8 @@ final class SettingsViewModel {
     private var lastValidPopoverShortcuts: [PopoverShortcutID: PopoverShortcut] = [:]
     /// TASK-033 — revert 호출 재진입 가드.
     private var isRevertingShortcut: Bool = false
+    /// TASK-111 — 오픈소스 라이선스 창. 화면 상태가 아니므로 관찰 대상에서 뺀다.
+    @ObservationIgnored private var licensesWindowController: LicensesWindowController?
 
     init(loginItemService: LoginItemService, repository: (any ClipRepository)? = nil) {
         self.loginItemService = loginItemService
@@ -223,9 +227,19 @@ final class SettingsViewModel {
 
     /// TASK-033 — 일반 탭 *"시스템 접근 권한"* 링크 클릭 핸들러. macOS 시스템 설정 Accessibility 화면 직접 열기.
     func openSystemSettingsForAccessibility() {
+        #if APP_STORE
+        // TASK-113 — 온보딩을 건너뛴 사용자도 여기서 처음 켤 수 있다. 목록 등록을 위해 열기 직전에 요청한다.
+        AXPermissionChecker.requestPostEventAccess()
+        #endif
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         if let url = URL(string: urlString) {
-            NSWorkspace.shared.open(url)
+            // 열기만으로는 설정 앱이 앞으로 오지 않을 수 있다. 열린 뒤 직접 앞으로 가져온다 (온보딩과 같은 사유, TASK-115 — 두 판 공통).
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { app, error in
+                if let error {
+                    Logger.ui.error("Settings: 시스템 설정 열기 실패 — \(error.localizedDescription, privacy: .public)")
+                }
+                _ = app?.activate()
+            }
         }
     }
 
@@ -401,21 +415,34 @@ final class SettingsViewModel {
         NSWorkspace.shared.open(AppDataPath.dataFolder())
     }
 
-    // MARK: - GitHub / Releases
+    // MARK: - GitHub / Licenses
     func openGitHubRepo() {
-        if let url = URL(string: "https://github.com/angar2/stash") {
-            NSWorkspace.shared.open(url)
-        }
+        NSWorkspace.shared.open(AppLinks.gitHubRepository)
     }
 
-    /// TASK-033 — 정보 탭 *릴리즈 노트* 버튼 액션. GitHub releases 페이지 열기.
-    func openReleaseNotes() {
-        if let url = URL(string: "https://github.com/angar2/stash/releases") {
-            NSWorkspace.shared.open(url)
+    /// TASK-116 — 정보 탭 *개인정보 처리방침* 링크 액션 (두 판 공통).
+    func openPrivacyPolicy() {
+        NSWorkspace.shared.open(AppLinks.privacyPolicy)
+    }
+
+    #if APP_STORE
+    /// TASK-116 — App Store판 정보 탭 *App Store에서 보기*. 앱 안 업데이트 확인을 대신하는 경로라 App Store판에만 있다.
+    func openAppStorePage() {
+        NSWorkspace.shared.open(AppLinks.appStorePage)
+    }
+    #endif
+
+    /// TASK-111 — 정보 탭 *오픈소스 라이선스* 링크 액션. 창은 처음 열 때 만든다.
+    func openLicenses() {
+        if licensesWindowController == nil {
+            licensesWindowController = LicensesWindowController()
         }
+        licensesWindowController?.show()
     }
 
     // MARK: - 자동 업데이트 (TASK-102)
+    // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 절 전체가 빌드에서 빠진다.
+    #if !APP_STORE
 
     /// Composition Root 가 주입. `nil` 이면 설정 화면의 업데이트 항목이 표시되지 않는다 (테스트 경로).
     func setUpdateService(_ service: UpdateService) {
@@ -444,4 +471,5 @@ final class SettingsViewModel {
 
     /// 업데이트 항목 표시 여부 — 창구가 주입되지 않은 경로(테스트·프리뷰)에서는 그리지 않는다.
     var updateAvailable: Bool { updateService != nil }
+    #endif
 }

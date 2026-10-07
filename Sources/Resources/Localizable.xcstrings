@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "ko",
   "strings": {
+    "about.appStore": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store에서 보기"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View in App Store"
+          }
+        }
+      }
+    },
     "about.copyright": {
       "extractionState": "manual",
       "localizations": {
@@ -35,23 +52,6 @@
         }
       }
     },
-    "about.description": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS 클립보드 매니저"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS Clipboard Manager"
-          }
-        }
-      }
-    },
     "about.github": {
       "extractionState": "manual",
       "localizations": {
@@ -69,19 +69,53 @@
         }
       }
     },
-    "about.releaseNotes": {
+    "about.licenses.link": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "릴리스 노트 보기"
+            "value": "오픈소스 라이선스"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "View Release Notes"
+            "value": "Open Source Licenses"
+          }
+        }
+      }
+    },
+    "about.licenses.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오픈소스 라이선스"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source Licenses"
+          }
+        }
+      }
+    },
+    "about.privacy.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
           }
         }
       }
@@ -558,6 +592,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "onboarding.permission.relaunchHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한을 켰는데 화면이 바뀌지 않으면 Stash를 종료했다가 다시 열어 주세요."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If this screen doesn't change after you turn it on, quit Stash and open it again."
           }
         }
       }

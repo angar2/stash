@@ -354,6 +354,30 @@ struct ClipsViewModelMultiSelectTests {
         #expect(h.vm.multiSelection.isEmpty)
     }
 
+    @Test("파일 묶음 등록 — 단일 클립의 원본 북마크와 묶음 항목의 북마크를 그대로 이어받는다 (TASK-113)")
+    func fileBundleCarriesBookmarks() async throws {
+        let single = Clip(
+            id: UUID(), type: .file, body: nil,
+            filePath: "/Library/copies/x.pdf", isFileExternal: false,
+            fileOriginalPath: "/tmp/x.pdf", fileBookmark: Data([7]),
+            sourceAppBundleId: nil, isPinned: false, createdAt: Date(), lastUsedAt: Date()
+        )
+        let multi = ClipFixture.makeMultiFile(entries: [
+            ClipFileEntry(originalPath: "/tmp/a.txt", filePath: "/Library/copies/a.txt", isFileExternal: false, bookmark: Data([8])),
+            ClipFileEntry(originalPath: "/tmp/b.png", filePath: "/Library/copies/b.png", isFileExternal: false)
+        ])
+        let h = await makeHarness(prefilled: [single, multi])
+        await h.vm.reload()
+
+        h.vm.toggleMultiSelect(id: single.id)
+        h.vm.toggleMultiSelect(id: multi.id)
+        await h.vm.runMultiPaste(.copy)
+
+        let stored = try await h.repo.fetchAll()
+        let bundle = try #require(stored.first { $0.isMultiFile && $0.id != multi.id })
+        #expect(bundle.accessBookmarks == [Data([7]), Data([8]), nil])
+    }
+
     @Test("선택 1개 붙여넣기 — 묶음 로직을 타도 결과는 그 텍스트 그대로")
     func singleSelectionBehavesLikeSingleClip() async {
         let only = ClipFixture.makeText(body: "혼자")

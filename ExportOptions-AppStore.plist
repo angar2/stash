@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- TASK-116 App Store판 내보내기 설정 (Scripts/build-appstore.sh). dmg판은 ExportOptions.plist 를 쓴다. -->
+<plist version="1.0">
+<dict>
+  <!-- App Store Connect 배포. 결과물은 Mac Installer 인증서로 서명한 설치 패키지(Stash.pkg)다. -->
+  <key>method</key>
+  <string>app-store-connect</string>
+  <!-- 배포 인증서·App Store 프로파일을 Xcode 가 고른다(없으면 만든다). -allowProvisioningUpdates 와 한 쌍이다. -->
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>teamID</key>
+  <string>L7J8SQ9T5F</string>
+  <!-- 내보내기만 한다. 업로드는 스크립트가 검사를 통과한 뒤 따로 한다. -->
+  <key>destination</key>
+  <string>export</string>
+  <!-- 빌드 번호는 스크립트가 git 커밋 수로 넣는다. Xcode 가 임의로 올리지 않게 끈다. -->
+  <key>manageAppVersionAndBuildNumber</key>
+  <false/>
+  <key>uploadSymbols</key>
+  <true/>
+</dict>
+</plist>

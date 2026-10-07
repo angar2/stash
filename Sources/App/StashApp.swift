@@ -22,10 +22,12 @@ struct StashApp: App {
     /// TASK-033 — *저장하지 않을 앱* 백엔드 — frontmost 앱 번들 ID 추적. ClipboardWatcher.buildClip 분기에서 사용.
     let frontmostAppTracker: FrontmostAppTracker
     let hotkeyManager: HotkeyManager
-    let hotkeyMonitor: HotkeyMonitor
     let pasteService: PasteService
+    #if !APP_STORE
     /// TASK-102 — 자동 업데이트 창구. 업데이터 보유 + 즉시 확인 / 자동 확인 토글 / 배너 대기 상태.
+    /// TASK-112 — App Store판은 업데이트를 App Store 가 맡아 창구 자체가 없다.
     let updateService: UpdateService
+    #endif
 
     // MARK: - UI ViewModels
     let clipsViewModel: ClipsViewModel
@@ -41,7 +43,7 @@ struct StashApp: App {
     let toastQueue: ToastQueue
     let toastWindowController: ToastWindowController
     let permissionToastNotifier: PermissionToastNotifier
-    /// 권한 변경 시 hotkeyMonitor 자동 start/stop — App lifetime 보관 (구독 유지).
+    /// 권한 변경 시 ViewModel 권한 상태 갱신 — App lifetime 보관 (구독 유지).
     let permissionMonitorBridge: AnyCancellable
     /// NSWorkspace 앱 활성화 감지 시 권한 recheck — 사용자가 시스템 설정에서 권한 부여 후 다른 앱으로 돌아올 때 자동 감지 (TASK-017 fix-3).
     let permissionRefresherObserver: NSObjectProtocol
@@ -142,7 +144,6 @@ struct StashApp: App {
             registrar: KeyboardShortcutsRegistrar.shared,
             permissionService: permSvc
         )
-        self.hotkeyMonitor = HotkeyMonitor(permissionService: permSvc)
         let pasteSvc = PasteService(
             synthesizer: CGEventPasteSynthesizer(),
             pasteboard: pb,
@@ -160,9 +161,11 @@ struct StashApp: App {
         self.pasteService = pasteSvc
 
         // ⑤-2 자동 업데이트 (TASK-102) — 생성 즉시 업데이터가 기동해 다음 runloop 부터 자동 확인 주기가 돈다.
-        // App lifetime 보관. UI(설정 항목 / popover 배너)는 이 창구만 사용한다.
+        // App lifetime 보관. UI(설정 항목 / popover 배너)는 이 창구만 사용한다. App Store판에는 없다 (TASK-112).
+        #if !APP_STORE
         let updateSvc = UpdateService()
         self.updateService = updateSvc
+        #endif
 
         // ⑥ UI ViewModel (View lifetime 결속 — Composition Root에서 보관, View는 @Bindable로 접근)
         let clipsVM = ClipsViewModel(repository: grdbRepo, pasteService: pasteSvc, fileClipService: fcs, toastQueue: toastQ)
@@ -172,7 +175,9 @@ struct StashApp: App {
         // TASK-100 — 보관 한도 판정에 쓸 *핀 제외 개수* 조회 경로로 리포지토리 주입.
         let settingsVM = SettingsViewModel(loginItemService: self.loginItemService, repository: grdbRepo)
         // TASK-102 — 설정 두 탭(업데이트 확인 / 자동 확인 토글)이 쓸 창구 주입.
+        #if !APP_STORE
         settingsVM.setUpdateService(updateSvc)
+        #endif
         self.settingsViewModel = settingsVM
         let onboardingVM = OnboardingViewModel(permissionService: permSvc)
         self.onboardingViewModel = onboardingVM
@@ -185,7 +190,7 @@ struct StashApp: App {
         )
 
         // ⑧ UI controllers (NSStatusItem retain) — HistoryPopover 호스팅
-        // 1·2·3 호출 방식 통합 popover Window (TASK-018). StatusItemController 와 HotkeyMonitor 모두 동일 인스턴스 공유.
+        // 1·2·3 호출 방식 통합 popover Window (TASK-018). StatusItemController 와 전역 단축키 진입점이 동일 인스턴스 공유.
         // TASK-029 — preferencesController 를 App lifetime 으로 보관 + popover onOpenSettings 콜백이 controller.show() 호출 (단일 진입점).
         // TASK-098 — 단축키 탭 `PIN 단축키` 묶음이 핀 항목의 명칭·값을 표시·수정하므로 클립 뷰모델도 주입.
         let prefsController = PreferencesWindowController(viewModel: settingsVM, clipsViewModel: clipsVM)
@@ -193,21 +198,21 @@ struct StashApp: App {
         let popover = PopoverWindow(
             viewModel: clipsVM,
             settingsViewModel: settingsVM,  // TASK-054 fix-1 — windowWillResize 안에서 setClipsPerPage 직접 호출.
-            updateService: updateSvc,       // TASK-102 — 헤더 업데이트 배너 + 높이 cap.
             onOpenSettings: { [prefsController] in prefsController.show() }
         )
+        #if !APP_STORE
+        popover.setUpdateService(updateSvc)  // TASK-102 — 헤더 업데이트 배너 + 높이 cap.
+        #endif
         self.popoverWindow = popover
         self.statusItemController = StatusItemController(popoverWindow: popover)
 
-        // ⑨ HotkeyMonitor callback 연결 — TASK-018 Phase 9 ⌘ hold *v1.0 보류* (onHoldStart/onHoldEnd 미연결). TASK-046 — ⌘ double-tap 트리거 폐기로 `onDoubleTap` 콜백 삭제. 방식 2 popover 호출 자체는 유지 — 트리거는 ⑨-2 SPM 단축키 (default `⌘⇧C` — TASK-065 / TASK-090) 가 담당.
-        // ⌘ hold 보류 사유: (a) 일반 ⌘+key 단축키 사용 중 의도 안 한 popover 오트리거 사용성 저해, (b) 방식 1/2 popover 열린 상태에서 단축키 입력 시 방식 3 진입으로 전환되어 사용성 저해. 코드 분기(`PopoverWindow.mode == .method3`)는 유지 (미래 부활 가능). 호출 사이트 X.
-        let hotkeyMon = self.hotkeyMonitor
-        hotkeyMon.onHoldStart = nil
-        hotkeyMon.onHoldEnd = nil
+        // ⑨ ⌘ hold 진입(방식 3)은 v1.0 보류 (TASK-018 Phase 9). 이를 감지하던 HotkeyMonitor(전역 modifier 키 감시)는
+        // 콜백이 연결되지 않은 채 권한이 켜지면 감시만 돌고 있어 TASK-116 에서 두 판 공통으로 지웠다. 부활 시 진입 조건부터 다시 설계한다.
+        // 방식 2 popover 호출 트리거는 ⑨-2 SPM 단축키 (default `⌘⇧C` — TASK-065 / TASK-090) 가 담당.
 
         // ⑨-2 TASK-032 — KeyboardShortcuts SPM (Carbon RegisterEventHotKey 기반, Accessibility 권한 무관) 진입점 등록.
         // default `⌘⇧C` (TASK-065 정정 / TASK-090 — TASK-032 잔존 fallback (`⌘⇧V` 강제 setShortcut) 제거. `.popoverOpen` default 적용은 ⑨-2-2 `PopoverShortcutStore.registerDefaultsIfNeeded()` 단일 진실 진입점 위임 — `PopoverShortcutStore.defaults[.popoverOpen]` = `⌘⇧C`).
-        // HotkeyMonitor (⌘ hold 영역, modifier-only 후킹, 권한 필수, TASK-018 Phase 9 보류) 와 별개 진입점 — 권한 거부 사용자도 popover 진입 가능. TASK-046 — 방식 2 popover 호출 트리거 단일화 (⌘ double-tap 트리거 폐기 후 SPM 단축키 통로만 / TASK-032 시점 ⌘⇧V SPM 을 *방식 4* 별도 진입점으로 잘못 분리 박은 명명도 본 task로 통합 정합 — 방식 4 폐기 + 방식 2 트리거 흡수).
+        // Carbon 단축키라 Accessibility 권한 무관 — 권한 거부 사용자도 popover 진입 가능. TASK-046 — 방식 2 popover 호출 트리거 단일화 (⌘ double-tap 트리거 폐기 후 SPM 단축키 통로만 / TASK-032 시점 ⌘⇧V SPM 을 *방식 4* 별도 진입점으로 잘못 분리 박은 명명도 본 task로 통합 정합 — 방식 4 폐기 + 방식 2 트리거 흡수).
         self.hotkeyManager.register(name: .popoverOpen) { [popover, clipsVM] in
             Task { @MainActor in
                 Logger.hotkey.info("popoverOpen shortcut triggered (방식 2 — SPM)")
@@ -254,25 +259,14 @@ struct StashApp: App {
         // 사유: SPM `setShortcut` 이 Carbon RegisterEventHotKey 글로벌 hotkey 등록을 자동 트리거 → ⌘V/⌘C 같은 시스템 표준 단축키 매핑 시 시스템 paste/copy 자체 무력화 + popover localMonitor 도달 X. → SPM 사용 X, 자체 UserDefaults JSON storage 활용.
         PopoverShortcutStore.registerDefaultsIfNeeded()
 
-        // ⑨-3 권한 변경 시 hotkeyMonitor 자동 재시작 + ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024) —
-        // 권한 부여 *전* 상태였으면 init 1회 start()가 skip됨. 이후 사용자가 권한 부여해도 재시작 트리거 없음 → 영원히 미동작.
-        // statusPublisher 구독해서 .granted 변경 시 start, .denied/.unknown 변경 시 stop. start()는 stop() 선행 호출로 멱등.
+        // ⑨-3 권한 변경 시 ViewModel state 동기 (TASK-017 Phase 2-A / TASK-024). TASK-116 — HotkeyMonitor start/stop 은 제거했다.
         // TASK-024 — 동일 sink 안에서 ClipsViewModel + SettingsViewModel 의 `accessibilityGranted` 동시 갱신. (1) ClipsViewModel 의 ⌘V 권한 게이트 동적 토글 + 힌트바 회색조 분기. (2) SettingsViewModel 의 *autoPaste 라디오 활성 분기* 의 호출처 누락 fix — 기존 `updateAccessibilityGranted` 정의만 되어 있고 호출처 0건이라 권한 O 사용자도 autoPaste 선택 불가했던 결함 정합.
         self.permissionMonitorBridge = permSvc.statusPublisher
             .receive(on: RunLoop.main)
-            .sink { [hotkeyMon, clipsVM, settingsVM] status in
+            .sink { [clipsVM, settingsVM] status in
                 Task { @MainActor in
-                    let granted: Bool
-                    switch status {
-                    case .granted:
-                        Logger.hotkey.info("Permission status changed → granted — hotkeyMonitor 자동 start + ViewModel state 갱신")
-                        await hotkeyMon.start()
-                        granted = true
-                    case .denied, .unknown:
-                        Logger.hotkey.info("Permission status changed → \(String(describing: status), privacy: .public) — hotkeyMonitor 자동 stop + ViewModel state 갱신")
-                        hotkeyMon.stop()
-                        granted = false
-                    }
+                    let granted = (status == .granted)
+                    Logger.hotkey.info("Permission status changed → \(String(describing: status), privacy: .public) — ViewModel state 갱신")
                     clipsVM.updateAccessibilityGranted(granted)
                     settingsVM.updateAccessibilityGranted(granted)
                 }
@@ -280,7 +274,7 @@ struct StashApp: App {
 
         // ⑨-4 권한 변경 감지 트리거 (TASK-017 fix-3) — stash는 LSUIElement=true (메뉴바 상주)라 background.
         // 사용자가 시스템 설정에서 Accessibility 권한 부여 후 시스템 설정을 닫고 다른 앱으로 돌아올 때 NSWorkspace.didActivateApplicationNotification 발화.
-        // 그 시점에 permSvc.recheck() 호출 → status .denied → .granted 변경 감지 → publisher emit → bridge → hotkeyMon.start() 자동.
+        // 그 시점에 permSvc.recheck() 호출 → status .denied → .granted 변경 감지 → publisher emit → bridge → ViewModel 권한 상태 갱신.
         self.permissionRefresherObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -302,7 +296,6 @@ struct StashApp: App {
         Task { @MainActor in
             await permSvc.recheck()
             Logger.appLifecycle.info("Initial permission check done")
-            await hotkeyMon.start()
         }
 
         // ⑩ DB 손상 복구 시 시스템 알림

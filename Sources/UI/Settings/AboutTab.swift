@@ -35,36 +35,48 @@ struct AboutTab: View {
                 .foregroundStyle(DesignTokens.Colors.labelSecondary)
                 .accessibilityIdentifier("about.version")
 
-            Text(L10n("about.description"))
-                .font(.system(size: 11.5, weight: .regular))
-                .foregroundStyle(DesignTokens.Colors.labelSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
-                .lineSpacing(2)
-                .padding(.top, 4)
-
             VStack(spacing: 8) {
-                // TASK-102 — 나머지 세 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
+                // TASK-102 — 나머지 두 항목은 자료를 여는 것이고 이 항목만 동작을 일으키므로 맨 위에 둔다.
                 // 결과는 같은 자리 우측 문구로 알린다 — 결과 하나 보자고 창을 띄우지 않는다 (UX-UI *자동 업데이트*).
+                // TASK-112 — App Store판은 업데이트를 App Store 가 맡아 이 항목이 빌드에서 빠진다.
+                #if APP_STORE
+                // TASK-116 — App Store판은 *업데이트 확인* 자리에 App Store 상품 페이지 항목을 둔다 (UX-UI *배포판별 동작*).
+                aboutButton(label: L10n("about.appStore"), icon: "bag", action: viewModel.openAppStorePage)
+                #else
                 if viewModel.updateAvailable {
                     updateCheckButton
                 }
+                #endif
                 aboutButton(label: L10n("about.github"), icon: "link", action: viewModel.openGitHubRepo)
                 aboutButton(label: L10n("about.dataFolder"), icon: "folder", action: viewModel.openDataFolder)
-                aboutButton(label: L10n("about.releaseNotes"), icon: "doc.text", action: viewModel.openReleaseNotes)
             }
             .padding(.top, 4)
             .frame(maxWidth: 320)
 
-            Text(L10n("about.copyright"))
-                .font(.system(size: 10.5, weight: .regular))
-                .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
-                .padding(.top, 12)
-                .padding(.bottom, 18)
+            VStack(spacing: 4) {
+                Text(L10n("about.copyright"))
+                    .font(.system(size: 10.5, weight: .regular))
+                    .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
+
+                // TASK-111 — 포함된 오픈소스 라이브러리의 저작권·라이선스 고지. 버튼 묶음과 구분되게 작은 링크로 둔다.
+                // TASK-116 — 개인정보 처리방침도 같은 고지 목적이라 한 줄에 나란히 둔다 (가이드라인 5.1.1(i), 두 판 공통).
+                HStack(spacing: 6) {
+                    noticeLink(L10n("about.privacy.link"), action: viewModel.openPrivacyPolicy)
+                        .accessibilityIdentifier("about.privacy")
+                    Text("·")
+                        .font(.system(size: 10.5, weight: .regular))
+                        .foregroundStyle(DesignTokens.Colors.labelSecondary.opacity(0.7))
+                    noticeLink(L10n("about.licenses.link"), action: viewModel.openLicenses)
+                        .accessibilityIdentifier("about.licenses")
+                }
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
         .frame(maxWidth: .infinity)
     }
 
+    #if !APP_STORE
     /// TASK-102 — *업데이트 확인*. 다른 항목과 같은 형태를 쓰되, 우측에 확인 상태 문구가 붙는다.
     /// 확인 중에는 항목을 비활성으로 두어 연타를 막는다.
     private var updateCheckButton: some View {
@@ -115,6 +127,18 @@ struct AboutTab: View {
         case .checking, nil:
             return nil
         }
+    }
+    #endif
+
+    /// 저작권 문구 아래 고지 링크 (작은 밑줄 글자).
+    private func noticeLink(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .regular))
+                .underline()
+                .foregroundStyle(DesignTokens.Colors.labelSecondary)
+        }
+        .buttonStyle(.plain)
     }
 
     private func aboutButton(label: String, icon: String, action: @escaping () -> Void) -> some View {

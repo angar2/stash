@@ -21,9 +21,12 @@ final class OnboardingViewModel {
 
     private let permissionService: PermissionService
     private var pollingTask: Task<Void, Never>?
+    /// 권한 감지 간격. 테스트가 예전 상한(120회)을 넘기는 경우를 빠르게 재현하려고 주입한다.
+    private let permissionPollingInterval: Duration
 
-    init(permissionService: PermissionService) {
+    init(permissionService: PermissionService, permissionPollingInterval: Duration = .seconds(1)) {
         self.permissionService = permissionService
+        self.permissionPollingInterval = permissionPollingInterval
     }
 
     func startPermissionPolling() {
@@ -32,16 +35,18 @@ final class OnboardingViewModel {
             await permissionService.startOnboardingPolling()
         }
         // 매 1초 recheck — granted 감지 시 UI 상태만 전환. 다음 페이지 advance 는 사용자가 "다음으로" 버튼 명시 클릭 (TASK-070).
+        // 횟수 상한 없이 권한 단계를 떠날 때(`stopPermissionPolling`)까지 돈다 (TASK-115 — 두 판 공통).
+        // 시스템 설정에서 목록을 찾아 켜기까지 2분을 넘기는 일이 실제로 있었고, 예전 2분 상한에서는 켠 뒤에도 화면이 대기 상태로 남았다 (TASK-113 사용자 확인).
+        let interval = permissionPollingInterval
         pollingTask = Task { @MainActor in
-            for _ in 0..<120 {  // 최대 2분 polling
-                if Task.isCancelled { return }
+            while !Task.isCancelled {
                 await permissionService.recheck()
                 if await permissionService.currentStatus() == .granted {
                     permissionGrantedSnapshot = true
                     Logger.ui.info("Onboarding: 권한 부여 감지 — UI 상태 전환 (auto-advance 제거됨, 사용자 명시 클릭 대기)")
                     return
                 }
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(for: interval)
             }
         }
     }
@@ -77,9 +82,24 @@ final class OnboardingViewModel {
     }
 
     func openSystemSettingsForAccessibility() {
+        #if APP_STORE
+        // TASK-113 — 샌드박스판은 요청을 불러야 손쉬운 사용 목록에 앱이 올라온다. 설정 화면을 열기 직전에 부른다.
+        AXPermissionChecker.requestPostEventAccess()
+        #endif
+        // 온보딩 창은 모든 앱 창 위(.modalPanel)에 떠 있어 방금 연 시스템 설정 창을 덮는다 (TASK-113 사용자 확인 2026-10-06 —
+        // 버튼을 눌러도 설정 창이 보이지 않음). 설정을 여는 순간 일반 창 높이로 내려 설정 창이 앞에 올 수 있게 한다 (TASK-115 — 두 판 공통).
+        for window in NSApp.windows where window is OnboardingNSWindow {
+            window.level = .normal
+        }
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         if let url = URL(string: urlString) {
-            NSWorkspace.shared.open(url)
+            // 열기만으로는 설정 앱이 앞으로 오지 않을 수 있다(샌드박스판은 시스템 대리자를 거친다). 열린 뒤 직접 앞으로 가져온다 (TASK-115 — 두 판 공통).
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { app, error in
+                if let error {
+                    Logger.ui.error("Onboarding: 시스템 설정 열기 실패 — \(error.localizedDescription, privacy: .public)")
+                }
+                _ = app?.activate()
+            }
         }
     }
 }

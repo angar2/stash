@@ -335,10 +335,11 @@ final class GRDBClipRepository: ClipRepository {
            try dedupByEquality(in: db, type: .text, column: "body", value: body, newLastUsedAt: clip.lastUsedAt) {
             return true
         }
-        // TASK-026 — 다중 파일 묶음 (F 케이스) dedup by file_paths_json (JSONEncoder `.sortedKeys` 결정성 보장).
-        // 단일 정합 (단일 파일은 file_original_path dedup) — 동일 set 동일 순서 ⌘C 시 dedup hit.
-        if clip.type == .file, let json = clip.filePathsJson,
-           try dedupByEquality(in: db, type: .file, column: "file_paths_json", value: json, newLastUsedAt: clip.lastUsedAt) {
+        // TASK-026 — 다중 파일 묶음 (F 케이스) dedup — 동일 set 동일 순서 ⌘C 시 dedup hit.
+        // TASK-113 — JSON 문자열 비교 대신 *북마크를 뺀 항목 목록* 으로 비교한다. App Store판은 항목마다 북마크를 담는데
+        // 같은 파일이라도 북마크 바이트가 복사마다 다를 수 있다. dmg판은 북마크가 없어 판정 결과가 이전과 같다.
+        if clip.type == .file, let entries = clip.fileEntries,
+           try dedupMultiFile(in: db, entries: entries, newLastUsedAt: clip.lastUsedAt) {
             return true
         }
         // TASK-023 회귀 (f) — file / 이미지 파일 (C 케이스) dedup by fileOriginalPath (원본 절대 경로 = 원초적 식별자).
@@ -370,6 +371,29 @@ final class GRDBClipRepository: ClipRepository {
             arguments: [newLastUsedAt, existingId]
         )
         Logger.database.debug("performInsert — dedup hit (\(type.rawValue), \(column)), updated existing id: \(existingId)")
+        return true
+    }
+
+    /// 다중 파일 묶음 dedup (TASK-113) — 기존 묶음 중 북마크를 뺀 항목 목록이 같은 행을 찾아 `last_used_at` 만 갱신한다.
+    /// 디코드에 실패한 행은 건너뛴다 (비교 대상에서 빠질 뿐 main 흐름 영향 없음).
+    private func dedupMultiFile(in db: Database, entries: [ClipFileEntry], newLastUsedAt: Date) throws -> Bool {
+        let key = entries.map(\.withoutBookmark)
+        let rows = try Row.fetchAll(
+            db,
+            sql: "SELECT id, file_paths_json FROM clips WHERE type = ? AND file_paths_json IS NOT NULL",
+            arguments: [ClipType.file.rawValue]
+        )
+        let match = rows.first { row in
+            guard let json: String = row["file_paths_json"],
+                  let existing = ClipFileEntry.decodeJSON(json) else { return false }
+            return existing.map(\.withoutBookmark) == key
+        }
+        guard let match, let existingId: UUID = match["id"] else { return false }
+        try db.execute(
+            sql: "UPDATE clips SET last_used_at = ? WHERE id = ?",
+            arguments: [newLastUsedAt, existingId]
+        )
+        Logger.database.debug("performInsert — dedup hit (file, file_paths_json), updated existing id: \(existingId)")
         return true
     }
 

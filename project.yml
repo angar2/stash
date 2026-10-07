@@ -59,6 +59,65 @@ targets:
         product: GRDB
       - package: Sparkle
         product: Sparkle
+    # TASK-112 — 묶음에 Sparkle 이 빠지면 빌드를 멈춘다 (App Store판과 섞임 방지). 아카이브(build-dmg.sh)에서도 돈다.
+    postBuildScripts:
+      - name: 배포판 묶음 검사
+        script: '"${SRCROOT}/Scripts/verify-app-bundle.sh" dmg "${TARGET_BUILD_DIR}/${WRAPPER_NAME}"'
+        basedOnDependencyAnalysis: false
+
+  # TASK-112 — Mac App Store판. 같은 소스에 APP_STORE 조건을 켜서 자동 업데이트 코드를 빌드에서 뺀다.
+  # Sparkle 은 의존에 넣지 않는다 (가이드라인 2.4.5(vii) — 업데이트는 App Store 만 맡는다).
+  # 번들 ID 는 dmg판과 같다 (플랜 008 결정). 로컬 확인 빌드는 명령줄에서 접미사 ID 로 덮어 설치본과 분리한다.
+  # App Sandbox 는 TASK-113 에서 켰다 (권한은 실험에서 필요했던 두 가지만 — StashAppStore.entitlements).
+  # 배포 서명(TASK-116)은 Release 만 Xcode 자동 서명이다. 배포 인증서·App Store 프로파일은 Xcode 가 만든다
+  # (Scripts/build-appstore.sh 가 -allowProvisioningUpdates 로 아카이브·내보내기). Debug 는 로컬 서명 그대로다.
+  StashAppStore:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_NAME: Stash
+        PRODUCT_BUNDLE_IDENTIFIER: com.angar2.stash
+        # 모듈 이름은 dmg판(stash)과 다르게 둔다. 같으면 코드 테스트의 `@testable import stash` 가 이 타깃까지
+        # 암묵 의존으로 끌어와, 제품 이름이 같은 두 앱을 한 폴더에 빌드하다 충돌한다.
+        PRODUCT_MODULE_NAME: StashAppStore
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: Sources/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_PREVIEWS: "NO"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) APP_STORE"
+        ENABLE_APP_SANDBOX: "YES"
+        CODE_SIGN_ENTITLEMENTS: Sources/Resources/StashAppStore.entitlements
+      # TASK-113 — Debug 는 제품 이름을 따로 둔다. 두 앱 타깃이 같은 Debug/Stash.app 경로를 만들면, dmg판 코드 테스트가
+      # 테스트 호스트 경로를 만드는 타깃으로 이 타깃까지 끌어와 "Multiple commands produce" 로 실패한다 (dev 에서도 재현).
+      # 배포 빌드(Release)는 위 기본값 Stash 그대로다. 산출 폴더를 가르는 방법은 패키지 산출물을 못 찾아 쓰지 않는다.
+      configs:
+        Debug:
+          PRODUCT_NAME: StashAppStore
+        Release:
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPMENT_TEAM: L7J8SQ9T5F
+    dependencies:
+      - package: KeyboardShortcuts
+        product: KeyboardShortcuts
+      - package: GRDB
+        product: GRDB
+    postBuildScripts:
+      # Info.plist 는 dmg판과 한 파일을 쓴다 (버전 표기를 한 곳에서만 고치려고). Sparkle 설정 키(SU…)는 여기서 지운다.
+      - name: Sparkle 설정 키 삭제
+        script: |
+          PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          for KEY in $(/usr/libexec/PlistBuddy -c "Print" "$PLIST" | grep -oE '^    SU[A-Za-z]+' | tr -d ' '); do
+            /usr/libexec/PlistBuddy -c "Delete :${KEY}" "$PLIST"
+          done
+        basedOnDependencyAnalysis: false
+      - name: 배포판 묶음 검사
+        script: '"${SRCROOT}/Scripts/verify-app-bundle.sh" appstore "${TARGET_BUILD_DIR}/${WRAPPER_NAME}"'
+        basedOnDependencyAnalysis: false
 
   StashTests:
     type: bundle.unit-test
@@ -87,3 +146,4 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: Stash
+
