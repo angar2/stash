@@ -417,10 +417,20 @@ final class SettingsViewModel {
 
     // MARK: - GitHub / Licenses
     func openGitHubRepo() {
-        if let url = URL(string: "https://github.com/angar2/stash") {
-            NSWorkspace.shared.open(url)
-        }
+        NSWorkspace.shared.open(AppLinks.gitHubRepository)
     }
+
+    /// TASK-116 — 정보 탭 *개인정보 처리방침* 링크 액션 (두 판 공통).
+    func openPrivacyPolicy() {
+        NSWorkspace.shared.open(AppLinks.privacyPolicy)
+    }
+
+    #if APP_STORE
+    /// TASK-116 — App Store판 정보 탭 *App Store에서 보기*. 앱 안 업데이트 확인을 대신하는 경로라 App Store판에만 있다.
+    func openAppStorePage() {
+        NSWorkspace.shared.open(AppLinks.appStorePage)
+    }
+    #endif
 
     /// TASK-111 — 정보 탭 *오픈소스 라이선스* 링크 액션. 창은 처음 열 때 만든다.
     func openLicenses() {
